@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mole Conversions Intro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .box-mass { background-color: #f1f5f9; border: 3px solid #cbd5e1; width: 22%; height: 100px; transition: all 0.3s ease; } 
+        .box-moles { background-color: #f1f5f9; border: 3px solid #cbd5e1; width: 22%; height: 100px; transition: all 0.3s ease; } 
+        .box-particles { background-color: #f1f5f9; border: 3px solid #cbd5e1; width: 22%; height: 100px; transition: all 0.3s ease; } 
+        
+        .active-mass { background-color: #dbeafe !important; border: 4px solid #3b82f6 !important; transform: scale(1.05); box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+        .active-moles { background-color: #f0fdf4 !important; border: 4px solid #22c55e !important; transform: scale(1.05); box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
+        .active-particles { background-color: #fefce8 !important; border: 4px solid #eab308 !important; transform: scale(1.05); box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
+
+        .droppable-area { min-height: 160px; border: 2px dashed #cbd5e1; transition: all 0.2s; position: relative; }
+        .droppable-area.drag-over { border-color: #6366f1; background-color: #f5f3ff; transform: scale(1.02); }
+        
+        .factor-card { cursor: grab; user-select: none; touch-action: none; position: relative; z-index: 5; }
+        .factor-card:active { cursor: grabbing; }
+        
+        .fraction-line { height: 2px; background-color: #94a3b8; width: 100%; margin: 4px 0; position: relative; }
+
+        .cancel-line {
+            position: absolute;
+            width: 110%;
+            height: 2px;
+            background-color: #ef4444;
+            top: 50%;
+            left: -5%;
+            transform: rotate(-15deg);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .locked-overlay { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(2px); z-index: 20; }
+        .unit-mass { color: #3b82f6; }
+        .unit-moles { color: #22c55e; }
+        .unit-particles { color: #eab308; }
+
+        .dragging-ghost {
+            position: fixed !important;
+            pointer-events: none !important;
+            opacity: 0.9 !important;
+            z-index: 99999 !important;
+            background: white !important;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3) !important;
+            border-radius: 0.75rem !important;
+            transform: scale(1.05) !important;
+            margin: 0 !important;
+        }
+        
+        .error-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 font-sans text-slate-800 overflow-x-hidden">
+
+    <!-- Header & Score Tracker -->
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end mb-4 px-4 gap-4">
+        <div>
+            <h1 class="text-4xl font-black text-slate-700 tracking-tight">Mole Conversions Intro</h1>
+            <p class="text-slate-500 font-medium italic">Master the map, one step at a time.</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- Detailed Stats Box -->
+            <div class="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm flex items-center gap-4">
+                <!-- Total Section -->
+                <div class="text-center border-r pr-4 border-slate-100">
+                    <p class="text-[9px] uppercase font-black text-slate-400 tracking-widest">Total Accuracy</p>
+                    <p id="stat-accuracy" class="text-2xl font-black text-blue-600">0%</p>
+                </div>
+                
+                <!-- Breakdown Section -->
+                <div class="flex gap-4">
+                    <div class="text-center">
+                        <p class="text-[9px] uppercase font-black text-green-500 tracking-widest mb-1">Easy</p>
+                        <div class="flex flex-col">
+                             <span id="easy-stats" class="text-xs font-bold text-slate-600">0/0</span>
+                             <span id="easy-acc" class="text-[10px] font-black text-green-600">0%</span>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[9px] uppercase font-black text-orange-500 tracking-widest mb-1">Hard</p>
+                        <div class="flex flex-col">
+                             <span id="hard-stats" class="text-xs font-bold text-slate-600">0/0</span>
+                             <span id="hard-acc" class="text-[10px] font-black text-orange-600">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="mole-container" class="relative w-20 h-20 hidden lg:block">
+                <svg id="mole-character" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="100" cy="120" rx="70" ry="60" fill="#78350f" />
+                    <ellipse cx="100" cy="115" rx="30" ry="25" fill="#a16207" opacity="0.4" />
+                    <circle cx="75" cy="100" r="12" fill="white" />
+                    <circle id="mole-eye-l" cx="75" cy="100" r="5" fill="black" />
+                    <circle cx="125" cy="100" r="12" fill="white" />
+                    <circle id="mole-eye-r" cx="125" cy="100" r="5" fill="black" />
+                    <circle cx="100" cy="125" r="8" fill="#f472b6" />
+                    <circle cx="40" cy="140" r="15" fill="#78350f" />
+                    <circle cx="160" cy="140" r="15" fill="#78350f" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-md p-6 mb-6 border-t-4 border-blue-500">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-center md:text-left flex-1">
+                <div id="problem-display" class="p-4 bg-slate-50 rounded-lg border border-slate-100 hidden">
+                     <p id="problem-text" class="text-2xl md:text-3xl font-medium text-slate-700 leading-relaxed"></p>
+                </div>
+                <p id="initial-prompt" class="text-lg text-blue-600 font-medium mt-1">Select a difficulty to begin...</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="generateProblem('easy')" class="px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition shadow-md">Easy (1-Step)</button>
+                <button onclick="generateProblem('hard')" class="px-6 py-3 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition shadow-md">Hard (2-Step)</button>
+            </div>
+        </div>
+        
+        <!-- Pre-check Section -->
+        <div id="pre-check-section" class="mt-4 pt-4 border-t hidden">
+            <div class="bg-blue-50 p-4 rounded-lg flex flex-col items-center justify-between gap-4">
+                <div class="flex-1 text-center">
+                    <p class="font-bold text-blue-800 text-lg">Do you need to calculate a Molar Mass for this specific problem?</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="pre-yes" onclick="handlePreCheck(true)" class="px-4 py-2 bg-white border-2 border-blue-500 text-blue-600 rounded font-bold hover:bg-blue-500 hover:text-white transition">Yes</button>
+                    <button id="pre-no" onclick="handlePreCheck(false)" class="px-4 py-2 bg-white border-2 border-blue-500 text-blue-600 rounded font-bold hover:bg-blue-500 hover:text-white transition">No</button>
+                </div>
+            </div>
+            <p id="pre-check-explanation" class="text-center text-sm mt-3 italic hidden"></p>
+        </div>
+
+        <!-- Molar Mass Section -->
+        <div id="molar-mass-check" class="mt-4 pt-4 border-t flex flex-col md:flex-row gap-6 items-center hidden bg-slate-50 p-4 rounded-lg">
+            <div class="flex-1">
+                <p class="text-lg font-bold text-blue-600 uppercase mb-1">Step 1: Molar Mass</p>
+                <p class="text-xl text-slate-700">Find mass of <span id="check-formula" class="font-black text-2xl px-2 bg-blue-100 rounded">---</span> using the Periodic Table.</p>
+                <p class="text-md text-slate-500 italic mt-1 font-medium">Round to 2 decimal places.</p>
+            </div>
+            <div class="flex gap-2 items-center">
+                <input type="number" id="user-mass-input" step="0.01" placeholder="0.00" class="w-32 p-3 border-2 border-slate-300 rounded-lg font-bold text-2xl text-center outline-none focus:border-blue-500">
+                <span class="font-bold text-xl text-slate-400">g/mol</span>
+                <button onclick="verifyMolarMass()" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-lg">Check</button>
+            </div>
+            <div id="mass-feedback" class="text-md font-bold px-4 py-2 rounded-lg hidden"></div>
+        </div>
+    </div>
+
+    <!-- Map Section -->
+    <div class="max-w-6xl mx-auto relative mb-8 select-none">
+        <div class="flex justify-between items-center relative gap-2">
+            <div id="box-mass" class="box-mass rounded-xl flex flex-col items-center justify-center text-center shadow-sm">
+                <span class="text-sm md:text-xl font-black uppercase tracking-tighter">Mass</span>
+                <span class="text-[10px] md:text-xs font-bold text-blue-600">(Grams)</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center">
+                <div class="text-[9px] md:text-[12px] font-black text-slate-500 uppercase leading-tight text-center">Molar Mass</div>
+                <div class="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">(Use Periodic Table)</div>
+                <div class="w-full flex justify-between px-2 text-xl md:text-2xl font-bold text-blue-400 mt-1"><span>←</span><span>→</span></div>
+            </div>
+            <div id="box-moles" class="box-moles rounded-xl flex flex-col items-center justify-center text-center shadow-sm">
+                <span class="text-lg md:text-2xl font-black uppercase tracking-tighter">Moles</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center">
+                <div class="text-[9px] md:text-[12px] font-black text-slate-500 uppercase text-center leading-tight">1 mole = 6.02 × 10<sup>23</sup></div>
+                <div class="w-full flex justify-between px-2 text-xl md:text-2xl font-bold text-yellow-500 mt-1"><span>←</span><span>→</span></div>
+            </div>
+            <div id="box-particles" class="box-particles rounded-xl flex flex-col items-center justify-center text-center shadow-sm p-1">
+                <span class="text-sm md:text-xl font-black uppercase tracking-tighter leading-none">Particles</span>
+                <div id="particle-unit-hint" class="text-[8px] md:text-[10px] font-bold text-yellow-600 leading-tight mt-1 opacity-80 uppercase tracking-tighter">Atoms, Molecules, or Formula Units</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workspace Section -->
+    <div class="max-w-6xl mx-auto relative">
+        <div id="workspace-lock" class="absolute inset-0 z-10 locked-overlay flex flex-col items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-lg text-center p-4 rounded-xl border-2 border-dashed border-slate-300">
+            <span>Complete Step 1 Above<br>to Unlock Workspace</span>
+        </div>
+
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3 bg-slate-100 p-3 rounded-lg border border-slate-200">
+            <div class="flex flex-col md:flex-row md:items-center gap-2">
+                <h2 class="text-xl font-black text-slate-700 uppercase tracking-tight">Step 2: Setup Factors</h2>
+                <div id="mini-problem-ref" class="hidden flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-slate-300 shadow-sm">
+                    <span id="mini-qty" class="font-bold text-sm">--</span>
+                    <span id="mini-start" class="text-xs font-bold px-1.5 py-0.5 rounded bg-slate-100">--</span>
+                    <span class="text-slate-300">➜</span>
+                    <span id="mini-end" class="text-xs font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">--</span>
+                </div>
+            </div>
+            <button onclick="resetWorkspace()" class="px-4 py-1.5 border-2 border-red-500 text-red-500 rounded-lg text-sm font-bold hover:bg-red-500 hover:text-white transition-colors">Clear</button>
+        </div>
+
+        <div id="workspace" class="droppable-area bg-white rounded-xl shadow-inner p-4 md:p-8 flex flex-wrap items-center gap-4 md:gap-6 border-2 border-slate-100">
+            <div id="start-val" class="flex flex-col items-center min-w-[120px]">
+                <div class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Given</div>
+                <div class="flex flex-col items-center w-full">
+                    <div class="relative flex items-baseline gap-1">
+                        <div id="given-value-display" class="font-black text-lg md:text-xl">--</div>
+                        <div id="given-unit-display" class="text-xs md:text-sm font-bold relative">
+                            <span id="given-unit-text">unit</span>
+                            <div id="start-cancel" class="cancel-line hidden"></div>
+                        </div>
+                    </div>
+                    <div class="fraction-line"></div>
+                    <div class="font-bold text-slate-400">1</div>
+                </div>
+            </div>
+            <div class="text-2xl md:text-3xl font-bold text-slate-300">×</div>
+            <div id="factor-slots" class="flex items-center gap-4 md:gap-6"></div>
+            <div class="text-2xl md:text-3xl font-bold text-slate-300">=</div>
+            <div id="final-result" class="bg-slate-100 px-4 py-3 rounded-xl border-2 border-slate-200 min-w-[120px] text-center">
+                <div id="res-val" class="font-black text-xl">?</div>
+                <div id="res-unit" class="text-[10px] font-bold uppercase text-slate-500 tracking-widest">---</div>
+            </div>
+            <div id="check-action" class="flex flex-col items-center gap-2">
+                <button id="final-check-btn" onclick="checkFinalAnswer()" class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-md transition">Check Answer</button>
+                <div id="success-container" class="hidden flex flex-col items-center gap-2 animate-bounce">
+                    <div class="font-bold text-green-600 text-xl text-center">Correct!</div>
+                    <button onclick="requestNextProblem()" class="px-6 py-2 bg-green-500 text-white rounded-full font-black text-sm uppercase tracking-widest hover:bg-green-600 shadow-lg transition-all border-b-4 border-green-700 active:border-0 active:translate-y-1">Next Problem →</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="error-message" class="hidden mt-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 font-bold rounded text-center"></div>
+
+        <!-- Factor Bank -->
+        <div class="mt-8 bg-slate-200/50 p-6 rounded-xl border border-slate-200">
+            <p class="text-center text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">Conversion Factors Box</p>
+            <div class="flex flex-wrap justify-center gap-6">
+                <div onmousedown="handleFactorStart(event)" ontouchstart="handleFactorStart(event)" data-type="molar-mass" class="factor-card bg-white border-2 border-blue-400 rounded-lg p-3 shadow-md w-36 flex flex-col items-center">
+                    <div class="font-bold text-lg mb-1"><span class="mass-text">--</span> g</div>
+                    <div class="fraction-line"></div>
+                    <div class="font-bold text-lg">1 mol</div>
+                </div>
+                <div onmousedown="handleFactorStart(event)" ontouchstart="handleFactorStart(event)" data-type="inv-molar-mass" class="factor-card bg-white border-2 border-blue-400 rounded-lg p-3 shadow-md w-36 flex flex-col items-center">
+                    <div class="font-bold text-lg mb-1">1 mol</div>
+                    <div class="fraction-line"></div>
+                    <div class="font-bold text-lg"><span class="mass-text">--</span> g</div>
+                </div>
+                <div onmousedown="handleFactorStart(event)" ontouchstart="handleFactorStart(event)" data-type="avogadro" class="factor-card bg-white border-2 border-yellow-500 rounded-lg p-3 shadow-md w-44 flex flex-col items-center">
+                    <div class="font-bold text-sm mb-1">6.02×10<sup>23</sup> <span class="part-abbr">pt</span></div>
+                    <div class="fraction-line"></div>
+                    <div class="font-bold text-lg">1 mol</div>
+                </div>
+                <div onmousedown="handleFactorStart(event)" ontouchstart="handleFactorStart(event)" data-type="inv-avogadro" class="factor-card bg-white border-2 border-yellow-500 rounded-lg p-3 shadow-md w-44 flex flex-col items-center">
+                    <div class="font-bold text-lg mb-1">1 mol</div>
+                    <div class="fraction-line"></div>
+                    <div class="font-bold text-sm">6.02×10<sup>23</sup> <span class="part-abbr">pt</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const substances = [
+            { formula: "Li₂S", mass: 45.95, type: "ionic" }, { formula: "Al₂O₃", mass: 101.96, type: "ionic" },
+            { formula: "K₂SO₄", mass: 174.26, type: "ionic" }, { formula: "MgF₂", mass: 62.30, type: "ionic" },
+            { formula: "Fe₂O₃", mass: 159.69, type: "ionic" }, { formula: "O₂", mass: 32.00, type: "element" },
+            { formula: "C₃H₈", mass: 44.11, type: "covalent" }, { formula: "NH₃", mass: 17.04, type: "covalent" },
+            { formula: "AgCl", mass: 143.32, type: "ionic" }, { formula: "BaBr₂", mass: 297.13, type: "ionic" },
+            { formula: "Li", mass: 6.94, type: "element" }
+        ];
+
+        let currentProblem = null;
+        let lastProblemType = null;
+        let activeString = [];
+        let step1Passed = false;
+        let difficultyLevel = 'easy';
+
+        // Session Stats
+        let stats = {
+            easy: { attempts: 0, success: 0 },
+            hard: { attempts: 0, success: 0 }
+        };
+        let hasFailedCurrentProblem = false;
+
+        let dragGhost = null;
+        let dragActive = false;
+        let dragType = null;
+        const workspaceArea = document.getElementById('workspace');
+
+        function updateStatsUI() {
+            // Total Stats
+            const totalAttempts = stats.easy.attempts + stats.hard.attempts;
+            const totalSuccess = stats.easy.success + stats.hard.success;
+            const accuracy = totalAttempts === 0 ? 0 : Math.round((totalSuccess / totalAttempts) * 100);
+            
+            const accEl = document.getElementById('stat-accuracy');
+            accEl.innerText = accuracy + "%";
+            
+            // Easy Stats
+            const easyAcc = stats.easy.attempts === 0 ? 0 : Math.round((stats.easy.success / stats.easy.attempts) * 100);
+            document.getElementById('easy-stats').innerText = `${stats.easy.success}/${stats.easy.attempts}`;
+            document.getElementById('easy-acc').innerText = easyAcc + "%";
+
+            // Hard Stats
+            const hardAcc = stats.hard.attempts === 0 ? 0 : Math.round((stats.hard.success / stats.hard.attempts) * 100);
+            document.getElementById('hard-stats').innerText = `${stats.hard.success}/${stats.hard.attempts}`;
+            document.getElementById('hard-acc').innerText = hardAcc + "%";
+
+            // Color logic for total
+            if (accuracy >= 80) accEl.className = "text-2xl font-black text-green-600";
+            else if (accuracy >= 50) accEl.className = "text-2xl font-black text-orange-500";
+            else accEl.className = "text-2xl font-black text-red-500";
+        }
+
+        function handleFactorStart(e) {
+            if (!step1Passed || !currentProblem) return;
+            if (e.type === 'touchstart') e.stopPropagation();
+
+            const target = e.currentTarget;
+            dragType = target.getAttribute('data-type');
+            dragActive = true;
+
+            if (dragGhost) document.body.removeChild(dragGhost);
+
+            dragGhost = target.cloneNode(true);
+            dragGhost.classList.add('dragging-ghost');
+            
+            const rect = target.getBoundingClientRect();
+            dragGhost.style.width = rect.width + 'px';
+            dragGhost.style.height = rect.height + 'px';
+            dragGhost.style.border = window.getComputedStyle(target).border;
+            
+            document.body.appendChild(dragGhost);
+
+            const pointer = e.touches ? e.touches[0] : e;
+            updateGhostPos(pointer.clientX, pointer.clientY);
+
+            if (e.type === 'touchstart') {
+                window.addEventListener('touchmove', handleFactorMove, { passive: false });
+                window.addEventListener('touchend', handleFactorEnd);
+            } else {
+                window.addEventListener('mousemove', handleFactorMove);
+                window.addEventListener('mouseup', handleFactorEnd);
+            }
+        }
+
+        function handleFactorMove(e) {
+            if (!dragActive || !dragGhost) return;
+            if (e.cancelable) e.preventDefault();
+            const pointer = e.touches ? e.touches[0] : e;
+            updateGhostPos(pointer.clientX, pointer.clientY);
+
+            const rect = workspaceArea.getBoundingClientRect();
+            if (pointer.clientX >= rect.left && pointer.clientX <= rect.right &&
+                pointer.clientY >= rect.top && pointer.clientY <= rect.bottom) {
+                workspaceArea.classList.add('drag-over');
+            } else {
+                workspaceArea.classList.remove('drag-over');
+            }
+        }
+
+        function handleFactorEnd(e) {
+            if (!dragActive) return;
+            dragActive = false;
+            const pointer = e.changedTouches ? e.changedTouches[0] : e;
+            const rect = workspaceArea.getBoundingClientRect();
+            
+            if (pointer.clientX >= rect.left && pointer.clientX <= rect.right &&
+                pointer.clientY >= rect.top && pointer.clientY <= rect.bottom) {
+                validateFactor(dragType);
+            }
+
+            if (dragGhost) {
+                document.body.removeChild(dragGhost);
+                dragGhost = null;
+            }
+            workspaceArea.classList.remove('drag-over');
+            window.removeEventListener('touchmove', handleFactorMove);
+            window.removeEventListener('touchend', handleFactorEnd);
+            window.removeEventListener('mousemove', handleFactorMove);
+            window.removeEventListener('mouseup', handleFactorEnd);
+        }
+
+        function updateGhostPos(x, y) {
+            if (dragGhost) {
+                dragGhost.style.left = (x - dragGhost.offsetWidth / 2) + 'px';
+                dragGhost.style.top = (y - dragGhost.offsetHeight / 2) + 'px';
+            }
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            const mole = document.getElementById('mole-character');
+            if (!mole) return;
+            const rect = mole.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+            const dist = 4;
+            const mx = Math.cos(angle) * dist;
+            const my = Math.sin(angle) * dist;
+            document.getElementById('mole-eye-l')?.setAttribute('transform', `translate(${mx}, ${my})`);
+            document.getElementById('mole-eye-r')?.setAttribute('transform', `translate(${mx}, ${my})`);
+        });
+
+        function generateProblem(difficulty) {
+            difficultyLevel = difficulty;
+            hasFailedCurrentProblem = false; 
+            const sub = substances[Math.floor(Math.random() * substances.length)];
+            
+            const easyTypes = ['g-mol', 'mol-g', 'mol-pt', 'pt-mol'];
+            const hardTypes = ['g-pt', 'pt-g'];
+            let currentPool = difficulty === 'easy' ? easyTypes : hardTypes;
+            
+            let filteredPool = currentPool.filter(t => t !== lastProblemType);
+            if (filteredPool.length === 0) filteredPool = currentPool;
+
+            const chosenType = filteredPool[Math.floor(Math.random() * filteredPool.length)];
+            lastProblemType = chosenType;
+
+            const mapping = {
+                'g-mol': ['mass', 'moles'], 'mol-g': ['moles', 'mass'],
+                'mol-pt': ['moles', 'particles'], 'pt-mol': ['particles', 'moles'],
+                'g-pt': ['mass', 'particles'], 'pt-g': ['particles', 'mass']
+            };
+            const [startUnit, endUnit] = mapping[chosenType];
+
+            let startQty;
+            if (startUnit === 'mass') startQty = (Math.random() * 45 + 5).toFixed(2);
+            else if (startUnit === 'moles') startQty = (Math.random() * 2 + 0.1).toFixed(2);
+            else startQty = (Math.random() * 5 + 1).toFixed(2) + "e22";
+
+            currentProblem = { 
+                substance: sub, startUnit, endUnit, 
+                startQty: parseFloat(startQty),
+                startQtyDisplay: formatNumber(parseFloat(startQty), startUnit),
+                needsMass: (startUnit === 'mass' || endUnit === 'mass'),
+                partAbbr: getParticleAbbr(sub.type),
+                partFull: getParticleFullName(sub.type)
+            };
+
+            const fullEndUnit = endUnit === 'particles' ? currentProblem.partFull : unitName(endUnit);
+            const fullStartUnit = startUnit === 'particles' ? currentProblem.partFull : unitName(startUnit);
+
+            document.getElementById('initial-prompt').classList.add('hidden');
+            document.getElementById('problem-display').classList.remove('hidden');
+            document.getElementById('problem-text').innerHTML = 
+                `Convert <span class="font-bold ${unitClass(startUnit)}">${currentProblem.startQtyDisplay} ${fullStartUnit}</span> of ${sub.formula} into <span class="font-bold">${fullEndUnit}</span>.`;
+            
+            document.getElementById('mini-qty').innerText = currentProblem.startQtyDisplay;
+            document.getElementById('mini-start').innerText = startUnit === 'particles' ? currentProblem.partAbbr : unitAbbr(startUnit);
+            document.getElementById('mini-end').innerText = endUnit === 'particles' ? currentProblem.partAbbr : unitAbbr(endUnit);
+            document.getElementById('mini-problem-ref').classList.remove('hidden');
+
+            document.getElementById('pre-check-section').classList.remove('hidden');
+            document.getElementById('molar-mass-check').classList.add('hidden');
+            document.getElementById('check-formula').innerText = sub.formula;
+            document.getElementById('workspace-lock').classList.remove('hidden');
+            document.getElementById('error-message').classList.add('hidden');
+            document.getElementById('pre-check-explanation').classList.add('hidden');
+            
+            document.getElementById('particle-unit-hint').innerText = currentProblem.partFull;
+            document.querySelectorAll('.part-abbr').forEach(el => el.innerText = currentProblem.partAbbr);
+            document.querySelectorAll('.mass-text').forEach(el => el.innerText = sub.mass.toFixed(2));
+            
+            document.getElementById('given-unit-text').innerText = startUnit === 'particles' ? currentProblem.partAbbr : unitAbbr(startUnit);
+            document.getElementById('given-unit-display').className = `text-sm font-bold relative ${unitClass(startUnit)}`;
+            
+            document.getElementById('user-mass-input').value = "";
+            document.getElementById('mass-feedback').classList.add('hidden');
+            step1Passed = false;
+            resetWorkspace();
+            updateMapHighlight(startUnit);
+        }
+
+        function handlePreCheck(userSaysYes) {
+            const explanation = document.getElementById('pre-check-explanation');
+            explanation.classList.remove('hidden');
+            if (currentProblem.needsMass) {
+                if (userSaysYes) {
+                    explanation.innerText = "Correct! Molar mass is needed for grams.";
+                    explanation.className = "text-center text-sm text-green-700 font-bold";
+                    document.getElementById('molar-mass-check').classList.remove('hidden');
+                } else {
+                    explanation.innerText = "Wait! Grams are involved; you'll need the molar mass.";
+                    explanation.className = "text-center text-sm text-red-600 font-bold";
+                    hasFailedCurrentProblem = true;
+                }
+            } else {
+                if (!userSaysYes) {
+                    explanation.innerText = "Correct! No grams involved here.";
+                    explanation.className = "text-center text-sm text-green-700 font-bold";
+                    unlockWorkspace();
+                } else {
+                    explanation.innerText = "Actually, you don't. Particles to Moles only uses Avogadro's Number.";
+                    explanation.className = "text-center text-sm text-red-600 font-bold";
+                    hasFailedCurrentProblem = true;
+                }
+            }
+        }
+
+        function verifyMolarMass() {
+            const inputVal = parseFloat(document.getElementById('user-mass-input').value);
+            const target = currentProblem.substance.mass;
+            const feedback = document.getElementById('mass-feedback');
+            feedback.classList.remove('hidden');
+            if (Math.abs(inputVal - target) < 0.15) {
+                feedback.innerText = "Correct!";
+                feedback.className = "text-sm font-bold px-3 py-1 rounded bg-green-100 text-green-700";
+                unlockWorkspace();
+            } else {
+                feedback.innerText = "Check your math.";
+                feedback.className = "text-sm font-bold px-3 py-1 rounded bg-red-100 text-red-700";
+                hasFailedCurrentProblem = true;
+            }
+        }
+
+        function unlockWorkspace() {
+            step1Passed = true;
+            document.getElementById('workspace-lock').classList.add('hidden');
+            document.getElementById('given-value-display').innerText = currentProblem.startQtyDisplay;
+            updateCalculation();
+        }
+
+        function validateFactor(type) {
+            const errorEl = document.getElementById('error-message');
+            errorEl.classList.add('hidden');
+            
+            let currentUnit = currentProblem.startUnit;
+            activeString.forEach(t => {
+                if (t === 'molar-mass') currentUnit = 'mass';
+                else if (t === 'inv-molar-mass') currentUnit = 'moles';
+                else if (t === 'avogadro') currentUnit = 'particles';
+                else if (t === 'inv-avogadro') currentUnit = 'moles';
+            });
+
+            const isMassFactor = (type === 'molar-mass' || type === 'inv-molar-mass');
+            const isPartFactor = (type === 'avogadro' || type === 'inv-avogadro');
+            
+            if (currentUnit === 'mass' && !isMassFactor) { 
+                showError("You need a factor that cancels Grams!"); 
+                hasFailedCurrentProblem = true; 
+                return; 
+            }
+            if (currentUnit === 'particles' && !isPartFactor) { 
+                showError("You need a factor that cancels Particles!"); 
+                hasFailedCurrentProblem = true; 
+                return; 
+            }
+            
+            if (activeString.length < 2) {
+                activeString.push(type);
+                renderString();
+            }
+        }
+
+        function showError(msg) {
+            const err = document.getElementById('error-message');
+            err.innerText = msg;
+            err.classList.remove('hidden');
+            err.classList.add('error-shake');
+            setTimeout(() => err.classList.remove('error-shake'), 500);
+        }
+
+        function renderString() {
+            const slots = document.getElementById('factor-slots');
+            slots.innerHTML = '';
+            document.getElementById('start-cancel').classList.add('hidden');
+            document.getElementById('success-container').classList.add('hidden');
+            document.getElementById('final-check-btn').classList.remove('hidden');
+
+            let currentUnitAbbr = currentProblem.startUnit === 'particles' ? currentProblem.partAbbr : unitAbbr(currentProblem.startUnit);
+            
+            activeString.forEach((type, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-4";
+                const card = document.createElement('div');
+                card.className = `p-3 border-2 rounded-lg bg-white shadow-sm flex flex-col items-center w-36 md:w-44 cursor-pointer hover:border-red-400 group relative`;
+                card.onclick = () => { activeString.splice(idx); renderString(); };
+                
+                const mass = currentProblem.substance.mass;
+                let topVal, topUnit, botVal, botUnit;
+
+                if (type === 'molar-mass') { topVal = mass.toFixed(2); topUnit = "g"; botVal = "1"; botUnit = "mol"; }
+                else if (type === 'inv-molar-mass') { topVal = "1"; topUnit = "mol"; botVal = mass.toFixed(2); botUnit = "g"; }
+                else if (type === 'avogadro') { topVal = "6.02e23"; topUnit = currentProblem.partAbbr; botVal = "1"; botUnit = "mol"; }
+                else if (type === 'inv-avogadro') { topVal = "1"; topUnit = "mol"; botVal = "6.02e23"; botUnit = currentProblem.partAbbr; }
+
+                const doesCancel = (botUnit === currentUnitAbbr);
+                if (doesCancel && idx === 0) document.getElementById('start-cancel').classList.remove('hidden');
+                const cancelLine = doesCancel ? '<div class="cancel-line"></div>' : '';
+                
+                card.innerHTML = `
+                    <div class="flex items-center gap-1 font-bold text-xs md:text-sm"><span>${topVal === "6.02e23" ? "6.02×10<sup>23</sup>" : topVal}</span><div class="relative">${topUnit} <div class="cancel-line top-cancel-area hidden"></div></div></div>
+                    <div class="fraction-line"></div>
+                    <div class="flex items-center gap-1 font-bold text-xs md:text-sm relative"><span>${botVal === "6.02e23" ? "6.02×10<sup>23</sup>" : botVal}</span><div class="relative">${botUnit} ${cancelLine}</div></div>
+                    <div class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100">✕</div>
+                `;
+                
+                if (idx > 0 && doesCancel) {
+                    const prevTops = slots.querySelectorAll('.top-cancel-area');
+                    if (prevTops.length > 0) prevTops[idx-1].classList.remove('hidden');
+                }
+
+                div.appendChild(card);
+                if (idx < activeString.length - 1) {
+                    const mult = document.createElement('div');
+                    mult.className = "text-xl font-bold text-slate-300"; mult.innerText = "×";
+                    div.appendChild(mult);
+                }
+                slots.appendChild(div);
+                currentUnitAbbr = topUnit;
+            });
+            updateCalculation();
+        }
+
+        function checkFinalAnswer() {
+            const unitEl = document.getElementById('res-unit');
+            const valEl = document.getElementById('res-val');
+            const targetUnit = (currentProblem.endUnit === 'particles' ? currentProblem.partAbbr : unitName(currentProblem.endUnit)).toLowerCase();
+            
+            // Track attempt for current difficulty
+            stats[difficultyLevel].attempts++;
+
+            if (unitEl.innerText.toLowerCase() === targetUnit && !valEl.innerText.includes("TRY")) {
+                document.getElementById('final-check-btn').classList.add('hidden');
+                document.getElementById('success-container').classList.remove('hidden');
+                
+                if (!hasFailedCurrentProblem) {
+                    stats[difficultyLevel].success++;
+                }
+            } else {
+                showError("The units don't match the goal yet!");
+                hasFailedCurrentProblem = true;
+            }
+            updateStatsUI();
+        }
+
+        function updateCalculation() {
+            if (!currentProblem) return;
+            let val = currentProblem.startQty;
+            let currentUnit = currentProblem.startUnit;
+            let currentUnitAbbr = currentUnit === 'particles' ? currentProblem.partAbbr : unitAbbr(currentUnit);
+            let error = false;
+            
+            activeString.forEach(step => {
+                let stepBotUnit = (step === 'molar-mass' || step === 'avogadro') ? 'mol' : (step === 'inv-molar-mass' ? 'g' : currentProblem.partAbbr);
+                if (stepBotUnit !== currentUnitAbbr) error = true;
+
+                const mass = currentProblem.substance.mass;
+                if (step === 'molar-mass') { val *= mass; currentUnit = 'mass'; currentUnitAbbr = 'g'; }
+                else if (step === 'inv-molar-mass') { val /= mass; currentUnit = 'moles'; currentUnitAbbr = 'mol'; }
+                else if (step === 'avogadro') { val *= 6.02e23; currentUnit = 'particles'; currentUnitAbbr = currentProblem.partAbbr; }
+                else if (step === 'inv-avogadro') { val /= 6.02e23; currentUnit = 'moles'; currentUnitAbbr = 'mol'; }
+            });
+
+            const resValEl = document.getElementById('res-val');
+            const resUnitEl = document.getElementById('res-unit');
+            
+            if (error) {
+                resValEl.innerText = "TRY AGAIN";
+                resValEl.className = "font-black text-xl text-red-500";
+                resUnitEl.innerText = "Units don't cancel!";
+            } else {
+                resValEl.innerText = formatNumber(val, currentUnit);
+                resValEl.className = "font-black text-xl";
+                resUnitEl.innerText = currentUnit === 'particles' ? currentProblem.partAbbr : unitName(currentUnit);
+                if (currentUnit === currentProblem.endUnit && activeString.length > 0) resValEl.classList.add('text-green-600');
+            }
+            updateMapHighlight(currentUnit);
+        }
+
+        function updateMapHighlight(unit) {
+            document.querySelectorAll('.box-mass, .box-moles, .box-particles').forEach(el => el.classList.remove('active-mass', 'active-moles', 'active-particles'));
+            document.getElementById(`box-${unit}`)?.classList.add(`active-${unit}`);
+        }
+
+        function resetWorkspace() { activeString = []; renderString(); }
+        function requestNextProblem() { generateProblem(difficultyLevel); }
+
+        function formatNumber(num, unit) {
+            if (unit === 'particles' || num > 1000000 || (num < 0.01 && num !== 0)) return num.toExponential(2).replace("e+", "×10^").replace("e", "×10^");
+            return num.toLocaleString(undefined, { maximumFractionDigits: 3 });
+        }
+        function unitName(u) { return u === 'mass' ? 'grams' : (u === 'moles' ? 'moles' : 'particles'); }
+        function unitAbbr(u) { return u === 'mass' ? 'g' : (u === 'moles' ? 'mol' : 'pt'); }
+        function unitClass(u) { return u === 'mass' ? 'unit-mass' : (u === 'moles' ? 'unit-moles' : 'unit-particles'); }
+        function getParticleFullName(type) { return type === 'ionic' ? "Formula Units" : (type === 'covalent' ? "Molecules" : "Atoms"); }
+        function getParticleAbbr(type) { return type === 'ionic' ? "FU's" : (type === 'covalent' ? "molec" : "atoms"); }
+    </script>
+</body>
+</html>
