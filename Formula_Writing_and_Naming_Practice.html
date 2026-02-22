@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formula Writing and Naming Practice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .canvas-container { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; position: relative; overflow: hidden; }
+        .subscript-input { font-family: 'serif'; letter-spacing: 1px; }
+        sub { font-size: 0.7em; vertical-align: sub; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #f59e0b; }
+        .transferred-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #3b82f6; }
+        .solved-badge { background-color: #10b981 !important; color: white !important; cursor: default; }
+        .charge-neutral { background-color: #10b981; color: white; }
+        .charge-unbalanced { background-color: #f59e0b; color: white; }
+        
+        .sub-toggle-active {
+            background-color: #fbbf24 !important;
+            color: #000 !important;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .roman-tip {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 md:p-8 font-sans text-slate-900">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-extrabold text-indigo-900">Formula Writing and Naming Practice</h1>
+            <p class="text-slate-600 font-medium">Interactive Formula Writing & Particle Level Simulation</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-200">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Section Selector:</label>
+                    <select id="sectionSelect" class="w-full p-3 border-2 border-slate-100 rounded-xl bg-slate-50 focus:border-indigo-500 outline-none transition-all">
+                        <option value="part1" selected>Part I: Binary Ionic Compounds</option>
+                        <option value="part2">Part II: Transition Metals</option>
+                        <option value="part3">Part III: Polyatomic Ions</option>
+                        <option value="part4">Part IV: Binary Covalent</option>
+                    </select>
+                </div>
+
+                <div id="problemContainer" class="bg-white p-6 rounded-2xl shadow-xl border border-slate-200 min-h-[450px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 id="sectionTitle" class="text-xl font-bold text-indigo-800">Practice Problems</h2>
+                        <div id="progressCounter" class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">0/4 COMPLETED</div>
+                    </div>
+                    <div id="problemList" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-200 sticky top-8">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-indigo-800">Particle Level Simulation</h2>
+                            <p id="bondingTypeLabel" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Type to build structure...</p>
+                        </div>
+                        <div class="flex flex-col items-end gap-2">
+                            <div class="flex items-center gap-2">
+                                <div id="netChargeBadge" class="hidden px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter">Net Charge: 0</div>
+                                <div id="activeFormula" class="text-2xl font-serif text-indigo-900 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 min-w-[80px] text-center">--</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="visualizer" class="canvas-container h-[450px] flex items-center justify-center">
+                        <canvas id="chemCanvas" width="450" height="420"></canvas>
+                        <div id="canvasOverlay" class="absolute inset-0 flex items-center justify-center text-slate-400 font-medium text-center p-8 bg-slate-50/80">
+                            Start typing the formula to see the ions appear!
+                        </div>
+                    </div>
+
+                    <div id="feedbackPanel" class="mt-4 p-4 rounded-xl hidden flex items-center gap-3 border-2"></div>
+
+                    <div class="mt-6 border-t border-slate-100 pt-4">
+                        <div class="grid grid-cols-2 gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Cation / Metal</div>
+                            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-rose-500"></span> Anion / Non-metal</div>
+                            <div class="flex items-center gap-2"><span class="legend-dot"></span> Valence Electron</div>
+                            <div class="flex items-center gap-2"><span class="transferred-dot"></span> From Cation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('chemCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasOverlay = document.getElementById('canvasOverlay');
+
+        const SUB_MAP = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+        const REV_SUB_MAP = { '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9' };
+        let isSubscriptMode = false;
+
+        const DATA = {
+            part1: [
+                { id: 'p1_1', type: 'nameToFormula', question: 'lithium oxide', answer: 'Li2O' },
+                { id: 'p1_2', type: 'nameToFormula', question: 'calcium iodide', answer: 'CaI2' },
+                { id: 'p1_3', type: 'formulaToName', question: 'BaF2', answer: 'barium fluoride' },
+                { id: 'p1_4', type: 'formulaToName', question: 'K3N', answer: 'potassium nitride' },
+                { id: 'p1_5', type: 'nameToFormula', question: 'magnesium phosphide', answer: 'Mg3P2' },
+                { id: 'p1_6', type: 'nameToFormula', question: 'aluminum fluoride', answer: 'AlF3' }
+            ],
+            part2: [
+                { id: 'p2_1', type: 'nameToFormula', question: 'lead (II) oxide', answer: 'PbO' },
+                { id: 'p2_2', type: 'nameToFormula', question: 'iron (III) chloride', answer: 'FeCl3' },
+                { id: 'p2_3', type: 'formulaToName', question: 'CrCl3', answer: 'chromium (III) chloride' },
+                { id: 'p2_4', type: 'formulaToName', question: 'FeO', answer: 'iron (II) oxide' },
+                { id: 'p2_5', type: 'nameToFormula', question: 'lead (IV) sulfide', answer: 'PbS2' },
+                { id: 'p2_6', type: 'nameToFormula', question: 'zinc iodide', answer: 'ZnI2' }
+            ],
+            part3: [
+                { id: 'p3_1', type: 'formulaToName', question: 'BaCrO4', answer: 'barium chromate' },
+                { id: 'p3_2', type: 'nameToFormula', question: 'sodium sulfate', answer: 'Na2SO4' },
+                { id: 'p3_3', type: 'formulaToName', question: 'Ca(NO3)2', answer: 'calcium nitrate' },
+                { id: 'p3_4', type: 'formulaToName', question: 'Ca(ClO)2', answer: 'calcium hypochlorite' },
+                { id: 'p3_5', type: 'nameToFormula', question: 'nickel (III) phosphate', answer: 'NiPO4' },
+                { id: 'p3_6', type: 'nameToFormula', question: 'copper (I) nitrate', answer: 'CuNO3' },
+                { id: 'p3_7', type: 'nameToFormula', question: 'copper (II) nitrite', answer: 'Cu(NO2)2' },
+                { id: 'p3_8', type: 'nameToFormula', question: 'lead (IV) sulfate', answer: 'Pb(SO4)2' }
+            ],
+            part4: [
+                { id: 'p4_1', type: 'nameToFormula', question: 'phosphorus trichloride', answer: 'PCl3' },
+                { id: 'p4_2', type: 'nameToFormula', question: 'carbon dioxide', answer: 'CO2' },
+                { id: 'p4_3', type: 'formulaToName', question: 'SiO2', answer: 'silicon dioxide' },
+                { id: 'p4_4', type: 'formulaToName', question: 'N2O4', answer: 'dinitrogen tetroxide' },
+                { id: 'p4_5', type: 'nameToFormula', question: 'triphosphorus pentanitride', answer: 'P3N5' }
+            ]
+        };
+
+        const ATOM_VALENCE = {
+            'Li': 1, 'Na': 1, 'K': 1, 'Be': 2, 'Mg': 2, 'Ca': 2, 'Ba': 2, 'Al': 3,
+            'C': 4, 'Si': 4, 'N': 5, 'P': 5, 'O': 6, 'S': 6, 'F': 7, 'Cl': 7, 'Br': 7, 'I': 7,
+            'Pb': 2, 'Fe': 3, 'Cr': 3, 'Zn': 2, 'H': 1, 'Ni': 3, 'Cu': 2
+        };
+
+        const METALS = ['Li', 'Na', 'K', 'Be', 'Mg', 'Ca', 'Ba', 'Al', 'Pb', 'Fe', 'Cr', 'Zn', 'Cu', 'Ni', 'Sn', 'Ag', 'Au'];
+
+        const POLY_INFO = {
+            'SO4': { charge: -2, valence: 6 }, 
+            'NO3': { charge: -1, valence: 5 },
+            'OH': { charge: -1, valence: 7 },
+            'CO3': { charge: -2, valence: 4 },
+            'PO4': { charge: -3, valence: 5 },
+            'NH4': { charge: 1, valence: 0 }, 
+            'NO2': { charge: -1, valence: 5 },
+            'CrO4': { charge: -2, valence: 6 },
+            'ClO': { charge: -1, valence: 7 }
+        };
+
+        const ROMAN_MAP = { 'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5, 'vi': 6, 'vii': 7, 'viii': 8, 'ix': 9, 'x': 10 };
+
+        let currentProblem = null;
+        let solvedProblems = new Set();
+        let showingStructure = false;
+        let isVerified = false;
+
+        function init() {
+            document.getElementById('sectionSelect').addEventListener('change', (e) => loadSection(e.target.value));
+            loadSection('part1');
+        }
+
+        function formatFormula(str) {
+            let text = str;
+            for (let sub in REV_SUB_MAP) {
+                text = text.split(sub).join(REV_SUB_MAP[sub]);
+            }
+            return text.replace(/(\d+)/g, '<sub>$1</sub>');
+        }
+        
+        function normalizeForLogic(str) {
+            let out = str;
+            for (let sub in REV_SUB_MAP) {
+                out = out.split(sub).join(REV_SUB_MAP[sub]);
+            }
+            return out;
+        }
+
+        function loadSection(id) {
+            const container = document.getElementById('problemList');
+            container.innerHTML = '';
+            const sectionData = DATA[id];
+            
+            sectionData.forEach(p => {
+                const isSolved = solvedProblems.has(p.id);
+                const div = document.createElement('div');
+                div.className = "group p-4 border border-slate-100 rounded-xl hover:bg-indigo-50 cursor-pointer flex justify-between items-center bg-slate-50 transition-all";
+                div.innerHTML = `<div><span class="text-sm font-bold text-slate-700">${p.type === 'nameToFormula' ? p.question : formatFormula(p.question)}</span></div>
+                                 <button class="text-xs ${isSolved ? 'solved-badge' : 'bg-indigo-600 text-white'} px-4 py-2 rounded-lg font-bold">${isSolved ? 'CORRECT ✓' : 'SOLVE'}</button>`;
+                div.onclick = () => startProblem(p);
+                container.appendChild(div);
+            });
+
+            const solvedCount = sectionData.filter(p => solvedProblems.has(p.id)).length;
+            document.getElementById('progressCounter').innerText = `${solvedCount}/${sectionData.length} COMPLETED`;
+            resetVisualizer();
+        }
+
+        function resetVisualizer() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvasOverlay.classList.remove('hidden');
+            canvasOverlay.innerText = "Start typing the formula to see the ions appear!";
+            document.getElementById('activeFormula').innerHTML = '--';
+            document.getElementById('bondingTypeLabel').innerText = 'Type to build structure...';
+            document.getElementById('netChargeBadge').classList.add('hidden');
+            showingStructure = false;
+            isVerified = false;
+        }
+
+        function startProblem(p) {
+            currentProblem = p;
+            isVerified = false;
+            isSubscriptMode = false;
+            document.getElementById('feedbackPanel').classList.add('hidden');
+            resetVisualizer();
+            
+            const isNameToFormula = p.type === 'nameToFormula';
+            const list = document.getElementById('problemList');
+            // Show tip if answer or question involves roman numerals
+            const showRomanTip = p.answer.includes('(') || (p.type === 'formulaToName' && (p.question.match(/Fe|Pb|Cr|Cu|Ni/)));
+            
+            list.innerHTML = `
+                <div class="bg-indigo-900 p-6 rounded-xl text-white">
+                    <div class="flex justify-between items-start mb-2">
+                         <p class="text-2xl font-serif">${isNameToFormula ? p.question : formatFormula(p.question)}</p>
+                         ${isNameToFormula ? `
+                         <button id="toggleSubBtn" class="bg-white/20 hover:bg-white/30 text-xs px-3 py-2 rounded-lg font-bold transition-colors flex items-center gap-2">
+                            <span>Subscripts</span>
+                            <span class="bg-black/20 px-1 rounded">X₂</span>
+                         </button>` : ''}
+                    </div>
+                    
+                    ${showRomanTip && !isNameToFormula ? `
+                    <div class="roman-tip mb-4 bg-indigo-800/50 p-2 rounded-lg border border-indigo-700/50 flex items-center gap-2">
+                        <span class="text-amber-400">💡</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wide text-indigo-200">Tip: Use capital "I" for Roman numerals (e.g., II, III)</span>
+                    </div>` : ''}
+
+                    <input type="text" id="userInput" class="w-full p-3 bg-white text-slate-900 rounded-lg font-bold outline-none mb-4 ${isNameToFormula ? 'subscript-input' : ''}" placeholder="${isNameToFormula ? 'e.g. Al2O3' : 'e.g. aluminum oxide'}" autocomplete="off">
+                    <div class="flex gap-2">
+                        <button id="verifyBtn" class="bg-emerald-500 px-6 py-3 rounded-lg flex-1 font-black transition-transform active:scale-95">VERIFY</button>
+                        <button onclick="loadSection(document.getElementById('sectionSelect').value)" class="bg-white/10 px-4 py-3 rounded-lg text-sm font-bold">BACK</button>
+                    </div>
+                </div>`;
+            
+            const input = document.getElementById('userInput');
+            const subBtn = document.getElementById('toggleSubBtn');
+
+            if (subBtn) {
+                subBtn.onclick = () => {
+                    isSubscriptMode = !isSubscriptMode;
+                    subBtn.classList.toggle('sub-toggle-active', isSubscriptMode);
+                    input.focus();
+                };
+            }
+
+            document.getElementById('verifyBtn').onclick = checkAnswer;
+            
+            input.addEventListener('keydown', (e) => {
+                if (isSubscriptMode && e.key >= '0' && e.key <= '9') {
+                    e.preventDefault();
+                    const start = input.selectionStart;
+                    const end = input.selectionEnd;
+                    const subChar = SUB_MAP[e.key];
+                    input.value = input.value.substring(0, start) + subChar + input.value.substring(end);
+                    input.selectionStart = input.selectionEnd = start + 1;
+                    input.dispatchEvent(new Event('input'));
+                }
+            });
+
+            input.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                document.getElementById('activeFormula').innerHTML = (p.type === 'nameToFormula' ? formatFormula(val) : val) || '--';
+                
+                let stringToParse = "";
+                if (p.type === 'nameToFormula') {
+                    stringToParse = normalizeForLogic(val);
+                } else {
+                    if (val.length > 0) stringToParse = p.question;
+                }
+
+                if (stringToParse.length >= 1) {
+                    showingStructure = true;
+                    drawCompound(stringToParse, val);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    canvasOverlay.classList.remove('hidden');
+                    document.getElementById('netChargeBadge').classList.add('hidden');
+                    showingStructure = false;
+                }
+            });
+            input.focus();
+        }
+
+        function checkAnswer() {
+            let rawInput = document.getElementById('userInput').value.trim();
+            const originalInput = rawInput;
+            
+            // Standardize for comparison
+            let inputVal = normalizeForLogic(rawInput).toLowerCase().replace(/\s+/g, '');
+            let correctVal = currentProblem.answer.toLowerCase().replace(/\s+/g, '');
+            
+            const feedback = document.getElementById('feedbackPanel');
+            feedback.classList.remove('hidden');
+            
+            const isContentMatch = inputVal === correctVal;
+            
+            // Strictly check for capital I/V in Roman numerals if the answer should have them
+            const usesRoman = currentProblem.answer.includes('(');
+            const containsLowercaseRoman = /\((i|v|x)+\)/i.test(originalInput) && !/\((I|V|X)+\)/.test(originalInput);
+
+            if (isContentMatch) {
+                if (usesRoman && containsLowercaseRoman) {
+                     feedback.className = `mt-4 p-4 rounded-xl border-2 flex items-center bg-amber-100 text-amber-800 border-amber-200`;
+                     feedback.innerHTML = '<b>Almost!</b> Please use capital "I" or "V" for Roman numerals.';
+                     return;
+                }
+                
+                isVerified = true;
+                solvedProblems.add(currentProblem.id);
+                feedback.className = `mt-4 p-4 rounded-xl border-2 flex items-center bg-emerald-100 text-emerald-800 border-emerald-200`;
+                // Added <br> for spacing between phrases
+                feedback.innerHTML = '<div><b>✓ Correct!</b><br><span class="text-xs opacity-90">Simulation complete.</span></div>';
+                const formula = currentProblem.type === 'nameToFormula' ? currentProblem.answer : currentProblem.question;
+                showingStructure = true;
+                drawCompound(formula, originalInput);
+            } else {
+                feedback.className = `mt-4 p-4 rounded-xl border-2 flex items-center bg-rose-100 text-rose-800 border-rose-200`;
+                feedback.innerHTML = '<b>✕ Not quite.</b> Check your counts or spelling.';
+            }
+        }
+
+        function parseFormula(input, userInputForNaming = "") {
+            let parts = [];
+            const section = document.getElementById('sectionSelect').value;
+            const isCovalent = section === 'part4';
+            let working = normalizeForLogic(input.trim());
+            
+            const romanCharge = parseRoman(currentProblem ? currentProblem.question : "") || parseRoman(userInputForNaming);
+
+            const polyRegex = /\(([^)]+)\)(\d*)|(SO4|NO3|OH|PO4|NH4|CO3|NO2|CrO4|ClO)(\d*)/g;
+            let m;
+            while ((m = polyRegex.exec(working)) !== null) {
+                const sym = m[1] || m[3];
+                const count = parseInt(m[2] || m[4]) || 1;
+                const info = POLY_INFO[sym];
+                if (info) {
+                    parts.push({ 
+                        type: sym === 'NH4' ? 'cation' : 'poly', 
+                        symbol: sym, 
+                        count, 
+                        dots: sym === 'NH4' ? 0 : 8,
+                        origValence: info.valence, 
+                        chargeVal: info.charge,
+                        charge: info.charge > 0 ? `${info.charge}+` : `${Math.abs(info.charge)}-`,
+                        isCovalent 
+                    });
+                }
+                working = working.replace(m[0], '  '); 
+            }
+
+            const elementRegex = /([A-Z][a-z]?)(\d*)/g;
+            while ((m = elementRegex.exec(working)) !== null) {
+                const sym = m[1];
+                if (!sym || sym.trim() === "") continue;
+                const count = parseInt(m[2]) || 1;
+                if (ATOM_VALENCE[sym] !== undefined || METALS.includes(sym)) {
+                    parts.push({
+                        type: METALS.includes(sym) ? 'cation' : 'anion', 
+                        symbol: sym, 
+                        count,
+                        origValence: ATOM_VALENCE[sym] || 0,
+                        isCovalent
+                    });
+                }
+            }
+
+            if (!isCovalent && parts.length >= 1) {
+                const cation = parts.find(p => p.type === 'cation');
+                const anions = parts.filter(p => p.type === 'anion' || p.type === 'poly');
+
+                if (cation && anions.length > 0) {
+                    let totalAnionCharge = 0;
+                    anions.forEach(a => {
+                        const charge = a.chargeVal || (a.origValence - 8);
+                        a.chargeVal = charge;
+                        a.charge = `${Math.abs(charge)}-`;
+                        totalAnionCharge += (charge * a.count);
+                    });
+
+                    let cCharge = romanCharge;
+                    if (!cCharge) {
+                        cCharge = Math.abs(totalAnionCharge) / cation.count;
+                    }
+
+                    cation.chargeVal = cCharge;
+                    cation.charge = `${cCharge}+`;
+                    cation.dots = 0;
+                } else if (cation) {
+                    let cCharge = romanCharge || cation.origValence || 1;
+                    cation.chargeVal = cCharge;
+                    cation.charge = `${cCharge}+`;
+                }
+            }
+            return parts;
+        }
+
+        function parseRoman(str) {
+            if (!str) return null;
+            const m = str.match(/\((viii|vii|vi|v|iv|iii|ii|i|x|ix)\)/i);
+            return m ? ROMAN_MAP[m[1].toLowerCase()] : null;
+        }
+
+        function updateNetChargeBadge(components, isCovalent) {
+            const badge = document.getElementById('netChargeBadge');
+            if (isCovalent || components.length === 0) {
+                badge.classList.add('hidden');
+                return;
+            }
+            let net = 0;
+            components.forEach(c => {
+                const val = c.chargeVal || 0;
+                net += (val * c.count);
+            });
+            net = Math.round(net * 100) / 100;
+            badge.classList.remove('hidden');
+            badge.innerText = `Net Charge: ${net > 0 ? '+' : ''}${net}`;
+            badge.className = `px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${net === 0 ? 'charge-neutral' : 'charge-unbalanced'}`;
+        }
+
+        function drawCompound(formula, userInputForNaming = "") {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!showingStructure) return;
+            const formulaStr = normalizeForLogic(formula).toUpperCase().replace(/\s/g, '');
+            const isCovalent = document.getElementById('sectionSelect').value === 'part4';
+
+            if (formulaStr === 'P3N5') {
+                canvasOverlay.classList.remove('hidden');
+                canvasOverlay.innerHTML = "<div class='flex flex-col items-center'><p class='font-bold text-slate-700 text-center'>Triphosphorus Pentanitride Network</p><p class='text-xs mt-2'>High complexity network structure.</p></div>";
+                document.getElementById('netChargeBadge').classList.add('hidden');
+                return;
+            }
+            if (formulaStr === 'N2O4') { canvasOverlay.classList.add('hidden'); document.getElementById('netChargeBadge').classList.add('hidden'); drawN2O4(); return; }
+            if (formulaStr === 'PCL3') { canvasOverlay.classList.add('hidden'); document.getElementById('netChargeBadge').classList.add('hidden'); drawPCl3Custom(); return; }
+
+            const components = parseFormula(formula, userInputForNaming);
+            updateNetChargeBadge(components, isCovalent);
+
+            if (!components.length) {
+                canvasOverlay.classList.remove('hidden');
+                return;
+            }
+            
+            canvasOverlay.classList.add('hidden');
+            document.getElementById('bondingTypeLabel').innerText = isCovalent ? "Bonding: Covalent (Shared Electrons)" : "Bonding: Ionic (Electron Transfer)";
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const locations = [];
+
+            if (isCovalent) {
+                const firstComp = components[0];
+                const others = [];
+                components.forEach((comp, cIdx) => {
+                    for (let i = 0; i < comp.count; i++) { if (cIdx === 0 && i === 0) continue; others.push(comp); }
+                });
+                const isLinear = (firstComp.symbol === 'C' || firstComp.symbol === 'Si') && others.length === 2;
+                locations.push({ x: centerX, y: centerY, comp: firstComp, isCenter: true, isLinear });
+                others.forEach((comp, idx) => {
+                    let angle = isLinear ? (idx === 0 ? 0 : Math.PI) : (idx / others.length) * Math.PI * 2;
+                    const x = centerX + Math.cos(angle) * 110; 
+                    const y = centerY + Math.sin(angle) * 110;
+                    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3; 
+                    if (isLinear) drawDoubleBond(centerX, centerY, x, y);
+                    else { ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(x, y); ctx.stroke(); }
+                    locations.push({ x, y, comp, angle, isCenter: false, isLinear });
+                });
+            } else {
+                const columnSpacing = 200; 
+                components.forEach((comp, cIdx) => {
+                    const x = centerX + (cIdx === 0 ? -columnSpacing / 2 : columnSpacing / 2);
+                    const itemSpacing = Math.min(100, 360 / (comp.count || 1));
+                    const startY = centerY - ((comp.count - 1) * itemSpacing) / 2;
+                    for (let i = 0; i < comp.count; i++) {
+                        locations.push({ x, y: startY + (i * itemSpacing), comp, ionIdx: i });
+                    }
+                });
+            }
+            locations.forEach((loc) => drawSingleUnit(loc, isCovalent, locations, components));
+        }
+
+        function drawSingleUnit(loc, isCovalent, allLocs, components) {
+            const {x, y, comp, angle, isCenter, ionIdx, isLinear} = loc;
+            const isPoly = comp.type === 'poly' || comp.symbol === 'NH4';
+            const radius = isPoly ? 34 : 28;
+            ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2);
+            if (comp.type === 'cation') ctx.fillStyle = '#3b82f6';
+            else if (comp.type === 'poly') ctx.fillStyle = '#a855f7';
+            else ctx.fillStyle = (isCovalent && (comp.symbol === 'O' || comp.symbol === 'Cl')) ? '#1e40af' : '#f43f5e';
+            ctx.fill();
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            if (isPoly) {
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText(comp.symbol, x, y - 2);
+                ctx.font = 'bold 10px Arial';
+                ctx.fillText(comp.charge, x, y + 12);
+            } else {
+                ctx.font = 'bold 15px Arial';
+                ctx.fillText(comp.symbol, x, y + (isCovalent ? 6 : -2));
+                if (!isCovalent) {
+                    ctx.font = 'bold 11px Arial';
+                    ctx.fillText(comp.charge || '', x, y + 14);
+                }
+            }
+            if (isCovalent) drawCovalentDots(x, y, radius, comp, angle, isCenter, allLocs, isLinear);
+            else drawIonicDots(x, y, radius + 8, comp, components, ionIdx);
+        }
+
+        function drawIonicDots(x, y, r, comp, components, ionIdx) {
+            if (comp.type === 'cation') return;
+            const cation = components.find(c => c.type === 'cation');
+            const totalCationCharge = cation ? Math.abs(cation.chargeVal * cation.count) : 0;
+            const anions = components.filter(c => c.type !== 'cation');
+            const totalAnionsCount = anions.reduce((sum, a) => sum + a.count, 0);
+            let transferredForThisIon = totalAnionsCount > 0 ? Math.floor(totalCationCharge / totalAnionsCount) : 0;
+            if (totalAnionsCount > 0 && ionIdx < (totalCationCharge % totalAnionsCount)) transferredForThisIon += 1;
+            const totalDots = 8;
+            let amberDots = Math.max(0, 8 - transferredForThisIon);
+            const angles = [0, Math.PI/2, Math.PI, Math.PI*1.5];
+            let dotsPlaced = 0;
+            angles.forEach(a => {
+                const lx = x + Math.cos(a)*r, ly = y + Math.sin(a)*r, p = a + Math.PI/2;
+                if (dotsPlaced < totalDots) { drawDot(lx + Math.cos(p)*5, ly + Math.sin(p)*5, dotsPlaced < amberDots ? '#f59e0b' : '#3b82f6'); dotsPlaced++; }
+                if (dotsPlaced < totalDots) { drawDot(lx - Math.cos(p)*5, ly - Math.sin(p)*5, dotsPlaced < amberDots ? '#f59e0b' : '#3b82f6'); dotsPlaced++; }
+            });
+        }
+
+        function drawDot(x, y, color) { ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI*2); ctx.fillStyle = color; ctx.fill(); }
+
+        function drawN2O4() {
+            const cx = canvas.width / 2, cy = canvas.height / 2, nDist = 45, oDist = 95, angle = Math.PI / 4.5;
+            const n1 = { x: cx - nDist, y: cy }, n2 = { x: cx + nDist, y: cy };
+            const o1 = { x: n1.x - Math.cos(angle)*oDist, y: n1.y - Math.sin(angle)*oDist };
+            const o2 = { x: n1.x - Math.cos(angle)*oDist, y: n1.y + Math.sin(angle)*oDist };
+            const o3 = { x: n2.x + Math.cos(angle)*oDist, y: n2.y - Math.sin(angle)*oDist };
+            const o4 = { x: n2.x + Math.cos(angle)*oDist, y: n2.y + Math.sin(angle)*oDist };
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(n1.x, n1.y); ctx.lineTo(n2.x, n2.y); ctx.stroke();
+            drawDoubleBond(n1.x, n1.y, o1.x, o1.y); drawDoubleBond(n2.x, n2.y, o3.x, o3.y);
+            ctx.beginPath(); ctx.moveTo(n1.x, n1.y); ctx.lineTo(o2.x, o2.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(n2.x, n2.y); ctx.lineTo(o4.x, o4.y); ctx.stroke();
+            drawAtomCircle(n1.x, n1.y, 28, '#4ade80', 'N'); drawAtomCircle(n2.x, n2.y, 28, '#4ade80', 'N');
+            drawAtomCircle(o1.x, o1.y, 28, '#3b82f6', 'O'); drawAtomCircle(o2.x, o2.y, 28, '#3b82f6', 'O');
+            drawAtomCircle(o3.x, o3.y, 28, '#3b82f6', 'O'); drawAtomCircle(o4.x, o4.y, 28, '#3b82f6', 'O');
+            drawN2O4OxygenLonePairs(o1.x, o1.y, 28, Math.PI*1.05, Math.PI*1.55);
+            drawN2O4OxygenLonePairs(o3.x, o3.y, 28, Math.PI*1.45, Math.PI*1.95);
+            drawN2O4OxygenLonePairs(o2.x, o2.y, 28, Math.PI*0.5, Math.PI*0.95);
+            drawN2O4OxygenLonePairs(o4.x, o4.y, 28, Math.PI*0.5, Math.PI*0.05);
+        }
+
+        function drawPCl3Custom() {
+            const cx = canvas.width / 2, cy = canvas.height / 2 - 30, bl = 100;
+            const p = { x: cx, y: cy }, clL = { x: p.x - bl, y: p.y }, clR = { x: p.x + bl, y: p.y }, clB = { x: p.x, y: p.y + bl };
+            ctx.strokeStyle = '#991b1b'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(clL.x, clL.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(clR.x, clR.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(clB.x, clB.y); ctx.stroke();
+            drawAtomCircle(p.x, p.y, 28, '#a855f7', 'P'); 
+            drawAtomCircle(clL.x, clL.y, 28, '#4ade80', 'Cl', '#166534'); 
+            drawAtomCircle(clR.x, clR.y, 28, '#4ade80', 'Cl', '#166534');
+            drawAtomCircle(clB.x, clB.y, 28, '#4ade80', 'Cl', '#166534');
+            drawSpecificLonePair(p.x, p.y, 28, -Math.PI/2, '#dc2626');
+            [[clL, [-Math.PI/2, Math.PI, Math.PI/2]], [clR, [-Math.PI/2, 0, Math.PI/2]], [clB, [Math.PI, 0, Math.PI/2]]].forEach(cl => {
+                cl[1].forEach(a => drawSpecificLonePair(cl[0].x, cl[0].y, 28, a, '#dc2626'));
+            });
+        }
+
+        function drawSpecificLonePair(x, y, r, a, c) {
+            ctx.fillStyle = c; const d = r + 14, px = x + Math.cos(a)*d, py = y + Math.sin(a)*d, p = a + Math.PI/2;
+            ctx.beginPath(); ctx.arc(px + Math.cos(p)*4, py + Math.sin(p)*4, 3.5, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(px - Math.cos(p)*4, py - Math.sin(p)*4, 3.5, 0, Math.PI*2); ctx.fill();
+        }
+
+        function drawDoubleBond(x1, y1, x2, y2) {
+            const dx = x2 - x1, dy = y2 - y1, len = Math.sqrt(dx*dx + dy*dy);
+            const ox = -dy / len * 4, oy = dx / len * 4;
+            ctx.beginPath(); ctx.moveTo(x1 + ox, y1 + oy); ctx.lineTo(x2 + ox, y2 + oy); ctx.moveTo(x1 - ox, y1 - oy); ctx.lineTo(x2 - ox, y2 - oy); ctx.stroke();
+        }
+
+        function drawAtomCircle(x, y, r, c, l, tc='white') {
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = c; ctx.fill();
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = tc; ctx.textAlign = 'center'; ctx.font = 'bold 16px Arial'; ctx.fillText(l, x, y + 6);
+        }
+
+        function drawCovalentDots(x, y, radius, comp, angle, isCenter, allLocs, isLinear) {
+            ctx.fillStyle = '#000000';
+            if (isCenter && !isLinear) {
+                if (Math.floor(((ATOM_VALENCE[comp.symbol]||4) - allLocs.length + 1)/2) > 0) drawPair(x, y, -Math.PI/2, radius);
+            } else if (!isCenter) {
+                const bd = (angle + Math.PI) % (Math.PI * 2);
+                if (isLinear) { drawPair(x, y, bd + Math.PI/2, radius); drawPair(x, y, bd - Math.PI/2, radius); }
+                else { [Math.PI/2, Math.PI, -Math.PI/2].forEach(off => drawPair(x, y, bd + off, radius)); }
+            }
+        }
+
+        function drawPair(x, y, a, r) {
+            const lx = x + Math.cos(a)*(r+9), ly = y + Math.sin(a)*(r+9), p = a + Math.PI/2;
+            ctx.beginPath(); ctx.arc(lx + Math.cos(p)*5, ly + Math.sin(p)*5, 3.5, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(lx - Math.cos(p)*4, ly - Math.sin(p)*4, 3.5, 0, Math.PI*2); ctx.fill();
+        }
+
+        function drawN2O4OxygenLonePairs(x, y, r, ...angles) {
+            ctx.fillStyle = '#000000'; const d = r + 10;
+            angles.forEach(a => {
+                const px = x + Math.cos(a)*d, py = y + Math.sin(a)*d, p = a + Math.PI/2;
+                ctx.beginPath(); ctx.arc(px + Math.cos(p)*4, py + Math.sin(p)*4, 3.5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(px - Math.cos(p)*4, py - Math.sin(p)*4, 3.5, 0, Math.PI*2); ctx.fill();
+            });
+        }
+        window.onload = init;
+    </script>
+</body>
+</html>
