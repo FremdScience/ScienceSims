@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Science Simulations Hub</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-light: #666666;
+            --primary: #4a90e2;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-light);
+            font-size: 1.1rem;
+            max-width: 600px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .sim-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            border-top: 5px solid var(--primary);
+        }
+
+        .sim-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .sim-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin: 0 0 15px 0;
+        }
+
+        .sim-desc {
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-bottom: 25px;
+            flex-grow: 1;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+
+        .launch-btn {
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .launch-btn:hover {
+            background-color: #357abd;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            background-color: #eee;
+            color: #777;
+        }
+
+        .status-completed {
+            background-color: #e8f8f5;
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        /* Privacy Notice */
+        .privacy-notice {
+            margin-top: 50px;
+            padding: 15px;
+            background: #eef2f5;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            max-width: 800px;
+            border: 1px dashed #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Biology Simulations</h1>
+        <p class="subtitle">Complete the activities below. Your progress is saved automatically to this device.</p>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- Epigenetics Card -->
+        <div class="sim-card">
+            <h2 class="sim-title">Epigenetics: Lick Your Rats</h2>
+            <p class="sim-desc">
+                Investigate how maternal care during the first week of a rat's life affects the GR gene, shaping their adult personality and response to stress.
+            </p>
+            <div class="card-footer">
+                <a href="rat_simulation.html" class="launch-btn">Launch Activity</a>
+                <!-- The JavaScript below will update this badge if they completed it -->
+                <span id="rat-badge" class="status-badge">Incomplete</span>
+            </div>
+        </div>
+
+        <!-- Placeholder for Future Sims -->
+        <div class="sim-card" style="border-top-color: #bdc3c7; opacity: 0.7;">
+            <h2 class="sim-title" style="color: #7f8c8d;">Cell Division (Coming Soon)</h2>
+            <p class="sim-desc">
+                Explore the phases of mitosis and meiosis. (This is a placeholder for future activities you want to add!)
+            </p>
+            <div class="card-footer">
+                <span class="launch-btn" style="background: #bdc3c7; cursor: not-allowed;">Locked</span>
+                <span class="status-badge">Pending</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="privacy-notice">
+        <strong>🔒 SOPPA Compliant:</strong> This dashboard uses "Zero-Data" architecture. No names, emails, or personal information are collected. Progress is stored locally on your device hardware, acting like a digital notebook.
+    </div>
+
+    <script>
+        // Check local storage when the dashboard loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for rat simulation completion
+            const ratStatus = localStorage.getItem('ratSimCompleted');
+            
+            if (ratStatus === 'true') {
+                const badge = document.getElementById('rat-badge');
+                badge.textContent = 'Completed ✓';
+                badge.className = 'status-badge status-completed';
+            }
+        });
+    </script>
+</body>
+</html>
