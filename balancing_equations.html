@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Balancing Equations</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; background: #050505; }
+        canvas { display: block; }
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            color: white;
+            z-index: 10;
+        }
+        .pointer-auto { pointer-events: auto; }
+        .glass {
+            background: rgba(20, 20, 20, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+        .reactant-box {
+            background: linear-gradient(to bottom, rgba(217, 119, 6, 0.15), rgba(0,0,0,0.8));
+            border: 1px solid rgba(217, 119, 6, 0.3);
+        }
+        .product-box {
+            background: linear-gradient(to bottom, rgba(220, 38, 38, 0.15), rgba(0,0,0,0.8));
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { opacity: 1; }
+        sub { font-size: 0.6em; vertical-align: sub; }
+    </style>
+</head>
+<body>
+
+<div id="ui-overlay">
+    <!-- Header: Centered -->
+    <div class="flex flex-col items-center mb-4 gap-2">
+        <div class="glass p-3 pointer-auto flex items-center gap-4">
+            <h1 class="text-lg font-black text-amber-500 tracking-tighter uppercase italic">Balancing Equations</h1>
+            <select id="equation-select" class="bg-gray-800 text-sm p-2 rounded border border-gray-600 outline-none text-white cursor-pointer">
+                <option value="iron">Iron + Oxygen → Iron Oxide</option>
+                <option value="water">Synthesis of Water (H₂ + O₂)</option>
+                <option value="lithium">Decomposition (LiClO₃ → LiCl + O₂)</option>
+                <option value="propane">Propane Combustion (C₃H₈ + O₂)</option>
+                <option value="naso4">Double Displacement (Na₂SO₄ + Ca(NO₃)₂)</option>
+            </select>
+            <div id="balance-status" class="px-4 py-1 rounded-full text-sm font-black border transition-all duration-300">
+                UNBALANCED
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Equation Control: Centered and Max Width -->
+    <div class="w-full max-w-6xl mx-auto flex justify-center items-start px-10 mt-4">
+        <div class="flex-1 flex flex-col items-center gap-2">
+            <div id="reactants-controls" class="flex justify-center gap-2 text-xl md:text-2xl font-mono"></div>
+            <span class="text-[10px] font-black tracking-[0.3em] text-amber-500 uppercase">Reactants</span>
+        </div>
+        <div class="px-8 flex flex-col items-center">
+            <div class="text-4xl text-white font-light opacity-50">→</div>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2">
+            <div id="products-controls" class="flex justify-center gap-2 text-xl md:text-2xl font-mono"></div>
+            <span class="text-[10px] font-black tracking-[0.3em] text-red-500 uppercase">Products</span>
+        </div>
+    </div>
+
+    <!-- Inventory: Centered and Max Width -->
+    <div class="w-full max-w-6xl mx-auto flex justify-between gap-8 h-48 mt-auto">
+        <div class="reactant-box p-4 pointer-auto flex-1 rounded-xl">
+            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-amber-500 mb-2 text-center">Reactant Inventory</h3>
+            <div id="reactant-inventory" class="flex gap-3 items-center justify-center flex-wrap"></div>
+        </div>
+        <div class="product-box p-4 pointer-auto flex-1 rounded-xl">
+            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-red-500 mb-2 text-center">Product Inventory</h3>
+            <div id="product-inventory" class="flex gap-3 justify-center items-center flex-wrap"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ATOM_DATA = {
+        'H': { color: 0xffffff, mass: 1, size: 0.35 },
+        'O': { color: 0xff3333, mass: 16, size: 0.55 },
+        'Fe': { color: 0x3399ff, mass: 56, size: 0.8 }, 
+        'C': { color: 0x444444, mass: 12, size: 0.5 },
+        'Li': { color: 0xff66cc, mass: 7, size: 0.45 },
+        'Cl': { color: 0x33ff33, mass: 35, size: 0.55 },
+        'Na': { color: 0x9c27b0, mass: 23, size: 0.65 },
+        'S': { color: 0xffff00, mass: 32, size: 0.7 },
+        'Ca': { color: 0x8b4513, mass: 40, size: 0.75 },
+        'N': { color: 0x0000ff, mass: 14, size: 0.5 },
+        'SO4': { color: 0xffff00, mass: 96, size: 0.8 },
+        'NO3': { color: 0x0000ff, mass: 62, size: 0.65 }
+    };
+
+    const REACTIONS = {
+        iron: {
+            reactants: [
+                { label: "Fe", atoms: [{ el: 'Fe', pos: [0,0,0] }] },
+                { label: "O₂", atoms: [{ el: 'O', pos: [-0.4,0,0] }, { el: 'O', pos: [0.4,0,0] }] }
+            ],
+            products: [{ 
+                label: "Fe₂O₃", 
+                atoms: [
+                    { el: 'Fe', pos: [-0.8,0,-0.5] }, { el: 'Fe', pos: [0.8,0,-0.5] }, 
+                    { el: 'O', pos: [-0.8,0.9,0.5] }, { el: 'O', pos: [0,0.9,1.0] }, { el: 'O', pos: [0.8,0.9,0.5] }
+                ] 
+            }]
+        },
+        water: {
+            reactants: [
+                { label: "H₂", atoms: [{ el: 'H', pos: [-0.25,0,0] }, { el: 'H', pos: [0.25,0,0] }] },
+                { label: "O₂", atoms: [{ el: 'O', pos: [-0.4,0,0] }, { el: 'O', pos: [0.4,0,0] }] }
+            ],
+            products: [
+                { label: "H₂O", atoms: [{ el: 'O', pos: [0,0,0] }, { el: 'H', pos: [0.6,0.6,0.3] }, { el: 'H', pos: [-0.6,0.6,-0.3] }] }
+            ]
+        },
+        lithium: {
+            reactants: [{ label: "LiClO₃", atoms: [
+                { el: 'Li', pos: [0,1.2,0] },
+                { el: 'Cl', pos: [0,0,0] }, 
+                { el: 'O', pos: [-0.8,0,0.6] }, { el: 'O', pos: [0.8,0,0.6] }, { el: 'O', pos: [0,0,1.4] }
+            ]}],
+            products: [
+                { label: "LiCl", atoms: [{ el: 'Li', pos: [-0.5,0.4,0] }, { el: 'Cl', pos: [0.5,0,0] }] },
+                { label: "O₂", atoms: [{ el: 'O', pos: [-0.4,0,0] }, { el: 'O', pos: [0.4,0,0] }] }
+            ]
+        },
+        propane: {
+            reactants: [
+                { label: "C₃H₈", atoms: [
+                    { el: 'C', pos: [-1.1, 0, 0] }, { el: 'C', pos: [0, 0.3, 0] }, { el: 'C', pos: [1.1, 0, 0] },
+                    { el: 'H', pos: [-1.8, 0, 0] }, { el: 'H', pos: [-1.1, 0.8, 0.4] }, { el: 'H', pos: [-1.1, -0.8, 0.4] },
+                    { el: 'H', pos: [0, 1.0, 0] }, { el: 'H', pos: [0, -0.4, 0.8] },
+                    { el: 'H', pos: [1.1, 0.8, 0.4] }, { el: 'H', pos: [1.1, -0.8, 0.4] }, { el: 'H', pos: [1.8, 0, 0] }
+                ] },
+                { label: "O₂", atoms: [{ el: 'O', pos: [-0.4,0,0] }, { el: 'O', pos: [0.4,0,0] }] }
+            ],
+            products: [
+                { label: "CO₂", atoms: [{ el: 'C', pos: [0,0.2,0] }, { el: 'O', pos: [-0.65,0.2,0] }, { el: 'O', pos: [0.65,0.2,0] }] },
+                { label: "H₂O", atoms: [{ el: 'O', pos: [0,0,0] }, { el: 'H', pos: [0.6,0.6,0.5] }, { el: 'H', pos: [-0.6,0.6,-0.5] }] }
+            ]
+        },
+        naso4: {
+            reactants: [
+                { label: "Na₂SO₄", atoms: [
+                    { el: 'S', pos: [0,0.5,0], group: 'SO4' }, 
+                    { el: 'O', pos: [-0.8,0,0], group: 'SO4' }, { el: 'O', pos: [0.8,0,0], group: 'SO4' }, 
+                    { el: 'O', pos: [0,0,0.8], group: 'SO4' }, { el: 'O', pos: [0,0,-0.8], group: 'SO4' },
+                    { el: 'Na', pos: [-1.4,1.0,0] }, { el: 'Na', pos: [1.4,1.0,0] }
+                ]},
+                { label: "Ca(NO₃)₂", atoms: [
+                    { el: 'Ca', pos: [0,0,0] }, 
+                    { el: 'N', pos: [-1.2,1.0,0], group: 'NO3' }, { el: 'O', pos: [-1.7,1.0,0], group: 'NO3' }, { el: 'O', pos: [-1.2,1.5,0], group: 'NO3' }, { el: 'O', pos: [-1.2,0.5,0], group: 'NO3' },
+                    { el: 'N', pos: [1.2,1.0,0], group: 'NO3' }, { el: 'O', pos: [1.7,1.0,0], group: 'NO3' }, { el: 'O', pos: [1.2,1.5,0], group: 'NO3' }, { el: 'O', pos: [1.2,0.5,0], group: 'NO3' }
+                ]}
+            ],
+            products: [
+                { label: "CaSO₄", atoms: [
+                    { el: 'Ca', pos: [0,1.2,0] },
+                    { el: 'S', pos: [0,0,0], group: 'SO4' },
+                    { el: 'O', pos: [-0.7,0,0.5], group: 'SO4' }, { el: 'O', pos: [0.7,0,0.5], group: 'SO4' }, 
+                    { el: 'O', pos: [0,0.7,0.7], group: 'SO4' }, { el: 'O', pos: [0,-0.7,0.7], group: 'SO4' }
+                ]},
+                { label: "NaNO₃", atoms: [
+                    { el: 'Na', pos: [0,1.0,0] },
+                    { el: 'N', pos: [0,0,0], group: 'NO3' }, 
+                    { el: 'O', pos: [-0.7,0,0.4], group: 'NO3' }, { el: 'O', pos: [0.7,0,0.4], group: 'NO3' }, { el: 'O', pos: [0,0,1.1] }
+                ]}
+            ]
+        }
+    };
+
+    let currentKey = 'iron';
+    let coefficients = { reactants: [1, 1, 1, 1], products: [1, 1, 1, 1] };
+    let spawnedObjects = [];
+    let isBalanced = false;
+    let massDifference = 0; 
+    
+    let scene, camera, renderer, world;
+    let beamBody, beamMesh;
+
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x060606);
+        camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 18, 35);
+        camera.lookAt(0, -2, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        dirLight.position.set(10, 25, 15);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        world = new CANNON.World();
+        world.gravity.set(0, -40, 0);
+
+        setupPhysicalSeesaw();
+        setupUI();
+        syncSimulation();
+        animate();
+
+        window.addEventListener('resize', onWindowResize);
+    }
+
+    function setupPhysicalSeesaw() {
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.95 });
+
+        const fulcrumGroup = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.5, 0.5, 32), woodMat);
+        base.position.y = -5.75;
+        fulcrumGroup.add(base);
+
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.5, 4.5, 32), woodMat);
+        pillar.position.y = -3.5;
+        fulcrumGroup.add(pillar);
+
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 2.5, 32), woodMat);
+        cap.rotation.z = Math.PI / 2;
+        cap.position.y = -1.2; 
+        fulcrumGroup.add(cap);
+        scene.add(fulcrumGroup);
+
+        const beamW = 32, beamH = 1.0, beamD = 10.0;
+        beamMesh = new THREE.Group();
+        const plank = new THREE.Mesh(new THREE.BoxGeometry(beamW, beamH, beamD), woodMat);
+        plank.castShadow = true;
+        plank.receiveShadow = true;
+        beamMesh.add(plank);
+
+        const marker = new THREE.Mesh(
+            new THREE.BoxGeometry(0.3, 0.15, beamD + 0.1),
+            new THREE.MeshBasicMaterial({ color: 0xffcc00 })
+        );
+        marker.position.y = beamH/2 + 0.08;
+        beamMesh.add(marker);
+        scene.add(beamMesh);
+
+        beamBody = new CANNON.Body({ 
+            mass: 300, 
+            shape: new CANNON.Box(new CANNON.Vec3(beamW/2, beamH/2, beamD/2)),
+            angularDamping: 0.98,
+            linearDamping: 0.9,
+            position: new CANNON.Vec3(0, -1, 0),
+        });
+        world.addBody(beamBody);
+
+        const hinge = new CANNON.HingeConstraint(new CANNON.Body({ mass: 0 }), beamBody, {
+            pivotA: new CANNON.Vec3(0, -1, 0), axisA: new CANNON.Vec3(0, 0, 1),
+            pivotB: new CANNON.Vec3(0, 0, 0), axisB: new CANNON.Vec3(0, 0, 1)
+        });
+        world.addConstraint(hinge);
+    }
+
+    function placeMoleculeOnBoard(moleculeData, coeff, startXOffset, sideFactor) {
+        const spacingX = 3.6; 
+        const spacingZ = 3.0;
+        const gridCols = 2;
+
+        for (let i = 0; i < coeff; i++) {
+            const row = Math.floor(i / gridCols);
+            const col = i % gridCols;
+            const baseX = sideFactor * (startXOffset + col * spacingX);
+            const baseZ = (row - 1) * spacingZ;
+            const plankTopLocalY = 0.5; 
+
+            moleculeData.atoms.forEach((atomDef) => {
+                const data = ATOM_DATA[atomDef.el];
+                const mesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(data.size, 16, 16),
+                    new THREE.MeshStandardMaterial({ 
+                        color: data.color, 
+                        roughness: 0.2, 
+                        metalness: 0.5,
+                        emissive: data.color,
+                        emissiveIntensity: 0.15
+                    })
+                );
+                mesh.castShadow = true;
+                scene.add(mesh);
+
+                const body = new CANNON.Body({ mass: 0.1, shape: new CANNON.Sphere(data.size) });
+                const localPos = new CANNON.Vec3(
+                    baseX + atomDef.pos[0],
+                    plankTopLocalY + data.size + (atomDef.pos[1] || 0) + 0.1,
+                    baseZ + (atomDef.pos[2] || 0)
+                );
+                
+                const worldPos = beamBody.pointToWorldFrame(localPos);
+                body.position.copy(worldPos);
+                body.quaternion.copy(beamBody.quaternion);
+                world.addBody(body);
+
+                const lock = new CANNON.LockConstraint(body, beamBody);
+                lock.isAtomLock = true;
+                world.addConstraint(lock);
+                spawnedObjects.push({ mesh, body });
+            });
+        }
+    }
+
+    function syncSimulation() {
+        spawnedObjects.forEach(obj => { scene.remove(obj.mesh); world.remove(obj.body); });
+        world.constraints.filter(c => c.isAtomLock).forEach(c => world.removeConstraint(c));
+        spawnedObjects = [];
+        beamBody.velocity.set(0, 0, 0);
+        beamBody.angularVelocity.set(0, 0, 0);
+
+        const rx = REACTIONS[currentKey];
+        const rCont = document.getElementById('reactants-controls');
+        const pCont = document.getElementById('products-controls');
+        rCont.innerHTML = ''; pCont.innerHTML = '';
+
+        rx.reactants.forEach((r, idx) => {
+            if (idx > 0) rCont.insertAdjacentHTML('beforeend', '<span class="opacity-20 self-center text-white mx-1">+</span>');
+            rCont.appendChild(createControl('reactants', idx, r.label));
+            placeMoleculeOnBoard(r, coefficients.reactants[idx], 2.5 + (idx * 6.5), -1);
+        });
+
+        rx.products.forEach((p, idx) => {
+            if (idx > 0) pCont.insertAdjacentHTML('beforeend', '<span class="opacity-20 self-center text-white mx-1">+</span>');
+            pCont.appendChild(createControl('products', idx, p.label));
+            placeMoleculeOnBoard(p, coefficients.products[idx], 2.5 + (idx * 6.5), 1);
+        });
+
+        updateInventoryUI();
+    }
+
+    function createControl(side, index, label) {
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-1 pointer-auto bg-black/50 p-1 rounded-lg border border-white/5';
+        const input = document.createElement('input');
+        input.type = 'number'; input.min = '1'; input.max = '8';
+        input.value = coefficients[side][index];
+        input.className = `w-10 md:w-12 bg-black text-white text-center rounded border ${side === 'reactants' ? 'border-amber-600' : 'border-red-600'} p-0.5 font-bold text-lg outline-none`;
+        input.onchange = (e) => {
+            coefficients[side][index] = Math.min(8, Math.max(1, parseInt(e.target.value) || 1));
+            syncSimulation();
+        };
+        const span = document.createElement('span');
+        span.className = "text-white/80 font-bold text-sm md:text-base whitespace-nowrap";
+        span.innerHTML = label.replace(/(\d+)/g, '<sub>$1</sub>');
+        div.append(input, span);
+        return div;
+    }
+
+    function updateInventoryUI() {
+        const rC = document.getElementById('reactant-inventory');
+        const pC = document.getElementById('product-inventory');
+        const status = document.getElementById('balance-status');
+        rC.innerHTML = ''; pC.innerHTML = '';
+
+        const rx = REACTIONS[currentKey];
+        const trackingKeys = new Set();
+        const isPoly = currentKey === 'naso4';
+
+        if (isPoly) {
+            trackingKeys.add('Na'); trackingKeys.add('Ca'); trackingKeys.add('SO4'); trackingKeys.add('NO3');
+        } else {
+            rx.reactants.forEach(m => m.atoms.forEach(a => trackingKeys.add(a.el)));
+        }
+
+        let balanced = true;
+        let totalReactantMass = 0;
+        let totalProductMass = 0;
+
+        Array.from(trackingKeys).forEach(key => {
+            const mass = ATOM_DATA[key].mass;
+            
+            const countInSide = (sideArr, sideCoeffs) => {
+                let count = 0;
+                sideArr.forEach((mol, i) => {
+                    let groupCount = 0;
+                    if (isPoly && (key === 'SO4' || key === 'NO3')) {
+                        const centralAtom = key === 'SO4' ? 'S' : 'N';
+                        groupCount = mol.atoms.filter(a => a.el === centralAtom && a.group === key).length;
+                    } else {
+                        groupCount = mol.atoms.filter(a => a.el === key && !a.group).length;
+                    }
+                    count += groupCount * sideCoeffs[i];
+                });
+                return count;
+            };
+
+            const rCount = countInSide(rx.reactants, coefficients.reactants);
+            const pCount = countInSide(rx.products, coefficients.products);
+            
+            totalReactantMass += rCount * mass;
+            totalProductMass += pCount * mass;
+
+            const match = rCount === pCount;
+            if (!match) balanced = false;
+            const color = `#${ATOM_DATA[key].color.toString(16).padStart(6, '0')}`;
+            
+            const card = (v, m) => `
+                <div class="flex flex-col items-center bg-black/80 p-3 rounded-xl min-w-[70px] border-2 ${m ? 'border-green-500' : 'border-white/10'} shadow-lg scale-110">
+                    <div class="w-3 h-3 rounded-full mb-1.5" style="background: ${color}"></div>
+                    <span class="text-[10px] text-gray-400 font-bold">${key.replace(/(\d+)/g, '<sub>$1</sub>')}</span>
+                    <span class="text-xl font-black ${m ? 'text-green-400' : 'text-white'}">${v}</span>
+                </div>`;
+            
+            rC.innerHTML += card(rCount, match);
+            pC.innerHTML += card(pCount, match);
+        });
+
+        isBalanced = balanced;
+        massDifference = totalProductMass - totalReactantMass;
+        status.innerText = balanced ? "BALANCED ✓" : "UNBALANCED";
+        status.className = balanced ? "px-4 py-1 rounded-full text-sm font-black border border-green-500 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]" : "px-4 py-1 rounded-full text-sm font-black border border-red-500 text-red-400";
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        world.step(1/60);
+
+        if (!isBalanced) {
+            const targetTilt = -Math.sign(massDifference) * Math.min(0.25, Math.abs(massDifference) * 0.003);
+            const tiltError = targetTilt - beamBody.quaternion.z;
+            beamBody.angularVelocity.z += tiltError * 0.8; 
+            beamBody.angularVelocity.z *= 0.85;
+        } else {
+            beamBody.angularVelocity.z += (0 - beamBody.quaternion.z) * 3.0; 
+            beamBody.angularVelocity.z *= 0.8;
+            if (Math.abs(beamBody.quaternion.z) < 0.001) { beamBody.quaternion.z = 0; beamBody.angularVelocity.z = 0; }
+        }
+
+        const limit = 0.25; 
+        if (beamBody.quaternion.z > limit) { beamBody.quaternion.z = limit; beamBody.angularVelocity.z = 0; }
+        if (beamBody.quaternion.z < -limit) { beamBody.quaternion.z = -limit; beamBody.angularVelocity.z = 0; }
+
+        beamMesh.position.copy(beamBody.position);
+        beamMesh.quaternion.copy(beamBody.quaternion);
+        spawnedObjects.forEach(obj => {
+            obj.mesh.position.copy(obj.body.position);
+            obj.mesh.quaternion.copy(obj.body.quaternion);
+        });
+        renderer.render(scene, camera);
+    }
+
+    function setupUI() {
+        document.getElementById('equation-select').onchange = (e) => {
+            currentKey = e.target.value;
+            coefficients = { reactants: [1, 1, 1, 1], products: [1, 1, 1, 1] };
+            syncSimulation();
+        };
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
