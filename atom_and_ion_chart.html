@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atom & Ion Interactive Chart</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font import for a cleaner look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+        }
+        /* Style for the input fields */
+        .chart-input {
+            width: 100%;
+            padding: 0.5rem 0.25rem;
+            text-align: center;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            transition: background-color 0.3s ease;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            font-size: 0.875rem; /* text-sm */
+        }
+        /* Style for cells containing text, not inputs */
+        .chart-static {
+            padding: 0.5rem 0.25rem;
+            text-align: center;
+        }
+        /* Responsive Table Scroll */
+        .table-container {
+            overflow-x: auto;
+        }
+        /* Sticky Table Headers for better UX on scroll */
+        thead th {
+            position: sticky;
+            top: 0;
+            background-color: #1f2937; /* Dark Gray */
+            color: white;
+            z-index: 10;
+        }
+
+        /* --- PRINT STYLES (for PDF Export) --- */
+        @media print {
+            /* Class to hide all non-essential interactive elements */
+            .print-hide { 
+                display: none !important; 
+            }
+            
+            /* Format student info (Name/Date/Period) for a clean printout */
+            #student-info {
+                display: flex !important;
+                justify-content: space-between;
+                margin-bottom: 10px;
+                width: 100%;
+            }
+            #student-info label {
+                flex: 1; /* Distribute space evenly */
+                margin-right: 20px;
+                border: none;
+                padding: 0;
+                font-weight: bold;
+                color: #000;
+                display: block;
+            }
+            #student-info input {
+                border: none;
+                border-bottom: 1px solid #000; /* Line for filling in */
+                padding: 0;
+                margin-top: 5px;
+                font-weight: normal;
+                color: #000;
+                box-shadow: none;
+                background-color: transparent;
+                width: 100%; /* Ensure inputs take full width of label */
+            }
+
+            /* Make all chart-inputs appear as plain text for printing */
+            .chart-input {
+                border: none !important;
+                background-color: transparent !important;
+                box-shadow: none !important;
+                padding: 0;
+                margin: 0;
+                min-height: 1.5em;
+                color: #000 !important; 
+                border-bottom: 1px solid #000 !important; /* Solid line for filled-in data */
+            }
+            
+            /* Ensure table colors are transparent for print */
+            .bg-white, .bg-gray-50, .bg-gray-100, .bg-yellow-100, .bg-green-100, .bg-red-100 {
+                background-color: transparent !important;
+            }
+
+            /* Add borders back to the table for clean lines */
+            #quizTable {
+                border-collapse: collapse;
+            }
+            #quizTable th, #quizTable td {
+                border: 1px solid #444;
+            }
+            
+            /* Ensure the row index and static cells are clean */
+            #quizTable .chart-static, #quizTable .font-medium {
+                border: 1px solid #444;
+                background-color: transparent !important;
+            }
+
+            /* Ensure headers look good */
+            thead th {
+                background-color: #eee !important;
+                color: #000 !important;
+                border: 1px solid #444;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">Atom & Ion Chart Challenge</h1>
+            
+            <!-- NEW: Name/Date/Period Inputs -->
+            <div id="student-info" class="flex flex-wrap justify-center gap-4 mt-4 mb-6 text-left">
+                <label class="text-sm font-medium text-gray-700 w-full sm:w-1/3 md:w-1/4">
+                    Name:
+                    <input type="text" id="studentName" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Enter your name">
+                </label>
+                <label class="text-sm font-medium text-gray-700 w-full sm:w-1/3 md:w-1/4">
+                    Date:
+                    <input type="date" id="studentDate" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                </label>
+                <label class="text-sm font-medium text-gray-700 w-full sm:w-1/3 md:w-1/4">
+                    Period:
+                    <input type="text" id="studentPeriod" class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 3">
+                </label>
+            </div>
+            <!-- END NEW -->
+
+            <p class="text-lg text-gray-600 mt-2">Fill in the missing values. Get instant feedback as you type! Use common notation like 'S2-' or 'S-2' for ions.</p>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-4 mb-6 print-hide">
+            <button id="checkButton" onclick="checkAllAnswers()" class="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-200">
+                Check Answers
+            </button>
+            <button id="resetButton" onclick="resetChart()" class="flex-grow bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-200">
+                Reset Fields & Colors
+            </button>
+            <button id="showButton" onclick="showAnswers()" class="flex-grow bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-200">
+                Show All Solutions
+            </button>
+            <!-- NEW PRINT BUTTON -->
+            <button id="printButton" onclick="window.print()" class="flex-grow bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-200">
+                Print/Export PDF
+            </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-2xl p-4 table-container">
+            <table id="quizTable" class="min-w-full divide-y divide-gray-200">
+                <!-- Table will be populated by JavaScript -->
+            </table>
+        </div>
+
+        <div id="statusMessage" class="mt-6 p-4 text-center text-lg rounded-lg transition-opacity duration-300 opacity-0 bg-white shadow-md print-hide"></div>
+    </div>
+
+    <script>
+        // Data Structure for the Quiz:
+        const CHART_DATA = [
+            { X: "Kr", A: "84", Z: "", p: "", n: "", e: "36", C: "0", correct: { Z: "36", p: "36", n: "48", e: "36" } },
+            { X: "", A: "", Z: "24", p: "24", n: "26", e: "24", C: "0", correct: { X: "Cr", A: "50" } },
+            { X: "Fe³⁺", A: "", Z: "", p: "", n: "30", e: "", C: "3+", correct: { A: "56", Z: "26", p: "26", e: "23" } },
+            { X: "", A: "32", Z: "", p: "", n: "", e: "18", C: "2-", correct: { X: "S²⁻", Z: "16", p: "16", n: "16" } },
+            { X: "", A: "16", Z: "8", p: "8", n: "", e: "10", C: "", correct: { X: "O²⁻", n: "8", C: "2-" } },
+            { X: "Cl", A: "35", Z: "", p: "", n: "", e: "", C: "", correct: { Z: "17", p: "17", n: "18", e: "17", C: "0" } },
+            { X: "", A: "59", Z: "28", p: "", n: "", e: "28", C: "0", correct: { X: "Ni", p: "28", n: "31" } },
+            { X: "Li⁺", A: "", Z: "", p: "", n: "4", e: "", C: "1+", correct: { A: "7", Z: "3", p: "3", e: "2" } },
+            { X: "", A: "197", Z: "79", p: "79", n: "", e: "79", C: "0", correct: { X: "Au", n: "118" } },
+            { X: "", A: "", Z: "5", p: "5", n: "6", e: "5", C: "0", correct: { X: "B", A: "11" } },
+            { X: "", A: "", Z: "", p: "53", n: "74", e: "54", C: "1-", correct: { X: "I⁻", A: "127", Z: "53" } },
+            { X: "", A: "24", Z: "12", p: "12", n: "", e: "", C: "0", correct: { X: "Mg", n: "12", e: "12" } },
+            { X: "S²⁻", A: "34", Z: "", p: "", n: "18", e: "18", C: "", correct: { Z: "16", p: "16", C: "2-" } },
+            { X: "", A: "", Z: "", p: "19", n: "20", e: "18", C: "1+", correct: { X: "K⁺", A: "39", Z: "19" } },
+            { X: "", A: "108", Z: "47", p: "", n: "", e: "47", C: "0", correct: { X: "Ag", p: "47", n: "61" } },
+            { X: "Na⁺", A: "23", Z: "", p: "", n: "", e: "", C: "", correct: { Z: "11", p: "11", n: "12", e: "10", C: "1+" } },
+            { X: "", A: "75", Z: "33", p: "33", n: "", e: "", C: "3-", correct: { X: "As³⁻", n: "42", e: "36" } },
+            { X: "", A: "", Z: "10", p: "10", n: "10", e: "10", C: "", correct: { X: "Ne", A: "20", C: "0" } },
+            { X: "Al³⁺", A: "", Z: "", p: "", n: "14", e: "10", C: "3+", correct: { A: "27", Z: "13", p: "13" } },
+            { X: "", A: "12", Z: "", p: "", n: "", e: "6", C: "0", correct: { X: "C", Z: "6", p: "6", n: "6" } },
+            { X: "N³⁻", A: "14", Z: "", p: "", n: "", e: "", C: "", correct: { Z: "7", p: "7", n: "7", e: "10", C: "3-" } },
+            { X: "", A: "65", Z: "30", p: "", n: "", e: "30", C: "0", correct: { X: "Zn", p: "30", n: "35" } },
+            { X: "", A: "64", Z: "29", p: "29", n: "35", e: "27", C: "", correct: { X: "Cu²⁺", C: "2+" } },
+            { X: "", A: "56", Z: "26", p: "", n: "", e: "26", C: "0", correct: { X: "Fe", p: "26", n: "30" } },
+        ];
+
+        const HEADERS = [
+            { key: "X", label: "Name/Symbol" },
+            { key: "A", label: "Mass Number (A)" },
+            { key: "Z", label: "Atomic Number (Z)" },
+            { key: "p", label: "Protons (p)" },
+            { key: "n", label: "Neutrons (n)" },
+            { key: "e", label: "Electrons (e)" },
+            { key: "C", label: "Charge (C)" },
+        ];
+
+        // --- Utility Functions ---
+
+        // Normalizes string input (trim, case-insensitive, handles various charge formats)
+        function normalizeInput(value, key) {
+            if (typeof value !== 'string') return '';
+            let v = value.trim().toLowerCase().replace(/ /g, '');
+
+            // 1. Normalize Charge Notation (for C column and X column)
+            if (key === 'C' || key === 'X') {
+                // Handle common Unicode superscripts used in the correct answers
+                v = v.replace(/³⁺/g, '+3').replace(/²⁻/g, '-2').replace(/¹⁻/g, '-1').replace(/¹⁺/g, '+1').replace(/²⁺/g, '+2').replace(/³⁻/g, '-3');
+                
+                // Standardize charge format (e.g., 2+ -> +2, 3- -> -3)
+                v = v.replace(/(\d+)([\+\-])/g, '$2$1'); 
+                v = v.replace(/([\+\-])(\d+)/g, '$1$2'); 
+                
+                // Standardize single charges (Li+, I-) to include 1
+                v = v.replace(/(^|\w)\+$/, '$1+1'); 
+                v = v.replace(/(^|\w)-$/, '$1-1'); 
+
+                // Handle zero charge
+                if (v === '0+' || v === '+0' || v === '-0') v = '0';
+            }
+            
+            // 2. Separate Symbol from Charge for the X column
+            if (key === 'X') {
+                const match = v.match(/(\w+)([\+\-]\d+|\d+[\+\-])/);
+                if (match) {
+                    // For symbol check, standardize to lower-case symbol + charge, e.g., fe+3
+                    v = match[1] + match[2];
+                }
+            }
+
+            // 3. Normalize all to lowercase
+            return v;
+        }
+
+        // Deep comparison for checking correctness
+        function isCorrect(userInput, correctValue, key) {
+            if (!userInput || !correctValue) return false;
+
+            const normalizedInput = normalizeInput(userInput, key);
+            const normalizedCorrect = normalizeInput(correctValue, key);
+
+            return normalizedInput === normalizedCorrect;
+        }
+
+        // --- Rendering ---
+
+        function renderTable() {
+            const table = document.getElementById('quizTable');
+            table.innerHTML = '';
+
+            // 1. Create Table Head (Header Row)
+            let thead = table.createTHead();
+            let rowHeader = thead.insertRow();
+            rowHeader.className = "bg-gray-800 text-white uppercase text-xs leading-normal";
+
+            // Add an index column
+            let thIndex = document.createElement('th');
+            thIndex.textContent = '#';
+            thIndex.className = 'py-3 px-3 text-left w-12 rounded-tl-xl';
+            rowHeader.appendChild(thIndex);
+
+            // Add all other column headers
+            HEADERS.forEach(header => {
+                let th = document.createElement('th');
+                th.textContent = header.label;
+                th.className = 'py-3 px-3 text-center tracking-wider';
+                rowHeader.appendChild(th);
+            });
+            // Round the last header corner
+            rowHeader.lastElementChild.classList.add('rounded-tr-xl');
+
+
+            // 2. Create Table Body (Data Rows)
+            let tbody = table.createTBody();
+            tbody.className = "divide-y divide-gray-200";
+
+            CHART_DATA.forEach((rowData, rowIndex) => {
+                let row = tbody.insertRow();
+                row.className = rowIndex % 2 === 0 ? "bg-gray-50 hover:bg-gray-100" : "bg-white hover:bg-gray-100";
+
+                // Index Cell
+                let cellIndex = row.insertCell();
+                cellIndex.textContent = rowIndex + 1;
+                cellIndex.className = 'py-3 px-3 whitespace-nowrap font-medium text-gray-900 text-left';
+
+                // Data Cells
+                HEADERS.forEach(header => {
+                    let cell = row.insertCell();
+                    cell.className = 'py-2 px-2 text-center';
+                    const value = rowData[header.key];
+                    const isInputNeeded = value === "";
+
+                    if (isInputNeeded) {
+                        // Create an input field
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.id = `input_row_${rowIndex}_col_${header.key}`;
+                        input.className = 'chart-input';
+                        input.setAttribute('data-key', header.key);
+                        input.setAttribute('data-row', rowIndex);
+                        input.setAttribute('data-correct', rowData.correct[header.key]);
+                        
+                        // Add the instant feedback listener
+                        input.oninput = checkSingleAnswer;
+
+                        cell.appendChild(input);
+                    } else {
+                        // Display the static value
+                        cell.textContent = value;
+                        cell.className += ' chart-static text-sm text-gray-700 font-medium';
+                    }
+                });
+            });
+        }
+
+        // --- Logic ---
+
+        function checkSingleAnswer() {
+            const inputElement = this; 
+            const userAnswer = inputElement.value;
+            const correctValue = inputElement.getAttribute('data-correct');
+            const key = inputElement.getAttribute('data-key');
+
+
+            // Reset existing colors
+            inputElement.classList.remove('bg-red-100', 'bg-green-100', 'bg-yellow-100', 'border-red-400', 'border-green-400', 'border-yellow-400');
+
+            if (userAnswer.trim() === '') {
+                // If input is empty, revert to neutral white
+                inputElement.classList.add('bg-white');
+            } else if (isCorrect(userAnswer, correctValue, key)) {
+                // Correct: Pale Green
+                inputElement.classList.add('bg-green-100', 'border-green-400');
+            } else {
+                // Incorrect: Pale Red
+                inputElement.classList.add('bg-red-100', 'border-red-400');
+            }
+            
+            checkOverallProgress();
+        }
+
+        function checkOverallProgress() {
+            let correctCount = 0;
+            let totalInputs = 0;
+            const allInputs = document.querySelectorAll('.chart-input');
+            
+            allInputs.forEach(inputElement => {
+                totalInputs++;
+                const userAnswer = inputElement.value;
+                const correctValue = inputElement.getAttribute('data-correct');
+                const key = inputElement.getAttribute('data-key');
+
+                if (isCorrect(userAnswer, correctValue, key)) {
+                    correctCount++;
+                }
+            });
+
+            // Display status message
+            const messageElement = document.getElementById('statusMessage');
+            messageElement.classList.remove('opacity-0', 'bg-red-100', 'bg-green-100', 'bg-yellow-100', 'bg-white', 'shadow-md');
+            
+            if (totalInputs === 0) return; 
+
+            if (correctCount === totalInputs) {
+                messageElement.textContent = `🎉 Fantastic! You got all ${totalInputs} answers correct!`;
+                messageElement.classList.add('opacity-100', 'bg-green-100');
+            } else if (correctCount > 0) {
+                const percentage = Math.round((correctCount / totalInputs) * 100);
+                messageElement.textContent = `Keep going! You have ${correctCount} out of ${totalInputs} correct. (${percentage}%)`;
+                messageElement.classList.add('opacity-100', 'bg-yellow-100');
+            } else {
+                messageElement.textContent = `Start filling in the blanks to see your progress!`;
+                messageElement.classList.add('opacity-100', 'bg-white', 'shadow-md');
+            }
+        }
+
+        function checkAllAnswers() {
+             // Force a check on all existing inputs to ensure colors are updated
+             document.querySelectorAll('.chart-input').forEach(input => {
+                const userAnswer = input.value;
+                const correctValue = input.getAttribute('data-correct');
+                const key = input.getAttribute('data-key');
+                
+                input.classList.remove('bg-red-100', 'bg-green-100', 'bg-yellow-100', 'border-red-400', 'border-green-400', 'border-yellow-400');
+
+                if (userAnswer.trim() === '') {
+                    input.classList.add('bg-white');
+                } else if (isCorrect(userAnswer, correctValue, key)) {
+                    input.classList.add('bg-green-100', 'border-green-400');
+                } else {
+                    input.classList.add('bg-red-100', 'border-red-400');
+                }
+             });
+             
+             checkOverallProgress();
+        }
+
+
+        function resetChart() {
+            document.querySelectorAll('.chart-input').forEach(input => {
+                input.value = '';
+                // Explicitly remove all feedback/solution colors
+                input.classList.remove('bg-red-100', 'bg-green-100', 'bg-yellow-100', 'border-red-400', 'border-green-400', 'border-yellow-400');
+                input.classList.add('bg-white');
+            });
+            const messageElement = document.getElementById('statusMessage');
+            messageElement.classList.remove('opacity-100');
+            messageElement.classList.add('opacity-0');
+            messageElement.textContent = '';
+        }
+
+        function showAnswers() {
+            document.querySelectorAll('.chart-input').forEach(inputElement => {
+                const correctValue = inputElement.getAttribute('data-correct');
+                inputElement.value = correctValue;
+                
+                // Set the solution color
+                inputElement.classList.remove('bg-red-100', 'bg-green-100', 'border-red-400', 'border-green-400', 'border-white');
+                inputElement.classList.add('bg-yellow-100', 'border-yellow-400');
+            });
+
+            const messageElement = document.getElementById('statusMessage');
+            messageElement.classList.remove('opacity-0', 'bg-red-100', 'bg-green-100', 'bg-white', 'shadow-md');
+            messageElement.classList.add('opacity-100', 'bg-yellow-100');
+            messageElement.textContent = `Solutions displayed! Use the 'Reset' button to try again.`;
+        }
+
+        // Initialize the table when the page loads
+        window.onload = renderTable;
+    </script>
+</body>
+</html>
