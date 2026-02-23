@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acid/Base Periodicity Lab: Simulator</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Phosphor Icons for modern UI icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        /* Typography formulas */
+        .formula sub {
+            vertical-align: sub;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+
+        /* --- Realistic Test Tube CSS --- */
+        .glass-tube {
+            width: 90px;
+            height: 280px;
+            /* Glassy effect */
+            background: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.4) 15%, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.05) 70%, rgba(255,255,255,0.3) 85%, rgba(255,255,255,0.1) 100%);
+            border: 3px solid rgba(255, 255, 255, 0.6);
+            border-top: 2px solid rgba(255,255,255,0.8);
+            border-radius: 10px 10px 45px 45px;
+            box-shadow: 
+                inset -5px -5px 15px rgba(0,0,0,0.1),
+                inset 5px 5px 15px rgba(255,255,255,0.4),
+                0 15px 25px rgba(0,0,0,0.3);
+            backdrop-filter: blur(2px);
+            position: relative;
+            z-index: 20;
+            overflow: visible;
+        }
+
+        /* Tube opening lip */
+        .glass-tube::before {
+            content: '';
+            position: absolute;
+            top: -6px; left: -6px; right: -6px; height: 12px;
+            border: 3px solid rgba(255,255,255,0.8);
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Liquid inside tube */
+        .liquid-container {
+            position: absolute;
+            bottom: 3px; left: 3px; right: 3px;
+            height: 60%; /* Fill level */
+            border-radius: 0 0 42px 42px;
+            overflow: visible;
+            z-index: 10;
+        }
+
+        .liquid {
+            width: 100%;
+            height: 100%;
+            border-radius: 0 0 40px 40px;
+            background-color: #4CAF50; /* Initial Neutral */
+            transition: background-color 1.5s ease-in-out;
+            position: relative;
+            box-shadow: inset 0 -10px 20px rgba(0,0,0,0.15);
+        }
+
+        /* Liquid surface (Meniscus) */
+        .meniscus {
+            position: absolute;
+            top: -8px; left: 0; right: 0; height: 16px;
+            border-radius: 50%;
+            background: inherit;
+            filter: brightness(1.15) contrast(1.1);
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.4);
+            transition: background-color 1.5s ease-in-out;
+            z-index: 15;
+        }
+
+        /* Solid element dropping into tube */
+        .solid-piece {
+            position: absolute;
+            width: 18px; height: 18px;
+            background: radial-gradient(circle at 30% 30%, #f3f4f6, #9ca3af, #4b5563);
+            border-radius: 4px;
+            bottom: 10px; left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            z-index: 5;
+        }
+
+        /* Acid drop animation */
+        .acid-drop {
+            position: absolute;
+            width: 12px; height: 16px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            top: -50px; left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            z-index: 25;
+        }
+
+        @keyframes dropIn {
+            0% { top: -60px; opacity: 1; transform: translateX(-50%) scale(1); }
+            80% { top: 120px; opacity: 1; transform: translateX(-50%) scale(1.1); }
+            100% { top: 140px; opacity: 0; transform: translateX(-50%) scale(0); }
+        }
+        
+        @keyframes solidDrop {
+            0% { bottom: 200px; opacity: 1; transform: translateX(-50%) rotate(0deg); }
+            80% { bottom: 15px; opacity: 1; transform: translateX(-50%) rotate(45deg); }
+            100% { bottom: 10px; opacity: 1; transform: translateX(-50%) rotate(55deg); }
+        }
+
+        /* --- Animated Bunsen Flame --- */
+        .burner-stand {
+            position: absolute;
+            bottom: -30px;
+            width: 140px;
+            height: 12px;
+            background: linear-gradient(to bottom, #475569, #1e293b);
+            border-radius: 6px;
+            z-index: 50;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.4);
+        }
+        
+        .flame-container {
+            position: absolute;
+            bottom: -20px; left: 50%;
+            transform: translateX(-50%);
+            width: 40px; height: 70px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 30;
+            pointer-events: none;
+        }
+        
+        .flame-container.active { opacity: 1; }
+
+        .flame-main {
+            position: absolute;
+            bottom: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 100%; height: 100%;
+            background: radial-gradient(ellipse at bottom, #fde68a 10%, #f97316 50%, transparent 80%);
+            border-radius: 50% 50% 20% 20%;
+            filter: blur(2px);
+            animation: flicker 0.15s infinite alternate;
+        }
+
+        .flame-core {
+            position: absolute;
+            bottom: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 50%; height: 50%;
+            background: radial-gradient(ellipse at bottom, #bae6fd 10%, #3b82f6 60%, transparent 100%);
+            border-radius: 50% 50% 20% 20%;
+            animation: flicker-core 0.2s infinite alternate;
+        }
+
+        @keyframes flicker {
+            0% { transform: translateX(-50%) scaleY(1) scaleX(1); opacity: 0.9; }
+            100% { transform: translateX(-50%) scaleY(1.1) scaleX(0.95); opacity: 1; }
+        }
+        @keyframes flicker-core {
+            0% { transform: translateX(-50%) scaleY(1); }
+            100% { transform: translateX(-50%) scaleY(1.05); }
+        }
+
+        /* --- Bubble Animation --- */
+        .bubble {
+            position: absolute;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.2));
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        @keyframes rise {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-160px) scale(1.2); opacity: 0; }
+        }
+
+        /* --- Table Styling --- */
+        .lab-input {
+            width: 100%;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.5rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+            background-color: #f8fafc;
+        }
+        .lab-input:focus {
+            outline: none;
+            border-color: #0d9488;
+            background-color: #fff;
+            box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
+        }
+
+        /* --- Print Styles --- */
+        @media print {
+            body { background-color: #ffffff !important; }
+            .print-hide { display: none !important; }
+            .lg\:w-3\/5 { 
+                width: 100% !important; 
+                margin: 0 !important; 
+                padding: 0 !important;
+                box-shadow: none !important; 
+            }
+            .lab-input {
+                border: none !important;
+                border-bottom: 1px dashed #64748b !important;
+                background: transparent !important;
+                border-radius: 0 !important;
+                padding: 0.1rem !important;
+            }
+            .border-l-4 { border-left-width: 2px !important; }
+            table { border-collapse: collapse !important; }
+            th, td { border: 1px solid #cbd5e1 !important; }
+            .shadow-xl { box-shadow: none !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex overflow-hidden">
+
+    <div class="flex w-full h-screen flex-col lg:flex-row">
+
+        <!-- Left Column: Lab Instructions and Worksheet -->
+        <div id="report-content" class="lg:w-3/5 p-6 md:p-8 lg:p-10 overflow-y-auto custom-scroll space-y-8 bg-white shadow-2xl z-10">
+            
+            <header class="pb-6 border-b-2 border-slate-200">
+                <div class="flex items-center space-x-3 mb-2">
+                    <i class="ph-fill ph-flask text-4xl text-teal-600"></i>
+                    <h1 class="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">Acid/Base Periodicity</h1>
+                </div>
+                <h2 class="text-xl text-teal-600 font-semibold mb-6">Investigating Periodic Trends</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div class="flex items-center space-x-2">
+                        <label class="font-semibold text-slate-600 text-sm uppercase tracking-wide">Student Name</label>
+                        <input type="text" class="flex-1 border-b-2 border-slate-300 bg-transparent px-2 py-1 focus:outline-none focus:border-teal-500 transition-colors text-slate-800" placeholder="Type name here...">
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <label class="font-semibold text-slate-600 text-sm uppercase tracking-wide">Date</label>
+                        <span id="currentDate" class="flex-1 border-b-2 border-slate-300 px-2 py-1 text-slate-800"></span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Performance Expectations -->
+            <section class="rounded-xl border-l-4 border-amber-400 bg-amber-50 p-5">
+                <h3 class="flex items-center text-lg font-bold text-amber-800 mb-3">
+                    <i class="ph-bold ph-target mr-2"></i> Performance Expectations
+                </h3>
+                <ul class="list-disc pl-5 text-amber-900 space-y-2 text-sm leading-relaxed">
+                    <li><span class="font-bold">HS-PS1-1:</span> Use the periodic table as a model to predict the relative properties of elements based on the patterns of electrons in the outermost energy level of atoms.</li>
+                    <li><span class="font-bold">HS-PS1-2:</span> Construct and revise an explanation for the outcome of a simple chemical reaction based on the outermost electron states of atoms, trends in the periodic table, and knowledge of the patterns of chemical properties.</li>
+                </ul>
+            </section>
+
+            <!-- Part II: Metals -->
+            <section class="space-y-4">
+                <h3 class="flex items-center text-2xl font-bold text-teal-700 pb-2 border-b-2 border-teal-100">
+                    <i class="ph-fill ph-hexagon mr-2"></i> Part II: Metal Reactions with Water
+                </h3>
+                <p class="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <strong class="text-slate-800">Procedure:</strong> Metals (Ca, Mg, Al) are added to water containing Universal Indicator (UI). Magnesium and Aluminum tubes can be heated to observe any increase in reactivity.
+                </p>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm mt-4">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-teal-50/50">
+                            <tr>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-teal-800 uppercase tracking-wider">Element</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-teal-800 uppercase tracking-wider">Initial Reaction</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-teal-800 uppercase tracking-wider">Color After 5 min</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-teal-800 uppercase tracking-wider">After Heating</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-teal-800 uppercase tracking-wider">Final Color/pH</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 bg-white">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 whitespace-nowrap text-sm font-semibold text-slate-700">Calcium (Ca)</td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Observation..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Color..."></td>
+                                <td class="py-2 px-2"><div class="text-xs font-bold text-rose-500 bg-rose-50 px-2 py-1 rounded text-center border border-rose-100">DO NOT HEAT!</div></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Color/pH..."></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 whitespace-nowrap text-sm font-semibold text-slate-700">Magnesium (Mg)</td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Observation..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Color..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Observation..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Color/pH..."></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 whitespace-nowrap text-sm font-semibold text-slate-700">Aluminum (Al)</td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Observation..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Color..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Observation..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Color/pH..."></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+             <!-- Part III: Acids -->
+             <section class="space-y-4 pt-4">
+                <h3 class="flex items-center text-2xl font-bold text-rose-700 pb-2 border-b-2 border-rose-100">
+                    <i class="ph-fill ph-drop mr-2"></i> Part III: Non-Metal Oxide Solutions
+                </h3>
+                <p class="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <strong class="text-slate-800">Procedure:</strong> A few drops of the acid solution (derived from non-metal oxides) are added to water containing Universal Indicator (UI).
+                </p>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm mt-4">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-rose-50/50">
+                            <tr>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-rose-800 uppercase tracking-wider">Solution Name</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-rose-800 uppercase tracking-wider">Student Formula</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-rose-800 uppercase tracking-wider">Observation on Addition</th>
+                                <th class="py-3 px-4 text-left text-xs font-bold text-rose-800 uppercase tracking-wider">Final Color/pH</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 bg-white">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 whitespace-nowrap text-sm font-semibold text-slate-700">Sulfur</td>
+                                <td class="py-3 px-4 whitespace-nowrap text-sm font-medium formula text-slate-600">SO₂(<span class="formula">OH</span>)₂</td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Observation..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Color/pH..."></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 whitespace-nowrap text-sm font-semibold text-slate-700">Phosphorus</td>
+                                <td class="py-3 px-4 whitespace-nowrap text-sm font-medium formula text-slate-600">PO(<span class="formula">OH</span>)₃</td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Observation..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Color/pH..."></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 whitespace-nowrap text-sm font-semibold text-slate-700">Carbon</td>
+                                <td class="py-3 px-4 whitespace-nowrap text-sm font-medium formula text-slate-600">CO(<span class="formula">OH</span>)₂</td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Observation..."></td>
+                                <td class="py-2 px-2"><input type="text" class="lab-input" placeholder="Color/pH..."></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Reference Table -->
+            <section class="pt-6 pb-10">
+                <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Reference: Universal Indicator Colors</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    <div class="rounded-lg overflow-hidden border border-slate-200 shadow-sm text-center">
+                        <div class="h-6 bg-[#F44336]"></div>
+                        <div class="p-2 bg-white"><div class="text-xs font-bold text-slate-800">Red</div><div class="text-[10px] text-slate-500">pH &le; 3</div></div>
+                    </div>
+                    <div class="rounded-lg overflow-hidden border border-slate-200 shadow-sm text-center">
+                        <div class="h-6 bg-[#FF9800]"></div>
+                        <div class="p-2 bg-white"><div class="text-xs font-bold text-slate-800">Orange</div><div class="text-[10px] text-slate-500">pH ~ 3-4</div></div>
+                    </div>
+                    <div class="rounded-lg overflow-hidden border border-slate-200 shadow-sm text-center">
+                        <div class="h-6 bg-[#FFEB3B]"></div>
+                        <div class="p-2 bg-white"><div class="text-xs font-bold text-slate-800">Yellow</div><div class="text-[10px] text-slate-500">pH ~ 4-5</div></div>
+                    </div>
+                    <div class="rounded-lg overflow-hidden border border-slate-200 shadow-sm text-center">
+                        <div class="h-6 bg-[#4CAF50]"></div>
+                        <div class="p-2 bg-white"><div class="text-xs font-bold text-slate-800">Green</div><div class="text-[10px] text-slate-500">pH 7</div></div>
+                    </div>
+                    <div class="rounded-lg overflow-hidden border border-slate-200 shadow-sm text-center">
+                        <div class="h-6 bg-[#81D4FA]"></div>
+                        <div class="p-2 bg-white"><div class="text-xs font-bold text-slate-800">Blue-Grn</div><div class="text-[10px] text-slate-500">pH 8-9</div></div>
+                    </div>
+                    <div class="rounded-lg overflow-hidden border border-slate-200 shadow-sm text-center">
+                        <div class="h-6 bg-[#CE93D8]"></div>
+                        <div class="p-2 bg-white"><div class="text-xs font-bold text-slate-800">Violet</div><div class="text-[10px] text-slate-500">pH &ge; 10</div></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Right Column: Interactive Simulation (Hidden on Print) -->
+        <div class="lg:w-2/5 flex flex-col print-hide bg-slate-900 border-l border-slate-800 shadow-2xl z-20 relative">
+            
+            <!-- Simulator Header/Controls -->
+            <div class="p-6 bg-slate-800 border-b border-slate-700 shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-white flex items-center">
+                        <i class="ph-fill ph-monitor-play mr-2 text-teal-400"></i> Virtual Lab
+                    </h3>
+                    <button id="downloadReportBtn" class="flex items-center text-xs font-semibold bg-indigo-500 hover:bg-indigo-600 text-white py-1.5 px-3 rounded-md transition-colors shadow-sm">
+                        <i class="ph-bold ph-printer mr-1.5"></i> Print Report
+                    </button>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="ph-bold ph-flask text-slate-400"></i>
+                        </div>
+                        <select id="elementSelector" class="w-full bg-slate-900 text-white border border-slate-600 rounded-lg py-2.5 pl-10 pr-4 shadow-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none font-medium cursor-pointer transition-colors hover:border-slate-500">
+                            <optgroup label="Metals (React with Water)">
+                                <option value="Ca">Calcium (Ca)</option>
+                                <option value="Mg">Magnesium (Mg)</option>
+                                <option value="Al">Aluminum (Al)</option>
+                            </optgroup>
+                            <optgroup label="Non-Metal Oxide Solutions">
+                                <option value="SO2_OH2">Sulfur (SO₂(OH)₂)</option>
+                                <option value="PO_OH3">Phosphorus (PO(OH)₃)</option>
+                                <option value="CO_OH2">Carbon (CO(OH)₂)</option>
+                            </optgroup>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i class="ph-bold ph-caret-down text-slate-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <button id="startReactionBtn" class="flex-1 flex justify-center items-center bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-2.5 px-4 rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="ph-bold ph-play mr-2"></i> <span id="startBtnText">Add to Tube</span>
+                        </button>
+                        <button id="heatBtn" class="flex-1 flex justify-center items-center bg-rose-500 hover:bg-rose-400 text-white font-bold py-2.5 px-4 rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-rose-500" disabled>
+                            <i class="ph-bold ph-fire mr-2"></i> Heat
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Stage -->
+            <div class="flex-grow relative flex items-center justify-center p-8 overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-slate-950">
+                
+                <!-- Status Overlay (Top) -->
+                <div id="statusBox" class="absolute top-6 inset-x-6 bg-slate-800/80 backdrop-blur-sm border border-slate-700 p-4 rounded-xl shadow-xl flex items-start space-x-3 transition-colors duration-300">
+                    <div id="statusIcon" class="text-2xl mt-0.5 text-blue-400"><i class="ph-fill ph-info"></i></div>
+                    <div class="flex-1">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Live Observation</h4>
+                        <p id="statusText" class="text-sm font-medium text-slate-200 leading-snug">Ready. Select an element or acid solution and click the button to begin.</p>
+                    </div>
+                </div>
+
+                <!-- Reset Button (Floating) -->
+                <button id="resetBtn" class="absolute bottom-6 right-6 flex items-center bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold py-2 px-4 rounded-full transition-all shadow-lg border border-slate-600 active:scale-95 z-50">
+                    <i class="ph-bold ph-arrows-counter-clockwise mr-2"></i> Reset
+                </button>
+
+                <!-- 3D Lab Setup -->
+                <div class="relative w-64 h-[350px] flex flex-col items-center justify-end pb-[40px]">
+                    
+                    <!-- Falling animations containers -->
+                    <div id="animDrop" class="acid-drop"></div>
+                    
+                    <!-- Test Tube -->
+                    <div id="testTube" class="glass-tube">
+                        <!-- Liquid -->
+                        <div class="liquid-container">
+                            <div id="fluid" class="liquid">
+                                <div class="meniscus"></div>
+                                <!-- Solid Metal Piece -->
+                                <div id="elementPiece" class="solid-piece"></div>
+                                <!-- Bubbles -->
+                                <div id="bubbleContainer" class="absolute inset-0 overflow-hidden rounded-b-[40px]"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Burner System -->
+                    <div class="burner-stand"></div>
+                    <div id="flameIndicator" class="flame-container">
+                        <div class="flame-main"></div>
+                        <div class="flame-core"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set Date
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+            const elementSelector = document.getElementById('elementSelector');
+            const startReactionBtn = document.getElementById('startReactionBtn');
+            const startBtnText = document.getElementById('startBtnText');
+            const heatBtn = document.getElementById('heatBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const downloadReportBtn = document.getElementById('downloadReportBtn');
+            
+            const fluidElement = document.getElementById('fluid');
+            const meniscusElement = document.querySelector('.meniscus');
+            const elementPieceElement = document.getElementById('elementPiece');
+            const flameIndicator = document.getElementById('flameIndicator');
+            const bubbleContainer = document.getElementById('bubbleContainer');
+            const animDrop = document.getElementById('animDrop');
+            
+            const statusBox = document.getElementById('statusBox');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            
+            let currentElement = null;
+            let reactionInterval = null;
+            let isHeated = false;
+
+            // Colors based on UI scale
+            const UI_COLORS = {
+                NEUTRAL: '#4CAF50', // Green
+                MILD_BASIC: '#81D4FA', // Blue-Green
+                HIGH_BASIC: '#CE93D8',  // Violet
+                MILD_ACIDIC: '#FFEB3B', // Yellow
+                ORANGE_ACIDIC: '#FF9800', // Orange
+                HIGH_ACIDIC: '#F44336' // Red
+            };
+
+            const REACTIONS = {
+                Ca: { 
+                    type: 'metal', speed: 40, heatable: false, 
+                    color: UI_COLORS.HIGH_BASIC, 
+                    observation: 'Vigorous bubbling observed. Solution rapidly changes to Violet (Highly Basic).' 
+                },
+                Mg: { 
+                    type: 'metal', speed: 250, heatable: true, 
+                    color: UI_COLORS.MILD_BASIC, 
+                    observation: 'Very slow, sparse bubbling. Gradual color shift to Blue-Green (Mildly Basic).',
+                    heatedSpeed: 40,
+                    heatedColor: UI_COLORS.HIGH_BASIC,
+                    heatedObservation: 'Upon heating, bubbling becomes vigorous. Color quickly shifts to Violet (Highly Basic).'
+                },
+                Al: { 
+                    type: 'metal', speed: 0, heatable: true, 
+                    color: UI_COLORS.NEUTRAL, 
+                    observation: 'No observable reaction (due to protective oxide layer). Solution remains Green (Neutral).',
+                    heatedSpeed: 150,
+                    heatedColor: UI_COLORS.MILD_BASIC,
+                    heatedObservation: 'Heating disrupts oxide layer. Slow bubbling begins. Gradual color shift to Blue-Green (Mildly Basic).'
+                },
+                SO2_OH2: {
+                    type: 'acid', speed: 0, heatable: false, 
+                    color: UI_COLORS.HIGH_ACIDIC,
+                    observation: 'A few drops added. Solution instantly changes to Red (Highly Acidic). No visible gas.' 
+                },
+                PO_OH3: {
+                    type: 'acid', speed: 0, heatable: false, 
+                    color: UI_COLORS.ORANGE_ACIDIC,
+                    observation: 'A few drops added. Solution instantly changes to Orange (Stronger Mildly Acidic). No visible gas.' 
+                },
+                CO_OH2: {
+                    type: 'acid', speed: 0, heatable: false, 
+                    color: UI_COLORS.MILD_ACIDIC,
+                    observation: 'A few drops added. Solution instantly changes to Yellow (Mildly Acidic). No visible gas.'
+                }
+            };
+
+            function updateButtonState(key) {
+                const type = REACTIONS[key]?.type;
+                if (type === 'metal') {
+                    startBtnText.textContent = 'Drop Metal';
+                    heatBtn.disabled = !REACTIONS[key].heatable;
+                } else {
+                    startBtnText.textContent = 'Add Acid Drops';
+                    heatBtn.disabled = true;
+                }
+            }
+
+            function setStatus(msg, type = 'info') {
+                statusText.textContent = msg;
+                statusBox.className = 'absolute top-6 inset-x-6 backdrop-blur-sm border p-4 rounded-xl shadow-xl flex items-start space-x-3 transition-colors duration-300 ';
+                
+                if(type === 'info') {
+                    statusBox.classList.add('bg-slate-800/80', 'border-slate-700');
+                    statusIcon.innerHTML = '<i class="ph-fill ph-info text-blue-400"></i>';
+                } else if (type === 'success') {
+                    statusBox.classList.add('bg-teal-900/40', 'border-teal-700');
+                    statusIcon.innerHTML = '<i class="ph-fill ph-check-circle text-teal-400"></i>';
+                } else if (type === 'warning') {
+                    statusBox.classList.add('bg-amber-900/40', 'border-amber-700');
+                    statusIcon.innerHTML = '<i class="ph-fill ph-warning-circle text-amber-400"></i>';
+                } else if (type === 'danger') {
+                    statusBox.classList.add('bg-rose-900/40', 'border-rose-700');
+                    statusIcon.innerHTML = '<i class="ph-fill ph-warning-octagon text-rose-400"></i>';
+                }
+            }
+
+            function createBubble(speedMs) {
+                const bubble = document.createElement('div');
+                const size = Math.random() * 6 + 4; // 4-10px
+                const duration = 1500 + Math.random() * 1000; 
+
+                bubble.classList.add('bubble');
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${Math.random() * 80 + 10}%`;
+                bubble.style.bottom = '10px';
+
+                bubble.style.animation = `rise ${duration}ms ease-in infinite`;
+                
+                bubbleContainer.appendChild(bubble);
+
+                setTimeout(() => {
+                    if (bubbleContainer.contains(bubble)) bubble.remove();
+                }, duration);
+            }
+
+            function updateFluidColor(color) {
+                fluidElement.style.backgroundColor = color;
+                // Meniscus inherits color but we force a trigger if needed, though CSS handles it
+            }
+
+            function startReaction(key) {
+                if (currentElement) {
+                    setStatus('Please reset the tube before starting a new reaction.', 'warning');
+                    return;
+                }
+
+                currentElement = key;
+                const reaction = REACTIONS[key];
+                
+                startReactionBtn.disabled = true;
+                elementSelector.disabled = true;
+                heatBtn.disabled = true; // temporarily disable until animation finishes
+
+                // 1. Play Drop Animation
+                if (reaction.type === 'metal') {
+                    elementPieceElement.style.backgroundColor = key === 'Al' ? '#9ca3af' : '#e5e7eb';
+                    elementPieceElement.style.animation = 'solidDrop 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards';
+                    
+                    setTimeout(() => {
+                        triggerReactionEffects(reaction);
+                        heatBtn.disabled = !reaction.heatable;
+                    }, 600);
+
+                } else {
+                    animDrop.style.animation = 'none';
+                    animDrop.offsetHeight; /* trigger reflow */
+                    animDrop.style.animation = 'dropIn 0.8s cubic-bezier(0.5, 0, 1, 1) forwards';
+                    
+                    setTimeout(() => {
+                        triggerReactionEffects(reaction);
+                        heatBtn.disabled = true;
+                    }, 600);
+                }
+            }
+
+            function triggerReactionEffects(reaction) {
+                // Color change
+                updateFluidColor(reaction.color);
+                
+                // Set Status
+                let msgType = 'success';
+                if(reaction.color === UI_COLORS.HIGH_ACIDIC || reaction.color === UI_COLORS.ORANGE_ACIDIC) msgType = 'danger';
+                if(reaction.color === UI_COLORS.MILD_ACIDIC) msgType = 'warning';
+                setStatus(reaction.observation, msgType);
+
+                // Bubbling
+                if (reaction.speed > 0) {
+                    reactionInterval = setInterval(() => createBubble(reaction.speed), reaction.speed);
+                }
+            }
+
+            function applyHeat() {
+                if (!currentElement || REACTIONS[currentElement].type !== 'metal') return;
+                
+                const reaction = REACTIONS[currentElement];
+
+                if (currentElement === 'Ca') {
+                    setStatus('SAFETY WARNING: Do not heat Calcium! Reaction is too violent.', 'danger');
+                    return;
+                }
+
+                if (isHeated) return;
+
+                if (reaction.heatable) {
+                    isHeated = true;
+                    heatBtn.disabled = true;
+
+                    // Flame on
+                    flameIndicator.classList.add('active');
+
+                    // Adjust reaction
+                    clearInterval(reactionInterval);
+                    reactionInterval = setInterval(() => createBubble(reaction.heatedSpeed), reaction.heatedSpeed);
+
+                    updateFluidColor(reaction.heatedColor);
+                    setStatus(reaction.heatedObservation, 'warning');
+                }
+            }
+
+            function resetSimulation() {
+                currentElement = null;
+                isHeated = false;
+                
+                clearInterval(reactionInterval);
+                reactionInterval = null;
+                bubbleContainer.innerHTML = ''; 
+
+                // Reset visuals
+                updateFluidColor(UI_COLORS.NEUTRAL);
+                flameIndicator.classList.remove('active');
+                
+                elementPieceElement.style.animation = 'none';
+                elementPieceElement.style.opacity = '0';
+                
+                animDrop.style.animation = 'none';
+                animDrop.style.opacity = '0';
+
+                // Reset UI
+                startReactionBtn.disabled = false;
+                elementSelector.disabled = false;
+                elementSelector.value = 'Ca';
+                updateButtonState('Ca');
+                
+                setStatus('Ready. Select an element or acid solution and click the button to begin.', 'info');
+            }
+
+            // Events
+            startReactionBtn.addEventListener('click', () => startReaction(elementSelector.value));
+            heatBtn.addEventListener('click', applyHeat);
+            resetBtn.addEventListener('click', resetSimulation);
+            downloadReportBtn.addEventListener('click', () => window.print());
+            
+            elementSelector.addEventListener('change', (e) => {
+                updateButtonState(e.target.value);
+                if (currentElement) resetSimulation();
+            });
+
+            // Init
+            updateButtonState('Ca');
+        });
+    </script>
+</body>
+</html>
