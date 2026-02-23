@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Newton's Law Lab – Interactive</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    /* Hide elements when printing */
+    @media print {
+      .no-print { display:none !important; }
+      body { background: white; }
+      .shadow-sm, .shadow-md { box-shadow: none !important; border: 1px solid #e2e8f0; }
+    }
+    
+    /* Custom Range Slider Thumb */
+    input[type=range] {
+      -webkit-appearance: none; /* Hides the slider so that custom slider can be made */
+      width: 100%;
+      background: transparent; 
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #2563eb;
+      cursor: pointer;
+      margin-top: -6px; /* You need to specify a margin in Chrome, but in Firefox and IE it is automatic */
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      border: 2px solid white;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: #e2e8f0;
+      border-radius: 4px;
+    }
+    input[type=range]:focus {
+      outline: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-brand-100 selection:text-brand-700 min-h-screen pb-12">
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-10 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900">Newton's Law Lab</h1>
+          <p class="text-sm text-slate-500 mt-0.5">Interactive Kinematics & Dynamics Simulation</p>
+        </div>
+        <div class="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
+          <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-slate-600 pl-2">Name</label>
+            <input id="studentName" type="text" class="px-3 py-1.5 text-sm rounded-xl border-slate-200 border bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 w-32 md:w-48 transition-shadow" placeholder="Student Name"/>
+          </div>
+          <div class="flex items-center gap-2 pr-1">
+            <label class="text-sm font-medium text-slate-600">Date</label>
+            <input id="labDate" type="date" class="px-3 py-1.5 text-sm rounded-xl border-slate-200 border bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <div class="grid lg:grid-cols-12 gap-6">
+      <!-- LEFT COLUMN: CONTROLS & CALCULATIONS -->
+      <div class="lg:col-span-4 space-y-6">
+        
+        <!-- Controls Card -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+              Experiment Controls
+            </h2>
+          </div>
+
+          <!-- Mode Selector -->
+          <div class="mb-6">
+            <div class="bg-slate-100 p-1 rounded-2xl flex text-sm font-medium">
+              <button id="modeFree" class="flex-1 py-2 rounded-xl text-center transition-all mode-btn bg-white shadow-sm text-brand-600">Free Explore</button>
+              <button id="modePart1" class="flex-1 py-2 rounded-xl text-center transition-all mode-btn text-slate-500 hover:text-slate-700">Part I</button>
+              <button id="modePart2" class="flex-1 py-2 rounded-xl text-center transition-all mode-btn text-slate-500 hover:text-slate-700">Part II</button>
+            </div>
+            <p id="modeHint" class="mt-2 text-xs text-slate-500 px-1">Freely adjust all variables and run/log trials.</p>
+          </div>
+
+          <!-- Sliders -->
+          <div class="space-y-5">
+            <!-- Cart Mass -->
+            <div>
+              <div class="flex justify-between items-end mb-1">
+                <label class="text-sm font-semibold text-slate-700">Cart Mass <span class="text-xs font-normal text-slate-500 ml-1">m<sub>c</sub></span></label>
+                <div class="text-brand-600 font-bold text-sm bg-brand-50 px-2 py-0.5 rounded-md"><span id="cartMassOut">0.50</span> kg</div>
+              </div>
+              <input id="cartMass" type="range" min="0.10" max="2.00" step="0.01" value="0.50" />
+            </div>
+            
+            <!-- Hanging Mass -->
+            <div>
+              <div class="flex justify-between items-end mb-1">
+                <label class="text-sm font-semibold text-slate-700">Hanging Mass <span class="text-xs font-normal text-slate-500 ml-1">m<sub>h</sub></span></label>
+                <div class="text-brand-600 font-bold text-sm bg-brand-50 px-2 py-0.5 rounded-md"><span id="hangMassOut">0.05</span> kg</div>
+              </div>
+              <input id="hangMass" type="range" min="0.00" max="0.50" step="0.01" value="0.05" />
+            </div>
+
+            <!-- Friction & Gravity Grid -->
+            <div class="grid grid-cols-2 gap-4 pt-2">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Friction <span class="font-normal text-slate-500">μ<sub>k</sub></span></label>
+                <input id="mu" type="range" min="0.00" max="0.50" step="0.01" value="0.00" />
+                <div class="mt-1 text-xs text-right text-slate-500 font-medium" id="muOut">0.00</div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Gravity <span class="font-normal text-slate-500">g</span></label>
+                <input id="grav" type="range" min="1" max="20" step="0.1" value="9.81" />
+                <div class="mt-1 text-xs text-right text-slate-500 font-medium"><span id="gravOut">9.81</span> m/s²</div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-5 border-slate-100" />
+
+          <!-- Guided Buttons -->
+          <div class="grid grid-cols-2 gap-2 mb-4">
+            <button id="btnAddCartMass" class="px-2 py-2 text-xs font-medium rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors" title="+0.05 kg to cart (Part I)">+0.05 kg to Cart</button>
+            <button id="btnMoveMass" class="px-2 py-2 text-xs font-medium rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors" title="Move 0.05 kg from cart → string (Part II)">Move 0.05kg → String</button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="grid grid-cols-3 gap-2">
+            <button id="btnStart" class="col-span-1 px-4 py-2.5 rounded-xl bg-brand-600 text-white font-medium hover:bg-brand-700 transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 flex justify-center items-center gap-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+              Run
+            </button>
+            <button id="btnReset" class="col-span-1 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-slate-400">
+              Reset
+            </button>
+            <button id="btnLog" class="col-span-1 px-4 py-2.5 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 flex justify-center items-center gap-1" title="Log this trial to the table and graphs">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              Log
+            </button>
+          </div>
+        </div>
+
+        <!-- Calculated Results Card -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+          <h3 class="text-sm font-bold tracking-wide text-slate-400 uppercase mb-4">Live Calculations</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 rounded-2xl bg-brand-50/50 border border-brand-100">
+              <div class="text-xs text-slate-500 font-medium mb-1">Acceleration (a)</div>
+              <div class="text-lg font-bold text-brand-700"><span id="accelOut">0.00</span> <span class="text-xs font-normal">m/s²</span></div>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+              <div class="text-xs text-slate-500 font-medium mb-1">Net Force (ΣF)</div>
+              <div class="text-lg font-bold text-slate-700"><span id="netFOut">0.00</span> <span class="text-xs font-normal">N</span></div>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+              <div class="text-xs text-slate-500 font-medium mb-1">Tension (T)</div>
+              <div class="text-lg font-bold text-slate-700"><span id="tensionOut">0.00</span> <span class="text-xs font-normal">N</span></div>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+              <div class="text-xs text-slate-500 font-medium mb-1">Friction (f<sub>k</sub>)</div>
+              <div class="text-lg font-bold text-slate-700"><span id="fricOut">0.00</span> <span class="text-xs font-normal">N</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: SIMULATION & DATA -->
+      <div class="lg:col-span-8 space-y-6">
+        
+        <!-- Simulation Area -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 relative overflow-hidden">
+          <div class="absolute top-6 right-6 flex items-center gap-2 text-xs font-medium text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Simulation Active
+          </div>
+          <h2 class="text-lg font-bold text-slate-900 mb-6">Apparatus</h2>
+          
+          <div class="bg-gradient-to-b from-slate-50 to-slate-100 rounded-2xl border border-slate-200 flex justify-center items-center px-4 py-8 relative">
+            
+            <!-- SVG Simulation -->
+            <svg id="rig" viewBox="0 0 800 300" class="w-full h-auto max-h-72 drop-shadow-md">
+              <defs>
+                <!-- Track Gradient -->
+                <linearGradient id="trackGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#cbd5e1"/>
+                  <stop offset="20%" stop-color="#94a3b8"/>
+                  <stop offset="100%" stop-color="#64748b"/>
+                </linearGradient>
+                <!-- Cart Gradient -->
+                <linearGradient id="cartGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#60a5fa"/>
+                  <stop offset="100%" stop-color="#2563eb"/>
+                </linearGradient>
+                <!-- Brass Mass Gradient -->
+                <linearGradient id="brassGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#fcd34d"/>
+                  <stop offset="50%" stop-color="#fbbf24"/>
+                  <stop offset="100%" stop-color="#d97706"/>
+                </linearGradient>
+              </defs>
+
+              <!-- Table Base & Legs -->
+              <rect x="50" y="160" width="700" height="20" rx="2" fill="url(#trackGrad)"></rect>
+              <rect x="100" y="180" width="16" height="120" fill="#475569"></rect>
+              <rect x="680" y="180" width="16" height="120" fill="#475569"></rect>
+
+              <!-- Pulley Mount -->
+              <path d="M740 160 L765 130 L775 130 L750 160 Z" fill="#94a3b8"></path>
+
+              <!-- Pulley Wheel -->
+              <circle cx="765" cy="130" r="16" fill="#cbd5e1" stroke="#475569" stroke-width="3"></circle>
+              <circle cx="765" cy="130" r="4" fill="#334155"></circle>
+
+              <!-- String (Dynamic) -->
+              <path id="stringPath" d="M180 130 L765 130 A16 16 0 0 1 781 146 L781 220" stroke="#94a3b8" stroke-width="2" fill="none" stroke-dasharray="4 2" />
+
+              <!-- Cart Group (Dynamic Translate) -->
+              <g id="cart" transform="translate(80, 115)">
+                <!-- Cart Body -->
+                <rect x="0" y="0" width="100" height="35" rx="6" fill="url(#cartGrad)" stroke="#1e40af" stroke-width="2"></rect>
+                
+                <!-- Sensor/Hook bump -->
+                <rect x="100" y="12" width="6" height="10" rx="2" fill="#94a3b8"></rect>
+                
+                <!-- Wheels -->
+                <circle cx="20" cy="38" r="7" fill="#1e293b" stroke="#64748b" stroke-width="1.5"></circle>
+                <circle cx="80" cy="38" r="7" fill="#1e293b" stroke="#64748b" stroke-width="1.5"></circle>
+                <circle cx="20" cy="38" r="2" fill="#cbd5e1"></circle>
+                <circle cx="80" cy="38" r="2" fill="#cbd5e1"></circle>
+
+                <!-- Label -->
+                <text x="50" y="22" text-anchor="middle" font-family="Inter" font-size="12" font-weight="bold" fill="#ffffff">CART</text>
+              </g>
+
+              <!-- Hanging Mass Group (Dynamic Translate) -->
+              <g id="hanger" transform="translate(781, 220)">
+                <!-- String tie -->
+                <line x1="0" y1="0" x2="0" y2="10" stroke="#94a3b8" stroke-width="2"></line>
+                <!-- Hook -->
+                <path d="M0 10 C-5 15 -5 20 0 20" stroke="#64748b" stroke-width="2" fill="none"></path>
+                <!-- Weights Stack -->
+                <rect x="-15" y="20" width="30" height="25" rx="2" fill="url(#brassGrad)" stroke="#b45309" stroke-width="1"></rect>
+                <line x1="-15" y1="28" x2="15" y2="28" stroke="#b45309" stroke-width="1" opacity="0.5"></line>
+                <line x1="-15" y1="36" x2="15" y2="36" stroke="#b45309" stroke-width="1" opacity="0.5"></line>
+                
+                <!-- Label -->
+                <text x="0" y="58" text-anchor="middle" font-family="Inter" font-size="12" font-weight="bold" fill="#475569">m<tspan dy="2" font-size="9">h</tspan></text>
+              </g>
+              
+            </svg>
+          </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-slate-900">Recorded Trials</h2>
+            <div class="flex gap-2">
+              <button id="btnClearTable" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Clear Data</button>
+              <button id="btnExport" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-white hover:bg-slate-900 transition-colors flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                CSV
+              </button>
+            </div>
+          </div>
+          
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="min-w-full text-sm text-left whitespace-nowrap">
+              <thead class="bg-slate-50 text-slate-600 font-semibold text-xs uppercase border-b border-slate-200">
+                <tr>
+                  <th class="px-4 py-3">Mode</th>
+                  <th class="px-4 py-3">m<sub>c</sub> <span class="text-slate-400 font-normal">(kg)</span></th>
+                  <th class="px-4 py-3">m<sub>h</sub> <span class="text-slate-400 font-normal">(kg)</span></th>
+                  <th class="px-4 py-3">μ<sub>k</sub></th>
+                  <th class="px-4 py-3">Force <span class="text-slate-400 font-normal">(N)</span></th>
+                  <th class="px-4 py-3 text-brand-700 bg-brand-50/30">Accel <span class="text-brand-400 font-normal">(m/s²)</span></th>
+                </tr>
+              </thead>
+              <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700">
+                <!-- Data injected here -->
+                <tr id="emptyRow"><td colspan="6" class="px-4 py-8 text-center text-slate-400 italic">No trials logged yet. Run an experiment and click "Log".</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- GRAPHS SECTION -->
+    <div class="grid lg:grid-cols-2 gap-6 mt-6 no-print">
+      <!-- Graph 1 -->
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-md font-bold text-slate-900 mb-1">Graph I: Acceleration vs. Cart Mass</h3>
+        <p class="text-xs text-slate-500 mb-4">Part I: Maintain constant hanging mass, vary cart mass.</p>
+        <div class="relative h-64 w-full">
+          <canvas id="chartMass"></canvas>
+        </div>
+      </div>
+      <!-- Graph 2 -->
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-md font-bold text-slate-900 mb-1">Graph II: Acceleration vs. Applied Force</h3>
+        <p class="text-xs text-slate-500 mb-4">Part II: Transfer mass from cart to hanger (constant system mass).</p>
+        <div class="relative h-64 w-full">
+          <canvas id="chartForce"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Script Logic -->
+  <script>
+    /** --- Configuration & Defaults --- */
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+    Chart.defaults.color = "#64748b";
+    Chart.defaults.scale.grid.color = "#f1f5f9";
+    
+    const fmt = (x, d=3) => Number.parseFloat(x).toFixed(d);
+
+    /** --- State --- */
+    const state = {
+      mode: 'part1', // 'free' | 'part1' | 'part2'
+      running: false,
+      animStart: 0,
+      cartStartPos: 80,
+      cartMaxPos: 650,
+      pulleyX: 765,
+      pulleyY: 130,
+      currentX: 80,
+      scaleFactor: 150 // pixels per meter for simulation speed
+    };
+
+    /** --- DOM Elements --- */
+    const dom = {
+      inputs: {
+        cartMass: document.getElementById('cartMass'),
+        hangMass: document.getElementById('hangMass'),
+        mu: document.getElementById('mu'),
+        grav: document.getElementById('grav')
+      },
+      outputs: {
+        cartMass: document.getElementById('cartMassOut'),
+        hangMass: document.getElementById('hangMassOut'),
+        mu: document.getElementById('muOut'),
+        grav: document.getElementById('gravOut'),
+        accel: document.getElementById('accelOut'),
+        netF: document.getElementById('netFOut'),
+        tension: document.getElementById('tensionOut'),
+        fric: document.getElementById('fricOut')
+      },
+      buttons: {
+        start: document.getElementById('btnStart'),
+        reset: document.getElementById('btnReset'),
+        log: document.getElementById('btnLog'),
+        export: document.getElementById('btnExport'),
+        clear: document.getElementById('btnClearTable'),
+        addCart: document.getElementById('btnAddCartMass'),
+        moveMass: document.getElementById('btnMoveMass'),
+        modeFree: document.getElementById('modeFree'),
+        modePart1: document.getElementById('modePart1'),
+        modePart2: document.getElementById('modePart2')
+      },
+      ui: {
+        modeHint: document.getElementById('modeHint'),
+        tableBody: document.getElementById('tableBody'),
+        emptyRow: document.getElementById('emptyRow')
+      },
+      svg: {
+        cart: document.getElementById('cart'),
+        hanger: document.getElementById('hanger'),
+        stringPath: document.getElementById('stringPath')
+      }
+    };
+
+    /** --- Physics Engine --- */
+    function calculatePhysics() {
+      const mc = parseFloat(dom.inputs.cartMass.value);
+      const mh = parseFloat(dom.inputs.hangMass.value);
+      const mu = parseFloat(dom.inputs.mu.value);
+      const g  = parseFloat(dom.inputs.grav.value);
+
+      const fk = mu * mc * g;
+      const netForce = (mh * g) - fk;
+      const totalMass = mc + mh;
+      
+      let a = netForce / totalMass;
+      if (a < 0) a = 0; // Won't move backwards from friction
+
+      const T = mh * (g - a); // Tension
+      
+      return { a, netForce, T, fk, mc, mh, mu, g };
+    }
+
+    /** --- UI Updates --- */
+    function syncUI() {
+      const p = calculatePhysics();
+      
+      // Update Labels
+      dom.outputs.cartMass.textContent = fmt(p.mc, 2);
+      dom.outputs.hangMass.textContent = fmt(p.mh, 2);
+      dom.outputs.mu.textContent = fmt(p.mu, 2);
+      dom.outputs.grav.textContent = fmt(p.g, 2);
+      
+      // Update Results
+      dom.outputs.accel.textContent = fmt(p.a, 2);
+      dom.outputs.netF.textContent = fmt(p.netForce, 2);
+      dom.outputs.tension.textContent = fmt(p.T, 2);
+      dom.outputs.fric.textContent = fmt(p.fk, 2);
+    }
+
+    function setMode(m) {
+      state.mode = m;
+      
+      // Reset styles
+      [dom.buttons.modeFree, dom.buttons.modePart1, dom.buttons.modePart2].forEach(btn => {
+        btn.classList.remove('bg-white', 'shadow-sm', 'text-brand-600');
+        btn.classList.add('text-slate-500');
+      });
+
+      // Apply active styles & hints
+      if (m === 'free') { 
+        dom.buttons.modeFree.classList.add('bg-white', 'shadow-sm', 'text-brand-600'); 
+        dom.buttons.modeFree.classList.remove('text-slate-500');
+        dom.ui.modeHint.textContent = 'Freely adjust all variables and log any combination.'; 
+      }
+      if (m === 'part1') { 
+        dom.buttons.modePart1.classList.add('bg-white', 'shadow-sm', 'text-brand-600'); 
+        dom.buttons.modePart1.classList.remove('text-slate-500');
+        dom.ui.modeHint.textContent = 'Part I: Keep hanging mass constant, increase cart mass.'; 
+        dom.inputs.hangMass.value = 0.05; 
+      }
+      if (m === 'part2') { 
+        dom.buttons.modePart2.classList.add('bg-white', 'shadow-sm', 'text-brand-600'); 
+        dom.buttons.modePart2.classList.remove('text-slate-500');
+        dom.ui.modeHint.textContent = 'Part II: Move mass from cart to string (system mass constant).'; 
+        dom.inputs.hangMass.value = 0.05; 
+        dom.inputs.cartMass.value = 0.25; 
+      }
+      syncUI();
+    }
+
+    /** --- Animation System --- */
+    function updateGraphics(cartX) {
+      state.currentX = cartX;
+      
+      // Bounds check
+      const x = Math.max(state.cartStartPos, Math.min(state.cartMaxPos, cartX));
+      
+      // 1. Move Cart
+      dom.svg.cart.setAttribute('transform', `translate(${x}, 115)`);
+      
+      // 2. Move Hanging Mass proportionally
+      const displacement = x - state.cartStartPos;
+      // Visually scale the drop distance so it doesn't go off canvas too fast
+      const hangY = Math.min(270, 220 + (displacement * 0.4)); 
+      dom.svg.hanger.setAttribute('transform', `translate(${state.pulleyX + 16}, ${hangY})`);
+
+      // 3. Draw String dynamically extending to hangY
+      // Cart tie point is x + 100 (width of cart body), y + 15 (middle)
+      const tieX = x + 106; 
+      const path = `M${tieX} 127 L${state.pulleyX} 127 A16 16 0 0 1 ${state.pulleyX + 16} 143 L${state.pulleyX + 16} ${hangY}`;
+      dom.svg.stringPath.setAttribute('d', path);
+    }
+
+    function animate(timestamp) {
+      if (!state.running) return;
+      if (!state.animStart) state.animStart = timestamp;
+      
+      const t = (timestamp - state.animStart) / 1000; // time in seconds
+      const a = parseFloat(dom.outputs.accel.textContent);
+      
+      // Kinematics: d = 0.5 * a * t^2
+      const s = 0.5 * a * t * t * state.scaleFactor;
+      updateGraphics(state.cartStartPos + s);
+
+      // Stop condition
+      if (state.currentX >= state.cartMaxPos || t > 8) {
+        state.running = false;
+        dom.buttons.start.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 3a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg> Complete`;
+        dom.buttons.start.classList.replace('bg-brand-600', 'bg-slate-400');
+        return;
+      }
+      
+      requestAnimationFrame(animate);
+    }
+
+    /** --- Chart Setup --- */
+    const chartMass = new Chart(document.getElementById('chartMass'), {
+      type: 'scatter',
+      data: { datasets: [{ label: 'Acceleration', data: [], backgroundColor: '#3b82f6', pointRadius: 5, pointHoverRadius: 7 }] },
+      options: { 
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { 
+          x: { title: { text: 'Cart Mass (kg)', display: true, font: {weight: 'bold'} }}, 
+          y: { title: { text: 'Accel (m/s²)', display: true, font: {weight: 'bold'} }, beginAtZero: true }
+        }
+      }
+    });
+
+    const chartForce = new Chart(document.getElementById('chartForce'), {
+      type: 'scatter',
+      data: { datasets: [{ label: 'Acceleration', data: [], backgroundColor: '#10b981', pointRadius: 5, pointHoverRadius: 7 }] },
+      options: { 
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { 
+          x: { title: { text: 'Applied Force (N)', display: true, font: {weight: 'bold'} }}, 
+          y: { title: { text: 'Accel (m/s²)', display: true, font: {weight: 'bold'} }, beginAtZero: true }
+        }
+      }
+    });
+
+    /** --- Data Logging --- */
+    function logTrial() {
+      const p = calculatePhysics();
+      const F = p.mh * p.g; // Force applied by hanging mass
+
+      // Remove empty placeholder
+      if (dom.ui.emptyRow) dom.ui.emptyRow.remove();
+
+      // Build Row
+      const tr = document.createElement('tr');
+      tr.className = "hover:bg-slate-50 transition-colors";
+      tr.innerHTML = `
+        <td class="px-4 py-2 text-xs font-medium text-slate-500 uppercase">${state.mode}</td>
+        <td class="px-4 py-2">${fmt(p.mc, 2)}</td>
+        <td class="px-4 py-2">${fmt(p.mh, 2)}</td>
+        <td class="px-4 py-2">${fmt(p.mu, 2)}</td>
+        <td class="px-4 py-2 font-medium">${fmt(F, 2)}</td>
+        <td class="px-4 py-2 font-bold text-brand-600 bg-brand-50/20">${fmt(p.a, 3)}</td>
+      `;
+      dom.ui.tableBody.appendChild(tr);
+
+      // Update Charts
+      chartMass.data.datasets[0].data.push({ x: p.mc, y: p.a });
+      chartForce.data.datasets[0].data.push({ x: F, y: p.a });
+      chartMass.update();
+      chartForce.update();
+    }
+
+    /** --- Event Listeners --- */
+    // Input changes
+    Object.values(dom.inputs).forEach(input => {
+      input.addEventListener('input', () => {
+        syncUI();
+        if(!state.running) updateGraphics(state.cartStartPos); // reset position if tweaking while stopped
+      });
+    });
+
+    // Mode Buttons
+    dom.buttons.modeFree.addEventListener('click', () => setMode('free'));
+    dom.buttons.modePart1.addEventListener('click', () => setMode('part1'));
+    dom.buttons.modePart2.addEventListener('click', () => setMode('part2'));
+
+    // Controls
+    dom.buttons.start.addEventListener('click', () => {
+      if (state.running) return;
+      
+      // Reset button appearance if it was 'Complete'
+      dom.buttons.start.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg> Run`;
+      dom.buttons.start.classList.replace('bg-slate-400', 'bg-brand-600');
+      
+      state.running = true; 
+      state.animStart = 0; 
+      updateGraphics(state.cartStartPos); 
+      requestAnimationFrame(animate);
+    });
+
+    dom.buttons.reset.addEventListener('click', () => {
+      state.running = false;
+      dom.buttons.start.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg> Run`;
+      dom.buttons.start.classList.replace('bg-slate-400', 'bg-brand-600');
+      updateGraphics(state.cartStartPos);
+    });
+
+    // Helper Buttons
+    dom.buttons.addCart.addEventListener('click', () => {
+      let mc = parseFloat(dom.inputs.cartMass.value);
+      dom.inputs.cartMass.value = Math.min(2.00, mc + 0.05).toFixed(2);
+      syncUI();
+    });
+
+    dom.buttons.moveMass.addEventListener('click', () => {
+      let mc = parseFloat(dom.inputs.cartMass.value);
+      let mh = parseFloat(dom.inputs.hangMass.value);
+      if (mc >= 0.05) { 
+        dom.inputs.cartMass.value = (mc - 0.05).toFixed(2);
+        dom.inputs.hangMass.value = (mh + 0.05).toFixed(2);
+      }
+      syncUI();
+    });
+
+    // Data Management
+    dom.buttons.log.addEventListener('click', logTrial);
+
+    dom.buttons.clear.addEventListener('click', () => {
+      dom.ui.tableBody.innerHTML = '<tr id="emptyRow"><td colspan="6" class="px-4 py-8 text-center text-slate-400 italic">No trials logged yet. Run an experiment and click "Log".</td></tr>';
+      dom.ui.emptyRow = document.getElementById('emptyRow');
+      chartMass.data.datasets[0].data = [];
+      chartForce.data.datasets[0].data = [];
+      chartMass.update();
+      chartForce.update();
+    });
+
+    dom.buttons.export.addEventListener('click', () => {
+      const rows = Array.from(dom.ui.tableBody.querySelectorAll('tr'));
+      if (rows[0].id === 'emptyRow') { alert('No data to export.'); return; }
+      
+      const hdr = ['Mode', 'Cart_Mass_kg', 'Hang_Mass_kg', 'Mu_k', 'Force_N', 'Accel_m_s2'];
+      const csvData = rows.map(tr => Array.from(tr.children).map(td => td.textContent.trim()));
+      
+      const csv = [hdr.join(','), ...csvData.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url; 
+      a.download = `newtons-law-lab-${new Date().toISOString().slice(0,10)}.csv`; 
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    /** --- Initialize --- */
+    setMode('part1');
+    updateGraphics(state.cartStartPos);
+
+  </script>
+</body>
+</html>
