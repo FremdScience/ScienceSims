@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Eggciting Eggsperiment - 2D Virtual Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .font-mono { font-family: 'JetBrains+Mono', monospace; }
+
+        /* Lab Stage Styles */
+        #lab-stage {
+            position: relative;
+            width: 100%;
+            height: 440px;
+            background: linear-gradient(to bottom, #e2e8f0 0%, #cbd5e1 100%);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 4px solid #94a3b8;
+            box-shadow: inset 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        /* 2D Assets */
+        .beaker {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 170px;
+            border: 5px solid rgba(255,255,255,0.6);
+            border-top: none;
+            border-radius: 0 0 25px 25px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%);
+            backdrop-filter: blur(2px);
+            z-index: 20; /* Front glass */
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .beaker-back {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 170px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 0 0 25px 25px;
+            border: 2px solid rgba(255,255,255,0.2);
+            z-index: 5; /* Back glass */
+        }
+
+        /* Adjusted liquid layer to ensure visibility */
+        .liquid-layer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 0px; 
+            transition: height 1.5s ease-out, background-color 0.5s;
+            border-radius: 0 0 20px 20px;
+            z-index: 10; /* Behind egg, in front of back glass */
+        }
+        
+        /* Specific liquid container for the beaker to handle masking */
+        #beaker-liquid-container {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140px; /* Slightly narrower than beaker */
+            height: 170px;
+            z-index: 8; /* Behind egg */
+            pointer-events: none;
+            border-radius: 0 0 22px 22px;
+            overflow: hidden;
+        }
+
+        #beaker-liquid {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0px;
+            transition: height 1.2s ease-in-out;
+            z-index: 8;
+        }
+
+        .egg-2d {
+            position: absolute;
+            bottom: 48px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 110px;
+            background: #fff5e1;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            border: 2px solid rgba(139, 69, 19, 0.1); /* Slight brown rim */
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.1);
+            z-index: 15; /* In front of liquid */
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .graduated-cylinder {
+            position: absolute;
+            bottom: 40px;
+            left: 60px;
+            width: 55px;
+            height: 280px;
+            border: 3px solid rgba(255,255,255,0.6);
+            border-top: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 0 0 12px 12px;
+            z-index: 5;
+        }
+
+        .scale-2d {
+            position: absolute;
+            bottom: 20px;
+            right: 40px;
+            width: 180px;
+            height: 45px;
+            background: #1e293b;
+            border-radius: 12px;
+            z-index: 5;
+        }
+
+        .scale-plate {
+            position: absolute;
+            top: -12px;
+            left: 15px;
+            width: 150px;
+            height: 18px;
+            background: #cbd5e1;
+            border-radius: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -8px); }
+        }
+        .egg-floating { animation: float 3s ease-in-out infinite; }
+
+        .btn-locked { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+        
+        #stream {
+            position: absolute;
+            width: 12px;
+            background: rgba(255,255,255,0.5);
+            top: 150px;
+            left: 150px;
+            height: 0;
+            z-index: 30;
+            opacity: 0;
+            border-radius: 6px;
+            transition: opacity 0.3s;
+        }
+
+        .data-row {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 8px; font-size: 10px; text-transform: uppercase; color: #94a3b8; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 8px; font-size: 13px; font-weight: 600; color: #334155; border-bottom: 1px solid #f1f5f9; }
+        td.mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+<div class="max-w-6xl mx-auto">
+    <header class="mb-8 flex flex-col md:flex-row justify-between items-end gap-4">
+        <div>
+            <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Simulation Mode: 2D Interactive</span>
+            <h1 class="text-4xl font-extrabold text-slate-900 mt-2 tracking-tight">The Eggciting Eggsperiment</h1>
+        </div>
+        <div class="bg-white shadow-md border border-slate-200 p-4 rounded-2xl flex gap-8">
+            <div class="text-center">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Lab Day</p>
+                <p id="day-display" class="text-2xl font-black text-indigo-600">Day 1</p>
+            </div>
+            <div class="w-px bg-slate-100"></div>
+            <div class="text-center">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</p>
+                <p id="phase-display" class="text-sm font-bold text-slate-700 mt-1 uppercase tracking-tight">Initial Setup</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Main Simulation Stage -->
+        <div class="lg:col-span-7 space-y-6">
+            <div id="lab-stage">
+                <!-- Beaker Back Layer -->
+                <div class="beaker-back"></div>
+
+                <!-- Liquid Container (Behind Egg) -->
+                <div id="beaker-liquid-container">
+                    <div id="beaker-liquid"></div>
+                </div>
+
+                <!-- Scale with Dynamic Display -->
+                <div class="scale-2d">
+                    <div class="scale-plate"></div>
+                    <div class="absolute inset-0 flex items-center justify-center pt-2">
+                        <div id="scale-display" class="w-20 h-6 bg-black rounded border border-slate-700 font-mono text-[13px] text-emerald-400 flex items-center justify-center shadow-inner tracking-wider">00.0g</div>
+                    </div>
+                </div>
+
+                <!-- Graduated Cylinder -->
+                <div class="graduated-cylinder">
+                    <div id="cyl-liquid" class="liquid-layer"></div>
+                    <div class="absolute inset-0 flex flex-col justify-between py-6 px-1 opacity-40">
+                        <!-- Markings -->
+                        <div class="w-full h-px bg-slate-800"></div>
+                        <div class="w-full h-px bg-slate-800"></div>
+                        <div class="w-full h-px bg-slate-800"></div>
+                        <div class="w-full h-px bg-slate-800"></div>
+                        <div class="w-full h-px bg-slate-800"></div>
+                    </div>
+                </div>
+
+                <!-- Beaker Front (Visual Only) -->
+                <div id="beaker-group" class="transition-transform duration-700 origin-bottom">
+                    <div class="beaker"></div>
+                </div>
+
+                <!-- Egg (Between Liquid and Front Glass) -->
+                <div id="egg" class="egg-2d"></div>
+
+                <!-- Pouring Stream -->
+                <div id="stream"></div>
+
+                <!-- Overlay Info -->
+                <div class="absolute top-8 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md text-white px-8 py-3 rounded-full text-xs font-bold tracking-widest uppercase flex items-center gap-3 opacity-0 transition-opacity duration-300 shadow-2xl z-50" id="action-label">
+                    <div class="flex gap-1">
+                        <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                        <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                    </div>
+                    <span id="action-text">Processing...</span>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="bg-white p-6 rounded-3xl shadow-lg border border-slate-200">
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+                    <button id="btn-measure" onclick="runProcedure('mass')" class="flex flex-col items-center p-3 bg-slate-50 border-2 border-slate-100 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group">
+                        <span class="text-2xl mb-1">⚖️</span>
+                        <span class="text-[9px] font-black uppercase text-slate-500 group-hover:text-indigo-600">Measure</span>
+                    </button>
+                    <button id="btn-vinegar" onclick="addLiquid('vinegar')" class="flex flex-col items-center p-3 bg-slate-50 border-2 border-slate-100 rounded-2xl hover:border-yellow-500 hover:bg-yellow-50 transition-all group">
+                        <span class="text-2xl mb-1">🧪</span>
+                        <span class="text-[9px] font-black uppercase text-slate-500 group-hover:text-yellow-600">Vinegar</span>
+                    </button>
+                    <button id="btn-syrup" onclick="addLiquid('syrup')" class="btn-locked flex flex-col items-center p-3 bg-slate-50 border-2 border-slate-100 rounded-2xl transition-all group">
+                        <span class="text-2xl mb-1">🍯</span>
+                        <span class="text-[9px] font-black uppercase text-slate-400 group-hover:text-amber-600">Syrup</span>
+                    </button>
+                    <button id="btn-water" onclick="addLiquid('water')" class="btn-locked flex flex-col items-center p-3 bg-slate-50 border-2 border-slate-100 rounded-2xl transition-all group">
+                        <span class="text-2xl mb-1">💧</span>
+                        <span class="text-[9px] font-black uppercase text-slate-400 group-hover:text-blue-600">Water</span>
+                    </button>
+                    <button onclick="handleWait()" class="flex flex-col items-center p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg">
+                        <span class="text-2xl mb-1">⏳</span>
+                        <span class="text-[9px] font-black uppercase tracking-wider">Wait 24h</span>
+                    </button>
+                    <button onclick="resetSim()" class="flex flex-col items-center p-3 bg-red-50 text-red-600 border-2 border-red-100 rounded-2xl hover:bg-red-100 transition-all">
+                        <span class="text-2xl mb-1">🔄</span>
+                        <span class="text-[9px] font-black uppercase tracking-wider">Reset</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Data -->
+        <div class="lg:col-span-5 space-y-6">
+            <div class="bg-slate-900 text-white p-8 rounded-3xl shadow-2xl border-t-4 border-indigo-500">
+                <p class="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 mb-2">Electronic Sensor Readout</p>
+                <div class="flex items-baseline gap-3">
+                    <span id="readout-val" class="text-7xl font-mono font-bold tracking-tighter text-emerald-400">---</span>
+                    <span id="readout-unit" class="text-3xl font-bold text-slate-500"></span>
+                </div>
+                <p id="readout-msg" class="mt-4 text-sm text-slate-400 font-medium border-l-2 border-indigo-500 pl-4">Ready for experimental input.</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+                <!-- Table 1 -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <h3 class="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 bg-indigo-500 rounded-full"></span> Data Table 1: Mass
+                    </h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Condition</th>
+                                <th class="text-right">Mass (g)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mass-table-body">
+                            <!-- Rows go here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Table 2 -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <h3 class="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Data Table 2: Volume
+                    </h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Liquid</th>
+                                <th class="text-right">Vol (mL)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vol-table-body">
+                            <!-- Rows go here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- APP STATE & RANDOM GENERATION ---
+    const generateInitialState = () => ({
+        day: 1,
+        // Random start mass between 54.0 and 62.0g
+        eggMass: (Math.random() * 8 + 54),
+        volume: 0,
+        liquid: 'none',
+        isBusy: false,
+        eggCondition: 'raw',
+        phaseLabel: 'Initial Setup'
+    });
+
+    let state = generateInitialState();
+
+    const liquids = {
+        vinegar: { color: '#fbbf24', opacity: 0.9, name: 'Vinegar' }, // Darker Yellow
+        syrup: { color: '#78350f', opacity: 0.95, name: 'Corn Syrup' }, // Deep Brown/Amber
+        water: { color: '#3b82f6', opacity: 0.85, name: 'Water' }, // Strong Blue
+        none: { color: 'transparent', opacity: 0, name: 'None' }
+    };
+
+    const eggStages = {
+        raw: { color: '#fff5e1', scale: 1, label: 'Raw Egg', bottom: 48 },
+        shelless: { color: '#ffd1dc', scale: 1.15, label: 'Shell Removed', bottom: 52 },
+        hyper: { color: '#eab308', scale: 0.8, label: 'Shriveled', bottom: 45 },
+        hypo: { color: '#ffffff', scale: 1.35, label: 'Swollen', bottom: 55 }
+    };
+
+    function updateUI() {
+        document.getElementById('day-display').innerText = `Day ${state.day}`;
+        document.getElementById('phase-display').innerText = state.phaseLabel;
+        
+        const bSyrup = document.getElementById('btn-syrup');
+        const bWater = document.getElementById('btn-water');
+        const bVinegar = document.getElementById('btn-vinegar');
+
+        bVinegar.classList.toggle('hidden', state.day > 1);
+        
+        // Day 2 unlocks Syrup (after Vinegar day 1 -> wait 24h -> Day 2)
+        bSyrup.classList.toggle('btn-locked', state.day !== 2 || state.liquid !== 'none');
+        bSyrup.classList.toggle('hidden', state.day > 2);
+
+        // Day 3 unlocks Water (after Syrup day 2 -> wait 24h -> Day 3)
+        bWater.classList.toggle('btn-locked', state.day !== 3 || state.liquid !== 'none');
+        bWater.classList.toggle('hidden', state.day > 3);
+
+        const eggEl = document.getElementById('egg');
+        const stage = eggStages[state.eggCondition];
+        eggEl.style.backgroundColor = stage.color;
+        eggEl.style.transform = `translateX(-50%) scale(${stage.scale})`;
+        eggEl.style.bottom = `${stage.bottom}px`;
+        
+        if (state.liquid !== 'none') {
+            eggEl.classList.add('egg-floating');
+        } else {
+            eggEl.classList.remove('egg-floating');
+        }
+    }
+
+    function resetSim() {
+        if(state.isBusy) return;
+        state = generateInitialState();
+        document.getElementById('mass-table-body').innerHTML = '';
+        document.getElementById('vol-table-body').innerHTML = '';
+        document.getElementById('readout-val').innerText = '---';
+        document.getElementById('readout-unit').innerText = '';
+        document.getElementById('readout-msg').innerText = 'Ready for experimental input.';
+        document.getElementById('scale-display').innerText = '00.0g';
+        document.getElementById('beaker-liquid').style.height = '0px';
+        document.getElementById('cyl-liquid').style.height = '0px';
+        updateUI();
+    }
+
+    async function runProcedure(type) {
+        if (state.isBusy) return;
+        state.isBusy = true;
+        
+        const label = document.getElementById('action-label');
+        const text = document.getElementById('action-text');
+        const egg = document.getElementById('egg');
+        const beaker = document.getElementById('beaker-group');
+        const stream = document.getElementById('stream');
+        const bLiquid = document.getElementById('beaker-liquid');
+        const cLiquid = document.getElementById('cyl-liquid');
+        const scaleDisplay = document.getElementById('scale-display');
+
+        label.style.opacity = '1';
+        text.innerText = "Analyzing Specimen...";
+
+        // 1. Move Egg to Scale
+        egg.style.bottom = '280px';
+        await sleep(600);
+        egg.style.left = 'calc(100% - 130px)';
+        await sleep(600);
+        egg.style.bottom = '55px';
+        
+        await sleep(400);
+        // Add random variation to measurement (simulating scale flutter)
+        const massReading = (state.eggMass + (Math.random() * 0.1 - 0.05)).toFixed(1);
+        
+        document.getElementById('readout-val').innerText = massReading;
+        document.getElementById('readout-unit').innerText = "g";
+        scaleDisplay.innerText = massReading + "g";
+        
+        document.getElementById('readout-msg').innerText = "Mass detected. Recorded in Data Table 1.";
+        addTableRow('mass-table-body', state.day, eggStages[state.eggCondition].label, massReading);
+
+        // 2. Measure Volume if liquid exists
+        if (state.liquid !== 'none') {
+            await sleep(800);
+            text.innerText = "Measuring Displacement...";
+            
+            const currentLiquid = liquids[state.liquid];
+            
+            // Pouring Logic
+            beaker.style.transform = 'translate(-220px, -180px) rotate(-65deg)';
+            stream.style.left = '165px';
+            stream.style.backgroundColor = currentLiquid.color;
+            stream.style.opacity = '1';
+            stream.style.height = '180px';
+            
+            // Empty beaker visually
+            bLiquid.style.height = '0px';
+            
+            // Fill cylinder
+            cLiquid.style.backgroundColor = currentLiquid.color;
+            cLiquid.style.opacity = currentLiquid.opacity;
+            
+            let volGoal = state.volume || 100;
+            // Ensure volume doesn't look weird (clamp if calc goes wrong, though logic handles it)
+            volGoal = Math.max(0, Math.round(volGoal));
+            
+            let curr = 0;
+            const interval = setInterval(() => {
+                curr += 5;
+                cLiquid.style.height = (curr / 2.8) + '%';
+                document.getElementById('readout-val').innerText = curr;
+                document.getElementById('readout-unit').innerText = "mL";
+                if (curr >= volGoal) clearInterval(interval);
+            }, 50);
+
+            await sleep(1800);
+            stream.style.opacity = '0';
+            beaker.style.transform = 'translateX(0)';
+            addTableRow('vol-table-body', state.day, currentLiquid.name, volGoal);
+            
+            // Clear liquid state after measuring
+            state.liquid = 'none';
+        }
+
+        await sleep(1000);
+        // Reset position
+        egg.style.bottom = '280px';
+        await sleep(500);
+        egg.style.left = '50%';
+        await sleep(500);
+        egg.style.bottom = `${eggStages[state.eggCondition].bottom}px`;
+        
+        // Reset Scale Display
+        scaleDisplay.innerText = "00.0g";
+        
+        label.style.opacity = '0';
+        cLiquid.style.height = '0px';
+        state.isBusy = false;
+        updateUI();
+    }
+
+    function addLiquid(type) {
+        if (state.isBusy) return;
+        state.liquid = type;
+        state.volume = 100; // Start with 100mL
+        const bLiquid = document.getElementById('beaker-liquid');
+        bLiquid.style.backgroundColor = liquids[type].color;
+        bLiquid.style.opacity = liquids[type].opacity;
+        
+        bLiquid.style.height = '120px'; // Visual fill
+        
+        document.getElementById('readout-val').innerText = "100";
+        document.getElementById('readout-unit').innerText = "mL";
+        document.getElementById('readout-msg').innerText = `${liquids[type].name} added. Click 'Wait 24h'.`;
+        
+        updateUI();
+    }
+
+    function handleWait() {
+        if (state.liquid === 'none' || state.isBusy) return;
+        
+        // --- RANDOMIZED TREND LOGIC ---
+        // VINEGAR: Mass Decreases (Shell Removed), Volume Decreases (Water enters cup? No, slight absorption)
+        if (state.liquid === 'vinegar') {
+            state.day = 2; // Fixed: Day 1 -> Day 2
+            state.eggCondition = 'shelless';
+            state.phaseLabel = 'Shell Dissolved';
+            
+            // Lose 5-10% mass (Shell gone)
+            // Note: In real life, mass can gain due to osmosis, but user requested a DROP.
+            const factor = 0.90 + (Math.random() * 0.05); 
+            state.eggMass = state.eggMass * factor;
+            // Liquid volume decreases (approx 10-20mL absorbed/evaporated/reaction)
+            state.volume = 100 - (Math.random() * 8 + 8);
+        } 
+        // SYRUP: Mass Decreases (Water leaves egg), Volume Increases (Water enters cup)
+        else if (state.liquid === 'syrup') {
+            state.day = 3; // Fixed: Day 2 -> Day 3
+            state.eggCondition = 'hyper';
+            state.phaseLabel = 'Hypertonic (Syrup)';
+
+            // Lose 30-40% mass
+            const factor = 0.6 + (Math.random() * 0.1); 
+            state.eggMass = state.eggMass * factor;
+            // Liquid volume increases (approx 15-25mL gained from egg)
+            state.volume = 100 + (Math.random() * 10 + 15);
+        } 
+        // WATER: Mass Increases (Water enters egg), Volume Decreases (Water leaves cup)
+        else if (state.liquid === 'water') {
+            state.day = 4; // Fixed: Day 3 -> Day 4
+            state.eggCondition = 'hypo';
+            state.phaseLabel = 'Hypotonic (Water)';
+
+            // Gain 40-50% mass (relative to shriveled state)
+            const factor = 1.4 + (Math.random() * 0.15); 
+            state.eggMass = state.eggMass * factor;
+            // Liquid volume decreases (approx 20-30mL absorbed)
+            state.volume = 100 - (Math.random() * 10 + 20);
+        }
+
+        updateUI();
+        document.getElementById('readout-msg').innerText = "24h passed. Click 'Measure' to record mass and volume.";
+    }
+
+    function addTableRow(tableId, day, label, val) {
+        const tbody = document.getElementById(tableId);
+        const row = document.createElement('tr');
+        row.className = "data-row";
+        row.innerHTML = `
+            <td>${day}</td>
+            <td>${label}</td>
+            <td class="text-right mono">${val}</td>
+        `;
+        tbody.prepend(row);
+    }
+
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+    window.onload = updateUI;
+</script>
+
+</body>
+</html>
