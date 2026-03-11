@@ -281,6 +281,34 @@
             return new THREE.Mesh(geometry, material);
         }
 
+        // Draw a thick 3D arrow (used for the Current to make it highly visible inside the wire)
+        function createThickArrow(dir, origin, length, color, shaftRadius, headLength, headRadius) {
+            const group = new THREE.Group();
+            // Basic material ignores lighting, making it always brilliantly bright
+            const mat = new THREE.MeshBasicMaterial({ color: color }); 
+            
+            const shaftLength = length - headLength;
+            const shaftGeo = new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftLength, 16);
+            const shaft = new THREE.Mesh(shaftGeo, mat);
+            shaft.position.y = shaftLength / 2;
+            
+            const headGeo = new THREE.ConeGeometry(headRadius, headLength, 16);
+            const head = new THREE.Mesh(headGeo, mat);
+            head.position.y = shaftLength + headLength / 2;
+            
+            group.add(shaft);
+            group.add(head);
+            group.position.copy(origin);
+            
+            group.setDirection = function(newDir) {
+                const axis = new THREE.Vector3(0, 1, 0);
+                this.quaternion.setFromUnitVectors(axis, newDir.clone().normalize());
+            };
+            group.setDirection(dir);
+            
+            return group;
+        }
+
         // --- Simulation Builders ---
 
         function clearSimulation() {
@@ -318,7 +346,7 @@
                 metalness: 0.3, 
                 roughness: 0.5, 
                 transparent: true, 
-                opacity: 0.9,
+                opacity: 0.65, // Lowered opacity so the white arrow pops
                 emissive: 0x3a1505 // Slight warm glow to prevent it from fading into the dark background
             });
             const wire = new THREE.Mesh(wireGeo, wireMat);
@@ -331,7 +359,7 @@
             // 2. Current Arrow
             if (state.currentOn) {
                 const arrowLength = 6;
-                const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(0,0,0), arrowLength, COLORS.current, 1.5, 0.8);
+                const arrow = createThickArrow(dir, new THREE.Vector3(0,0,0), arrowLength, COLORS.current, 0.12, 1.5, 0.35);
                 // Center the arrow inside the wire
                 arrow.position.copy(dir.clone().multiplyScalar(-3)); 
                 simGroup.add(arrow);
@@ -406,7 +434,7 @@
                     metalness: 0.3, 
                     roughness: 0.5,
                     transparent: true, 
-                    opacity: 0.9,
+                    opacity: 0.65, // Lowered opacity so the white arrow pops
                     emissive: 0x3a1505 
                 });
                 particleData.mesh = new THREE.Mesh(wireGeo, wireMat);
@@ -434,9 +462,11 @@
 
             // 4. Attach Vectors (Velocity & Force)
             if (state.forceValid || state.objType !== 'wire') {
-                const arrowColor = state.objType === 'wire' ? COLORS.current : COLORS.velocity;
-                const arrowLen = state.objType === 'wire' ? 5 : 3;
-                particleData.vArrow = new THREE.ArrowHelper(vDir, new THREE.Vector3(0,0,0), arrowLen, arrowColor, 1.2, 0.6);
+                if (state.objType === 'wire') {
+                    particleData.vArrow = createThickArrow(vDir, new THREE.Vector3(0,0,0), 5, COLORS.current, 0.08, 1.2, 0.25);
+                } else {
+                    particleData.vArrow = new THREE.ArrowHelper(vDir, new THREE.Vector3(0,0,0), 3, COLORS.velocity, 1.2, 0.6);
+                }
                 simGroup.add(particleData.vArrow);
             }
             if (state.forceValid) {
