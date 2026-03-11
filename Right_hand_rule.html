@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Right Hand Rule Simulation</title>
+    <!-- Tailwind CSS for clean, modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls for camera manipulation -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        .ui-layer { position: absolute; z-index: 10; pointer-events: none; }
+        .interactive { pointer-events: auto; }
+        .hidden { display: none !important; }
+        
+        /* Custom scrollbar for control panel */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Top UI: Titles and Legend -->
+    <div class="ui-layer top-0 left-0 w-full p-4 flex justify-between items-start">
+        <div class="interactive bg-white/95 backdrop-blur shadow-lg rounded-xl p-4 border border-slate-200 w-80">
+            <h1 class="text-xl font-bold text-slate-900 mb-1" id="main-title">Right Hand Rule #1</h1>
+            <p class="text-sm text-slate-500 mb-3" id="sub-title">Magnetic Field around a Current</p>
+            
+            <!-- Global Controls -->
+            <div class="flex gap-2 mb-4">
+                <button id="btn-2d3d" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-3 rounded-lg text-sm transition-colors border border-slate-300">
+                    Switch to 2D View
+                </button>
+                <button id="btn-screenshot" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-colors shadow-sm">
+                    📷 Screenshot
+                </button>
+            </div>
+
+            <!-- Legend -->
+            <div class="bg-slate-50 rounded-lg p-3 text-sm border border-slate-200">
+                <div class="font-semibold text-slate-700 mb-2 text-xs uppercase tracking-wider">Legend</div>
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="w-4 h-4 rounded bg-green-500"></div> <span>Velocity (<span class="font-bold italic">v</span>)</span>
+                </div>
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="w-4 h-4 rounded bg-white border border-slate-300"></div> <span>Current (<span class="font-bold italic">I</span>)</span>
+                </div>
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="w-4 h-4 rounded bg-blue-500"></div> <span>Magnetic Field (<span class="font-bold italic">B</span>)</span>
+                </div>
+                <div class="flex items-center gap-2" id="legend-force" style="display: none;">
+                    <div class="w-4 h-4 rounded bg-red-500"></div> <span>Force (<span class="font-bold italic">F</span>)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warning Message -->
+        <div id="warning-box" class="hidden interactive bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 rounded-r shadow-lg max-w-md">
+            <p class="font-bold">Force is Zero!</p>
+            <p class="text-sm">The velocity/current and magnetic field are parallel. The cross product is zero, so no force is applied.</p>
+        </div>
+    </div>
+
+    <!-- Right Side Controls -->
+    <div class="ui-layer top-0 right-0 h-full p-4 flex flex-col justify-center">
+        <div class="interactive bg-white/95 backdrop-blur shadow-xl rounded-xl p-5 border border-slate-200 w-72 max-h-[90vh] overflow-y-auto">
+            
+            <!-- Controls for RHR #1 -->
+            <div id="controls-rhr1">
+                <h3 class="font-bold text-slate-800 mb-3 border-b pb-2">Wire Configuration</h3>
+                
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Direction of Wire</label>
+                <select id="rhr1-dir" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 mb-4 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="up">Up (↑)</option>
+                    <option value="down">Down (↓)</option>
+                    <option value="right">Right (→)</option>
+                    <option value="left">Left (←)</option>
+                    <option value="out">Out of Page (⊙)</option>
+                    <option value="in">Into Page (⊗)</option>
+                </select>
+
+                <div class="flex items-center mt-4">
+                    <input id="rhr1-current" type="checkbox" class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
+                    <label for="rhr1-current" class="ml-2 text-sm font-medium text-slate-900 cursor-pointer">Turn Current ON</label>
+                </div>
+            </div>
+
+            <!-- Controls for RHR #2 -->
+            <div id="controls-rhr2" class="hidden">
+                <h3 class="font-bold text-slate-800 mb-3 border-b pb-2">Charge & Field Setup</h3>
+                
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Object Type</label>
+                <select id="rhr2-type" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 mb-4 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="pos">Positive Charge (+)</option>
+                    <option value="neg">Negative Charge (-)</option>
+                    <option value="wire">Current-Carrying Wire</option>
+                </select>
+
+                <label class="block text-sm font-semibold text-slate-700 mb-1" id="label-rhr2-dir">Velocity Direction</label>
+                <select id="rhr2-dir" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 mb-4 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="up">Up (↑)</option>
+                    <option value="down">Down (↓)</option>
+                    <option value="right">Right (→)</option>
+                    <option value="left" selected>Left (←)</option>
+                    <option value="out">Out of Page (⊙)</option>
+                    <option value="in">Into Page (⊗)</option>
+                </select>
+
+                <label class="block text-sm font-semibold text-slate-700 mb-1">External B-Field Direction</label>
+                <select id="rhr2-b-dir" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 mb-5 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="up">Up (↑)</option>
+                    <option value="down">Down (↓)</option>
+                    <option value="right">Right (→)</option>
+                    <option value="left">Left (←)</option>
+                    <option value="out">Out of Page (⊙)</option>
+                    <option value="in" selected>Into Page (⊗)</option>
+                </select>
+
+                <!-- Prediction Section -->
+                <div id="prediction-section" class="mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <label class="block text-sm font-semibold text-indigo-900 mb-2">1. Predict Force Direction:</label>
+                    <select id="rhr2-predict-dir" class="w-full bg-white border border-indigo-300 text-slate-900 rounded-lg p-2 mb-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="" disabled selected>Select a direction...</option>
+                        <option value="up">Up (↑)</option>
+                        <option value="down">Down (↓)</option>
+                        <option value="right">Right (→)</option>
+                        <option value="left">Left (←)</option>
+                        <option value="out">Out of Page (⊙)</option>
+                        <option value="in">Into Page (⊗)</option>
+                        <option value="zero">Zero Force (Parallel)</option>
+                    </select>
+                    <button id="btn-check-predict" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded shadow text-sm transition-colors">
+                        Check Prediction
+                    </button>
+                    <p id="predict-feedback" class="text-sm font-bold mt-2 text-center hidden"></p>
+                </div>
+
+                <div class="flex gap-2 pt-2 border-t">
+                    <button id="btn-play" disabled class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow transition-colors opacity-50 cursor-not-allowed">
+                        ▶ Play
+                    </button>
+                    <button id="btn-reset" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded shadow transition-colors">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="ui-layer bottom-0 left-0 w-full p-6 flex justify-center">
+        <div class="interactive bg-white/90 backdrop-blur rounded-full p-1 shadow-xl flex gap-1 border border-slate-200">
+            <button id="tab-rhr1" class="px-6 py-2 rounded-full font-bold text-sm bg-blue-600 text-white shadow-sm transition-all">
+                #1: Current -> B-Field
+            </button>
+            <button id="tab-rhr2" class="px-6 py-2 rounded-full font-bold text-sm bg-transparent text-slate-600 hover:bg-slate-100 transition-all">
+                #2: Force on Charge/Wire
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Logic Script -->
+    <script>
+        // --- System State ---
+        let state = {
+            mode: 1, // 1 for RHR#1, 2 for RHR#2
+            is2D: false,
+            isPlaying: false,
+            // RHR 1
+            wireDir: 'up',
+            currentOn: false,
+            // RHR 2
+            objType: 'pos', // 'pos', 'neg', 'wire'
+            objDir: 'left',
+            bFieldDir: 'in',
+            forceValid: true,
+            hasPredicted: false
+        };
+
+        // --- Vector Dictionary ---
+        const VECTORS = {
+            'up': new THREE.Vector3(0, 1, 0),
+            'down': new THREE.Vector3(0, -1, 0),
+            'right': new THREE.Vector3(1, 0, 0),
+            'left': new THREE.Vector3(-1, 0, 0),
+            'out': new THREE.Vector3(0, 0, 1),
+            'in': new THREE.Vector3(0, 0, -1)
+        };
+
+        const COLORS = {
+            current: 0xffffff, // White
+            velocity: 0x22c55e, // Green
+            bField: 0x3b82f6,  // Blue
+            force: 0xef4444,   // Red
+            wire: 0x94a3b8,    // Slate
+            posCharge: 0xf87171, // Light Red
+            negCharge: 0x60a5fa  // Light Blue
+        };
+
+        // --- Three.js Setup ---
+        const container = document.getElementById('canvas-container');
+        const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a); // Dark slate
+
+        // Camera setup (Dual cameras for 3D/2D toggle)
+        const aspect = window.innerWidth / window.innerHeight;
+        const camera3D = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+        camera3D.position.set(10, 8, 15);
+        
+        const frustumSize = 15;
+        const camera2D = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 0.1, 1000);
+        camera2D.position.set(0, 0, 20); // Looking straight down Z axis
+        camera2D.lookAt(0, 0, 0);
+
+        let activeCamera = camera3D;
+
+        // Orbit Controls
+        const controls = new THREE.OrbitControls(camera3D, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // Main group to hold specific simulation objects so we can clear them easily
+        const simGroup = new THREE.Group();
+        scene.add(simGroup);
+
+        // Variables for animation
+        let particleData = {
+            mesh: null,
+            velocity: new THREE.Vector3(),
+            pos: new THREE.Vector3(),
+            charge: 1,
+            trail: null,
+            trailPositions: [],
+            vArrow: null,
+            fArrow: null
+        };
+
+        // --- Helper Geometries ---
+
+        // Draw an 'X' for into the page
+        function createXMarker(size, color) {
+            const material = new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
+            const points1 = [new THREE.Vector3(-size, -size, 0), new THREE.Vector3(size, size, 0)];
+            const points2 = [new THREE.Vector3(-size, size, 0), new THREE.Vector3(size, -size, 0)];
+            const geo1 = new THREE.BufferGeometry().setFromPoints(points1);
+            const geo2 = new THREE.BufferGeometry().setFromPoints(points2);
+            const line1 = new THREE.Line(geo1, material);
+            const line2 = new THREE.Line(geo2, material);
+            const group = new THREE.Group();
+            group.add(line1); group.add(line2);
+            return group;
+        }
+
+        // Draw a Dot for out of page
+        function createDotMarker(size, color) {
+            const geometry = new THREE.CircleGeometry(size, 16);
+            const material = new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide });
+            return new THREE.Mesh(geometry, material);
+        }
+
+        // --- Simulation Builders ---
+
+        function clearSimulation() {
+            while (simGroup.children.length > 0) {
+                const child = simGroup.children[0];
+                simGroup.remove(child);
+            }
+            particleData.trailPositions = [];
+            simGroup.userData = {}; // Clears leftover B-field ring data to prevent stacking
+        }
+
+        function buildSimulation() {
+            clearSimulation();
+            
+            // Draw axis helper for reference
+            const gridHelper = new THREE.GridHelper(20, 20, 0x334155, 0x1e293b);
+            gridHelper.position.y = -5;
+            if(!state.is2D) simGroup.add(gridHelper);
+
+            if (state.mode === 1) {
+                buildRHR1();
+            } else {
+                buildRHR2();
+            }
+        }
+
+        function buildRHR1() {
+            const dir = VECTORS[state.wireDir].clone();
+            
+            // 1. Build Wire
+            const wireLength = 12;
+            const wireGeo = new THREE.CylinderGeometry(0.3, 0.3, wireLength, 16);
+            const wireMat = new THREE.MeshStandardMaterial({ color: COLORS.wire, metalness: 0.8, roughness: 0.2, transparent: true, opacity: 0.8 });
+            const wire = new THREE.Mesh(wireGeo, wireMat);
+            
+            // Align cylinder with direction vector
+            const axis = new THREE.Vector3(0, 1, 0);
+            wire.quaternion.setFromUnitVectors(axis, dir);
+            simGroup.add(wire);
+
+            // 2. Current Arrow
+            if (state.currentOn) {
+                const arrowLength = 6;
+                const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(0,0,0), arrowLength, COLORS.current, 1.5, 0.8);
+                // Center the arrow inside the wire
+                arrow.position.copy(dir.clone().multiplyScalar(-3)); 
+                simGroup.add(arrow);
+
+                // 3. B-Field Rings
+                const radius1 = 2;
+                const radius2 = 4;
+                createBFieldRings(dir, radius1, 8);
+                createBFieldRings(dir, radius2, 12);
+            }
+        }
+
+        function createBFieldRings(wireDir, radius, count) {
+            // Find an orthogonal vector to the wire
+            let arbitrary = new THREE.Vector3(1, 0, 0);
+            if (Math.abs(wireDir.x) > 0.9) arbitrary.set(0, 1, 0);
+            
+            const u = new THREE.Vector3().crossVectors(wireDir, arbitrary).normalize();
+            const v = new THREE.Vector3().crossVectors(wireDir, u).normalize();
+
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2;
+                // Position on circle: P = r * cos(theta) * u + r * sin(theta) * v
+                const pos = new THREE.Vector3()
+                    .addScaledVector(u, radius * Math.cos(angle))
+                    .addScaledVector(v, radius * Math.sin(angle));
+                
+                // Tangent direction for right hand rule (I cross r points to B)
+                // Actually, simply cross(wireDir, normalized_pos) gives correct curl direction!
+                const bDir = new THREE.Vector3().crossVectors(wireDir, pos.clone().normalize()).normalize();
+                
+                const arrow = new THREE.ArrowHelper(bDir, pos, 1.5, COLORS.bField, 0.6, 0.4);
+                
+                // If current is ON, add them to group and animate rotation
+                // For simplicity, we just add static arrows here, but attach to a rotating group
+                if (!simGroup.userData.bRings) simGroup.userData.bRings = new THREE.Group();
+                simGroup.userData.bRings.add(arrow);
+            }
+            simGroup.add(simGroup.userData.bRings);
+            // Save the axis for animation
+            simGroup.userData.bAxis = wireDir;
+        }
+
+        function buildRHR2() {
+            const vDir = VECTORS[state.objDir].clone();
+            const bDir = VECTORS[state.bFieldDir].clone();
+            
+            // 1. Setup Environment (B-Field Grid)
+            buildBFieldGrid(bDir);
+
+            // 2. Calculate Force
+            let chargeSign = state.objType === 'neg' ? -1 : 1;
+            const forceDir = new THREE.Vector3().crossVectors(vDir, bDir).multiplyScalar(chargeSign);
+            
+            // Check for parallel vectors
+            if (forceDir.lengthSq() < 0.01) {
+                state.forceValid = false;
+            } else {
+                state.forceValid = true;
+                forceDir.normalize();
+            }
+
+            // 3. Build Object
+            particleData.velocity = vDir.clone().multiplyScalar(4); // speed
+            particleData.pos = new THREE.Vector3(0, 0, 0);
+            particleData.charge = chargeSign;
+            
+            if (state.objType === 'wire') {
+                const wireGeo = new THREE.CylinderGeometry(0.2, 0.2, 8, 16);
+                const wireMat = new THREE.MeshStandardMaterial({ color: COLORS.wire, metalness: 0.8, transparent: true, opacity: 0.8 });
+                particleData.mesh = new THREE.Mesh(wireGeo, wireMat);
+                particleData.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vDir);
+            } else {
+                const sphereGeo = new THREE.SphereGeometry(0.6, 32, 32);
+                const color = state.objType === 'pos' ? COLORS.posCharge : COLORS.negCharge;
+                const sphereMat = new THREE.MeshStandardMaterial({ color: color });
+                particleData.mesh = new THREE.Mesh(sphereGeo, sphereMat);
+                
+                // Add +/- sign visually (simple lines)
+                const signGeo = new THREE.BoxGeometry(0.8, 0.1, 0.1);
+                const signMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const minus = new THREE.Mesh(signGeo, signMat);
+                minus.position.z = 0.6;
+                particleData.mesh.add(minus);
+                if (state.objType === 'pos') {
+                    const plus = new THREE.Mesh(signGeo, signMat);
+                    plus.rotation.z = Math.PI / 2;
+                    plus.position.z = 0.6;
+                    particleData.mesh.add(plus);
+                }
+            }
+            simGroup.add(particleData.mesh);
+
+            // 4. Attach Vectors (Velocity & Force)
+            if (state.forceValid || state.objType !== 'wire') {
+                const arrowColor = state.objType === 'wire' ? COLORS.current : COLORS.velocity;
+                const arrowLen = state.objType === 'wire' ? 5 : 3;
+                particleData.vArrow = new THREE.ArrowHelper(vDir, new THREE.Vector3(0,0,0), arrowLen, arrowColor, 1.2, 0.6);
+                simGroup.add(particleData.vArrow);
+            }
+            if (state.forceValid) {
+                particleData.fArrow = new THREE.ArrowHelper(forceDir, new THREE.Vector3(0,0,0), 3, COLORS.force, 0.8, 0.4);
+                particleData.fArrow.visible = state.hasPredicted || state.mode === 1; // Hidden initially in RHR2
+                simGroup.add(particleData.fArrow);
+            }
+
+            // 5. Trail
+            const trailGeo = new THREE.BufferGeometry();
+            const trailMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+            particleData.trail = new THREE.Line(trailGeo, trailMat);
+            simGroup.add(particleData.trail);
+        }
+
+        function buildBFieldGrid(bDir) {
+            const spacing = 3;
+            const size = 3;
+            const is2DIn = state.is2D && state.bFieldDir === 'in';
+            const is2DOut = state.is2D && state.bFieldDir === 'out';
+
+            for (let x = -size; x <= size; x++) {
+                for (let y = -size; y <= size; y++) {
+                    for (let z = -size; z <= size; z++) {
+                        // Skip some inner points to reduce clutter in 3D, or draw planes in 2D
+                        if (state.is2D && z !== 0) continue; 
+                        if (!state.is2D && (Math.abs(x) < 2 && Math.abs(y) < 2 && Math.abs(z) < 2) && !(x===0&&y===0&&z===0)) continue;
+
+                        const pos = new THREE.Vector3(x * spacing, y * spacing, z * spacing);
+                        
+                        if (is2DIn) {
+                            const marker = createXMarker(0.4, COLORS.bField);
+                            marker.position.copy(pos);
+                            simGroup.add(marker);
+                        } else if (is2DOut) {
+                            const marker = createDotMarker(0.2, COLORS.bField);
+                            marker.position.copy(pos);
+                            simGroup.add(marker);
+                        } else {
+                            const arrow = new THREE.ArrowHelper(bDir, pos, 1.5, COLORS.bField, 0.5, 0.3);
+                            simGroup.add(arrow);
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Animation Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.1); // Cap delta time
+
+            // Animation for RHR 1 (Rotating Magnetic Field)
+            if (state.mode === 1 && state.currentOn && simGroup.userData.bRings) {
+                // Rotate the B-field arrows around the wire axis
+                const axis = simGroup.userData.bAxis;
+                simGroup.userData.bRings.rotateOnWorldAxis(axis, 1.5 * dt);
+            }
+
+            // Animation for RHR 2 (Lorentz Force Motion)
+            if (state.mode === 2 && state.isPlaying && state.forceValid) {
+                const bDir = VECTORS[state.bFieldDir].clone();
+                
+                if (state.objType === 'wire') {
+                    // Wires just get pushed straight in direction of force
+                    const forceDir = new THREE.Vector3().crossVectors(VECTORS[state.objDir].clone(), bDir);
+                    particleData.pos.add(forceDir.normalize().multiplyScalar(3 * dt));
+                } else {
+                    // Charges experience continuous Lorentz force: a = q(v x B)
+                    // We update velocity based on force, creating a circular path
+                    const force = new THREE.Vector3().crossVectors(particleData.velocity, bDir).multiplyScalar(particleData.charge * 2.5);
+                    
+                    particleData.velocity.add(force.multiplyScalar(dt));
+                    // Normalize and reset speed to prevent spiraling outward due to Euler integration inaccuracies
+                    particleData.velocity.normalize().multiplyScalar(4); 
+                    
+                    particleData.pos.add(particleData.velocity.clone().multiplyScalar(dt));
+                }
+
+                // Update Mesh Position
+                particleData.mesh.position.copy(particleData.pos);
+                
+                // Update Arrows
+                if (particleData.vArrow) {
+                    particleData.vArrow.position.copy(particleData.pos);
+                    particleData.vArrow.setDirection(particleData.velocity.clone().normalize());
+                }
+                if (particleData.fArrow) {
+                    particleData.fArrow.position.copy(particleData.pos);
+                    const currentForce = new THREE.Vector3().crossVectors(particleData.velocity, bDir).multiplyScalar(particleData.charge);
+                    particleData.fArrow.setDirection(currentForce.normalize());
+                }
+
+                // Update Trail
+                if (state.objType !== 'wire') {
+                    particleData.trailPositions.push(particleData.pos.x, particleData.pos.y, particleData.pos.z);
+                    if (particleData.trailPositions.length > 300 * 3) {
+                        particleData.trailPositions.splice(0, 3); // keep trail length fixed
+                    }
+                    particleData.trail.geometry.setAttribute('position', new THREE.Float32BufferAttribute(particleData.trailPositions, 3));
+                    particleData.trail.geometry.attributes.position.needsUpdate = true;
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, activeCamera);
+        }
+
+        // --- Event Listeners & UI Logic ---
+
+        // Tab Switching
+        const btnRhr1 = document.getElementById('tab-rhr1');
+        const btnRhr2 = document.getElementById('tab-rhr2');
+        const panelRhr1 = document.getElementById('controls-rhr1');
+        const panelRhr2 = document.getElementById('controls-rhr2');
+        const title = document.getElementById('main-title');
+        const subTitle = document.getElementById('sub-title');
+        const legendForce = document.getElementById('legend-force');
+
+        function resetPrediction() {
+            if (state.mode === 2) {
+                state.hasPredicted = false;
+                document.getElementById('rhr2-predict-dir').value = '';
+                const feedback = document.getElementById('predict-feedback');
+                feedback.classList.add('hidden');
+                feedback.className = 'text-sm font-bold mt-2 text-center hidden';
+                
+                const playBtn = document.getElementById('btn-play');
+                playBtn.disabled = true;
+                playBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                playBtn.innerHTML = '▶ Play';
+                playBtn.classList.replace('bg-amber-500', 'bg-green-600');
+                playBtn.classList.replace('hover:bg-amber-600', 'hover:bg-green-700');
+                
+                document.getElementById('warning-box').classList.add('hidden');
+                state.isPlaying = false;
+            }
+        }
+
+        function setMode(mode) {
+            state.mode = mode;
+            state.isPlaying = false;
+            document.getElementById('warning-box').classList.add('hidden');
+
+            if (mode === 1) {
+                btnRhr1.className = "px-6 py-2 rounded-full font-bold text-sm bg-blue-600 text-white shadow-sm transition-all";
+                btnRhr2.className = "px-6 py-2 rounded-full font-bold text-sm bg-transparent text-slate-600 hover:bg-slate-100 transition-all";
+                panelRhr1.classList.remove('hidden');
+                panelRhr2.classList.add('hidden');
+                title.innerText = "Right Hand Rule #1";
+                subTitle.innerText = "Magnetic Field around a Current";
+                legendForce.style.display = 'none';
+            } else {
+                btnRhr2.className = "px-6 py-2 rounded-full font-bold text-sm bg-blue-600 text-white shadow-sm transition-all";
+                btnRhr1.className = "px-6 py-2 rounded-full font-bold text-sm bg-transparent text-slate-600 hover:bg-slate-100 transition-all";
+                panelRhr2.classList.remove('hidden');
+                panelRhr1.classList.add('hidden');
+                title.innerText = "Right Hand Rule #2";
+                subTitle.innerText = "Force on a Charge or Current";
+                legendForce.style.display = 'flex';
+                resetPrediction();
+            }
+            buildSimulation();
+        }
+
+        btnRhr1.addEventListener('click', () => setMode(1));
+        btnRhr2.addEventListener('click', () => setMode(2));
+
+        // RHR 1 Inputs
+        document.getElementById('rhr1-dir').addEventListener('change', (e) => { state.wireDir = e.target.value; buildSimulation(); });
+        document.getElementById('rhr1-current').addEventListener('change', (e) => { state.currentOn = e.target.checked; buildSimulation(); });
+
+        // RHR 2 Inputs
+        document.getElementById('rhr2-type').addEventListener('change', (e) => { 
+            state.objType = e.target.value; 
+            document.getElementById('label-rhr2-dir').innerText = state.objType === 'wire' ? 'Current Direction' : 'Velocity Direction';
+            resetPrediction();
+            buildSimulation(); 
+        });
+        document.getElementById('rhr2-dir').addEventListener('change', (e) => { 
+            state.objDir = e.target.value; 
+            resetPrediction(); 
+            buildSimulation(); 
+        });
+        document.getElementById('rhr2-b-dir').addEventListener('change', (e) => { 
+            state.bFieldDir = e.target.value; 
+            resetPrediction(); 
+            buildSimulation(); 
+        });
+
+        // Prediction Logic
+        document.getElementById('btn-check-predict').addEventListener('click', () => {
+            const predictedVal = document.getElementById('rhr2-predict-dir').value;
+            if (!predictedVal) return;
+
+            const vDir = VECTORS[state.objDir].clone();
+            const bDir = VECTORS[state.bFieldDir].clone();
+            let chargeSign = state.objType === 'neg' ? -1 : 1;
+            const forceVec = new THREE.Vector3().crossVectors(vDir, bDir).multiplyScalar(chargeSign);
+
+            let actualDir = 'zero';
+            if (forceVec.lengthSq() > 0.01) {
+                forceVec.normalize();
+                let maxDot = -1;
+                for (let key in VECTORS) {
+                    let dot = forceVec.dot(VECTORS[key]);
+                    if (dot > maxDot) {
+                        maxDot = dot;
+                        actualDir = key;
+                    }
+                }
+            }
+
+            const feedback = document.getElementById('predict-feedback');
+            feedback.classList.remove('hidden');
+
+            if (predictedVal === actualDir) {
+                feedback.innerText = '✅ Correct! You may now press Play.';
+                feedback.classList.remove('text-red-600');
+                feedback.classList.add('text-green-600');
+                
+                state.hasPredicted = true;
+                if (particleData.fArrow) particleData.fArrow.visible = true;
+                
+                const playBtn = document.getElementById('btn-play');
+                playBtn.disabled = false;
+                playBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                if (actualDir === 'zero') {
+                    document.getElementById('warning-box').classList.remove('hidden');
+                }
+            } else {
+                feedback.innerText = '❌ Incorrect. Try the Right Hand Rule again!';
+                feedback.classList.remove('text-green-600');
+                feedback.classList.add('text-red-600');
+            }
+        });
+
+        // Play / Reset
+        document.getElementById('btn-play').addEventListener('click', (e) => {
+            if (e.target.disabled) return;
+            state.isPlaying = !state.isPlaying;
+            if (state.isPlaying) {
+                e.target.innerHTML = '⏸ Pause';
+                e.target.classList.replace('bg-green-600', 'bg-amber-500');
+                e.target.classList.replace('hover:bg-green-700', 'hover:bg-amber-600');
+            } else {
+                e.target.innerHTML = '▶ Play';
+                e.target.classList.replace('bg-amber-500', 'bg-green-600');
+                e.target.classList.replace('hover:bg-amber-600', 'hover:bg-green-700');
+            }
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            resetPrediction();
+            buildSimulation();
+        });
+
+        // 2D / 3D Toggle
+        const btn2D = document.getElementById('btn-2d3d');
+        btn2D.addEventListener('click', () => {
+            state.is2D = !state.is2D;
+            if (state.is2D) {
+                activeCamera = camera2D;
+                controls.enabled = false;
+                btn2D.innerText = 'Switch to 3D View';
+                btn2D.classList.replace('bg-slate-100', 'bg-blue-100');
+                btn2D.classList.replace('text-slate-700', 'text-blue-800');
+            } else {
+                activeCamera = camera3D;
+                controls.enabled = true;
+                btn2D.innerText = 'Switch to 2D View';
+                btn2D.classList.replace('bg-blue-100', 'bg-slate-100');
+                btn2D.classList.replace('text-blue-800', 'text-slate-700');
+            }
+            buildSimulation(); // Rebuild to change markers (Xs vs Arrows)
+        });
+
+        // Screenshot
+        document.getElementById('btn-screenshot').addEventListener('click', () => {
+            // Render one frame explicitly to ensure buffer is current
+            renderer.render(scene, activeCamera);
+            const dataURL = renderer.domElement.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = `Physics_RHR_Simulation_${Date.now()}.png`;
+            a.click();
+        });
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const aspect = width / height;
+
+            renderer.setSize(width, height);
+            
+            camera3D.aspect = aspect;
+            camera3D.updateProjectionMatrix();
+
+            camera2D.left = frustumSize * aspect / -2;
+            camera2D.right = frustumSize * aspect / 2;
+            camera2D.top = frustumSize / 2;
+            camera2D.bottom = frustumSize / -2;
+            camera2D.updateProjectionMatrix();
+        });
+
+        // Initialize
+        buildSimulation();
+        animate();
+    </script>
+</body>
+</html>
