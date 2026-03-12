@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>German Grammar Quest</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body {
+font-family: 'Fredoka', sans-serif;
+background-color: #A7F3D0;
+margin: 0;
+overflow-x: hidden;
+}
+
+.card-container {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 1.5rem;
+width: 100%;
+max-width: 1100px;
+}
+
+.custom-card {
+border-radius: 30px;
+padding: 2rem 1rem;
+display: flex;
+flex-direction: column;
+align-items: center;
+box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+transition: transform 0.2s;
+cursor: pointer;
+border-width: 6px;
+position: relative;
+background: white;
+z-index: 10;
+}
+
+.custom-card:hover:not(.disabled) { transform: translateY(-8px); }
+.custom-card.disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); pointer-events: none; }
+
+.white-box {
+background: white;
+border-radius: 20px;
+padding: 1rem;
+width: 95%;
+margin: 1rem 0;
+font-size: 0.9rem;
+text-align: left;
+pointer-events: none;
+}
+
+.btn-utility {
+background-color: #ef4444;
+color: white;
+padding: 0.5rem 1.2rem;
+border-radius: 9999px;
+font-weight: 700;
+box-shadow: 0 4px 0px #b91c1c;
+transition: all 0.1s;
+}
+.btn-utility:active { transform: translateY(2px); box-shadow: 0 2px 0px #b91c1c; }
+
+.nav-fixed-bottom-left { position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 1000; }
+
+@keyframes float {
+0%, 100% { transform: translateY(0px); }
+50% { transform: translateY(-10px); }
+}
+.float { animation: float 3s ease-in-out infinite; }
+
+.station { transition: all 0.5s ease; cursor: pointer; }
+.station.locked { opacity: 0.5; filter: grayscale(1); cursor: not-allowed; }
+.difficulty-title { color: #8B4513; font-weight: 800; font-size: 3.5rem; margin-bottom: 0.5rem; }
+
+#player-token {
+transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+z-index: 20;
+}
+
+.pvp-layout {
+display: grid;
+grid-template-columns: 1fr 2fr 1fr;
+gap: 1rem;
+height: 100vh;
+padding: 1rem;
+}
+
+.option-btn:disabled { opacity: 0.6; cursor: default; }
+
+#map-path-svg {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+z-index: 5;
+pointer-events: none;
+}
+
+#map-path-svg polyline {
+fill: none;
+stroke: #8B4513;
+stroke-width: 6;
+stroke-dasharray: 12;
+stroke-linecap: round;
+opacity: 0.5;
+}
+
+.item-btn {
+transition: all 0.1s;
+}
+.item-btn:active:not(:disabled) {
+transform: scale(0.95);
+}
+
+.tense-tag {
+background: #FEF3C7;
+color: #92400E;
+padding: 4px 12px;
+border-radius: 8px;
+font-size: 0.85rem;
+font-weight: 700;
+display: inline-block;
+margin-top: 8px;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+border: 1px solid #FDE68A;
+}
+</style>
+</head>
+<body class="h-full">
+<div id="app" class="min-h-full w-full">
+<!-- Global Nav -->
+<div id="global-nav" class="hidden nav-fixed-bottom-left">
+<button onclick="backToStart()" class="btn-utility flex items-center gap-2">
+🏠 <span class="hidden sm:inline">Abbrechen</span>
+</button>
+</div>
+
+<!-- Start Screen -->
+<div id="start-screen" class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+<div class="text-9xl mb-6 float">🐲</div>
+<h1 class="text-6xl font-bold text-[#8B4513] mb-4">Grammatik-Quest</h1>
+<p class="text-2xl text-[#A0522D] mb-12 italic">Lerne Deutsch spielerisch!</p>
+<div class="flex flex-col gap-6 w-full max-w-sm">
+<button onclick="startGameMode('solo')" class="bg-[#F59E0B] text-white font-bold text-3xl py-6 rounded-[30px] shadow-lg hover:bg-[#D97706] transition-all flex items-center justify-center gap-4">
+<span>👤</span> Solo spielen
+</button>
+<button onclick="startGameMode('pvp')" class="bg-[#EF4444] text-white font-bold text-3xl py-6 rounded-[30px] shadow-lg hover:bg-[#DC2626] transition-all flex items-center justify-center gap-4">
+<span>⚔️</span> Head-to-Head
+</button>
+</div>
+</div>
+
+<!-- Difficulty Screen -->
+<div id="difficulty-select" class="hidden min-h-screen flex flex-col items-center py-10 px-6">
+<h1 class="difficulty-title text-center">Schwierigkeit</h1>
+<div class="card-container">
+<div onclick="selectDifficulty('easy')" class="custom-card border-[#86EFAC] bg-[#DCFCE7]">
+<div class="text-7xl mb-4">😋</div>
+<h2 class="text-4xl font-extrabold text-[#166534] mb-2">Leicht</h2>
+<div class="white-box">
+<ul class="space-y-1">
+<li>✅ 5 Richtige nötig</li>
+<li>✅ Nur Multiple Choice</li>
+</ul>
+</div>
+</div>
+<div onclick="selectDifficulty('normal')" class="custom-card border-[#FDE047] bg-[#FEF9C3]">
+<div class="text-7xl mb-4">🙂</div>
+<h2 class="text-4xl font-extrabold text-[#854D0E] mb-2">Normal</h2>
+<div class="white-box">
+<ul class="space-y-1">
+<li>⚖️ 7 Richtige nötig</li>
+<li>⚖️ Mix: Auswahl/Tippen</li>
+</ul>
+</div>
+</div>
+<div onclick="selectDifficulty('hard')" class="custom-card border-[#FCA5A5] bg-[#FEE2E2]">
+<div class="text-7xl mb-4">😰</div>
+<h2 class="text-4xl font-extrabold text-[#991B1B] mb-2">Schwer</h2>
+<div class="white-box">
+<ul class="space-y-1">
+<li>🔥 10 Richtige nötig</li>
+<li>🔥 Nur selbst Tippen</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Character Screen -->
+<div id="character-select" class="hidden min-h-screen flex flex-col items-center py-10 px-6">
+<h1 id="char-select-title" class="difficulty-title text-center">Helden wählen!</h1>
+<div id="char-cards" class="card-container">
+<div id="card-wizard" onclick="pickCharacter('wizard')" class="custom-card border-[#D8B4FE] bg-[#F3E8FF]">
+<div class="text-7xl mb-4">🧙‍♂️</div>
+<h2 class="text-4xl font-extrabold text-[#6B21A8] mb-2">Zauberer</h2>
+<div class="white-box space-y-1 font-medium">
+<p>❤️ Leben: <span class="text-[#6B21A8]">100</span></p>
+<p>⚔️ Angriff: <span class="text-[#6B21A8]">Normal</span></p>
+<p>🛡️ Verteidigung: <span class="text-[#6B21A8]">Normal</span></p>
+</div>
+</div>
+<div id="card-knight" onclick="pickCharacter('knight')" class="custom-card border-[#93C5FD] bg-[#DBEAFE]">
+<div class="text-7xl mb-4">🛡️</div>
+<h2 class="text-4xl font-extrabold text-[#1E40AF] mb-2">Ritter</h2>
+<div class="white-box space-y-1 font-medium">
+<p>❤️ Leben: <span class="text-blue-600">140</span></p>
+<p>⚔️ Angriff: <span class="text-gray-400">Schwach</span></p>
+<p>🛡️ Verteidigung: <span class="text-blue-600">Hoch</span></p>
+</div>
+</div>
+<div id="card-archer" onclick="pickCharacter('archer')" class="custom-card border-[#86EFAC] bg-[#DCFCE7]">
+<div class="text-7xl mb-4">🏹</div>
+<h2 class="text-4xl font-extrabold text-[#166534] mb-2">Schütze</h2>
+<div class="white-box space-y-1 font-medium">
+<p>❤️ Leben: <span class="text-red-500">80</span></p>
+<p>⚔️ Angriff: <span class="text-green-600">Sehr Stark</span></p>
+<p>🛡️ Verteidigung: <span class="text-gray-400">Niedrig</span></p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Solo Map -->
+<div id="quest-map" class="hidden h-screen w-full p-4 flex flex-col">
+<div class="bg-[#4B2C20] rounded-2xl p-4 mb-4 shadow-xl flex justify-between items-center text-white">
+<div class="flex items-center gap-4">
+<div id="map-hero-icons" class="text-4xl"></div>
+<div class="flex flex-col">
+<div class="text-xs font-bold mb-1">Lebenspunkte</div>
+<div class="w-48 h-4 bg-gray-700 rounded-full overflow-hidden border-2 border-white/20">
+<div id="hp-bar" class="bg-red-500 h-full w-full transition-all duration-500"></div>
+</div>
+</div>
+</div>
+<div class="flex gap-8 font-bold text-2xl mr-4">
+<span>💎 <span id="stat-coins">0</span></span>
+<span>⭐ <span id="stat-score">0</span></span>
+</div>
+</div>
+<div id="map-body" class="bg-[#E5D3B3] rounded-[40px] flex-1 relative shadow-inner border-8 border-[#C19A6B] overflow-hidden">
+<svg id="map-path-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none">
+<polyline id="map-polyline" points=""></polyline>
+</svg>
+<div id="player-token" class="absolute w-16 h-16 flex items-center justify-center text-5xl pointer-events-none"></div>
+<div id="station-container" class="absolute inset-0"></div>
+</div>
+</div>
+
+<!-- Question Screen (Solo) -->
+<div id="question-screen" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+<div id="question-card" class="bg-white w-full max-w-2xl rounded-[40px] p-10 shadow-2xl relative">
+<div id="boss-visual" class="hidden text-center mb-6">
+<div id="boss-emoji" class="text-8xl float">👹</div>
+<div class="w-full h-2 bg-gray-200 rounded-full mt-4 overflow-hidden">
+<div id="boss-hp-bar" class="bg-purple-600 h-full w-full transition-all"></div>
+</div>
+</div>
+<div class="flex justify-between items-center mb-4">
+<span id="q-header" class="text-2xl font-bold text-amber-800 italic"></span>
+<span class="text-3xl text-red-500 font-bold">❤️ <span id="q-hp-val">100</span></span>
+</div>
+<div class="text-center">
+<div id="q-counter" class="text-sm font-bold text-gray-400 mb-2 uppercase"></div>
+<p id="q-text" class="text-4xl font-bold text-gray-800"></p>
+<div id="q-tense-container" class="mb-6"></div>
+<div id="options-grid" class="grid grid-cols-1 gap-4"></div>
+<div id="input-area" class="hidden">
+<input type="text" id="type-answer" class="w-full p-6 text-2xl border-4 border-amber-200 rounded-3xl text-center outline-none focus:border-amber-500" placeholder="Antwort tippen...">
+<button id="btn-submit-solo" onclick="submitTypedAnswer()" class="mt-4 w-full bg-amber-500 text-white font-bold py-5 rounded-3xl text-2xl active:translate-y-1">Prüfen</button>
+</div>
+</div>
+<div id="feedback-box" class="hidden p-6 rounded-3xl text-center font-bold text-3xl my-6"></div>
+<div class="flex justify-center mt-4">
+<button id="btn-next" class="hidden bg-emerald-500 text-white px-16 py-5 rounded-full font-bold text-2xl shadow-lg">Weiter</button>
+</div>
+</div>
+</div>
+
+<!-- PVP Battle -->
+<div id="pvp-battle" class="hidden h-screen bg-[#1E293B] text-white overflow-hidden">
+<div class="pvp-layout">
+<div class="flex flex-col gap-4">
+<div id="p1-area" class="bg-white/10 p-6 rounded-[30px] border-4 border-white/20 transition-all">
+<div class="text-center">
+<div id="p1-icon" class="text-8xl mb-2"></div>
+<h3 class="text-2xl font-bold">Spieler 1</h3>
+<div class="w-full h-4 bg-gray-800 rounded-full my-4 overflow-hidden">
+<div id="p1-hp-bar" class="bg-red-500 h-full w-full"></div>
+</div>
+<div class="text-2xl font-bold">❤️ <span id="p1-hp-text">100</span></div>
+<div class="mt-4 text-emerald-400 font-bold">💎 <span id="p1-coins">0</span></div>
+</div>
+</div>
+<div class="bg-slate-900/40 p-4 rounded-3xl flex-1 border-2 border-emerald-600/30">
+<div class="flex flex-col gap-2">
+<button id="p1-btn-heal" onclick="buyItem(1, 'heal')" class="item-btn bg-green-600 p-2 rounded-xl text-xs font-bold">❤️ Heilung (15💎)</button>
+<button id="p1-btn-shield" onclick="buyItem(1, 'shield')" class="item-btn bg-blue-600 p-2 rounded-xl text-xs font-bold">🛡️ Schild (20💎)</button>
+<button id="p1-btn-sabotage" onclick="buyItem(1, 'sabotage')" class="item-btn bg-purple-600 p-2 rounded-xl text-xs font-bold">🌀 Sabotage (25💎)</button>
+</div>
+<div id="p1-active-effects" class="mt-2 flex gap-1 justify-center"></div>
+</div>
+</div>
+<div class="flex flex-col">
+<div id="pvp-turn-indicator" class="text-center py-4 bg-emerald-600 rounded-b-3xl text-2xl font-bold uppercase">Spieler 1 am Zug</div>
+<div id="pvp-question-card" class="mt-8 bg-white text-gray-800 p-10 rounded-[40px] shadow-2xl relative flex-1 overflow-y-auto">
+<div id="pvp-status-msg" class="text-center italic text-emerald-700 font-bold mb-4 uppercase text-sm">Wähle die richtige Antwort!</div>
+<p id="pvp-q-text" class="text-4xl font-bold text-center"></p>
+<div id="pvp-tense-container" class="text-center mb-10"></div>
+<div id="pvp-options" class="grid grid-cols-1 gap-4"></div>
+<div id="pvp-input-area" class="hidden">
+<input type="text" id="pvp-type-answer" class="w-full p-6 text-2xl border-4 border-emerald-100 rounded-3xl text-center" placeholder="Tippe hier...">
+<button id="btn-submit-pvp" onclick="submitPvpTypedAnswer()" class="mt-4 w-full bg-emerald-500 text-white font-bold py-5 rounded-3xl text-2xl">Prüfen</button>
+</div>
+<div id="pvp-feedback" class="hidden absolute inset-0 bg-white/95 rounded-[40px] flex flex-col items-center justify-center p-8 text-center z-[110]">
+<div id="pvp-feedback-icon" class="text-8xl mb-4"></div>
+<div id="pvp-feedback-text" class="text-3xl font-bold"></div>
+<button id="pvp-btn-next" class="mt-8 bg-emerald-500 text-white px-12 py-4 rounded-full font-bold text-2xl">Nächster Zug</button>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div id="p2-area" class="bg-white/10 p-6 rounded-[30px] border-4 border-white/20 transition-all">
+<div class="text-center">
+<div id="p2-icon" class="text-8xl mb-2"></div>
+<h3 class="text-2xl font-bold">Spieler 2</h3>
+<div class="w-full h-4 bg-gray-800 rounded-full my-4 overflow-hidden">
+<div id="p2-hp-bar" class="bg-red-500 h-full w-full"></div>
+</div>
+<div class="text-2xl font-bold">❤️ <span id="p2-hp-text">100</span></div>
+<div class="mt-4 text-emerald-400 font-bold">💎 <span id="p2-coins">0</span></div>
+</div>
+</div>
+<div class="bg-slate-900/40 p-4 rounded-3xl flex-1 border-2 border-emerald-600/30">
+<div class="flex flex-col gap-2">
+<button id="p2-btn-heal" onclick="buyItem(2, 'heal')" class="item-btn bg-green-600 p-2 rounded-xl text-xs font-bold">❤️ Heilung (15💎)</button>
+<button id="p2-btn-shield" onclick="buyItem(2, 'shield')" class="item-btn bg-blue-600 p-2 rounded-xl text-xs font-bold">🛡️ Schild (20💎)</button>
+<button id="p2-btn-sabotage" onclick="buyItem(2, 'sabotage')" class="item-btn bg-purple-600 p-2 rounded-xl text-xs font-bold">🌀 Sabotage (25💎)</button>
+</div>
+<div id="p2-active-effects" class="mt-2 flex gap-1 justify-center"></div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="game-over-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-6 text-center text-white bg-black/80">
+<div class="max-w-md w-full">
+<div id="go-emoji" class="text-9xl mb-6">💀</div>
+<h2 id="go-title" class="text-6xl font-bold mb-4">Game Over</h2>
+<button onclick="location.reload()" class="w-full bg-red-600 py-6 rounded-3xl text-2xl font-bold">Neustart</button>
+</div>
+</div>
+
+<div id="reward-screen" class="hidden min-h-screen bg-[#4B2C20] flex flex-col items-center justify-center p-8 text-center text-white">
+<div class="text-9xl mb-8">🏆</div>
+<h1 class="text-6xl font-bold mb-4">Quest Beendet!</h1>
+<p id="final-score" class="text-4xl font-bold text-amber-400">Punkte: 0</p>
+<button onclick="location.reload()" class="mt-12 bg-amber-500 px-12 py-6 rounded-full text-3xl font-bold">Nochmal spielen</button>
+</div>
+</div>
+
+<script>
+const state = {
+gameMode: 'solo', difficulty: 'normal',
+p1Char: null, p2Char: null,
+hp: 100, maxHp: 100, p2Hp: 100, p2MaxHp: 100,
+p1Coins: 0, p2Coins: 0,
+p1Shield: false, p2Shield: false,
+p1Sabotage: false, p2Sabotage: false,
+score: 0, currentStationIdx: 0, unlockedIdx: 0,
+qIdx: 0, activeQuestions: [], correctInStation: 0,
+targetCorrect: 5, bossHp: 100, activePlayer: 1,
+isAnswering: false
+};
+
+const charData = {
+wizard: { icon: '🧙‍♂️', hp: 100, dmgMod: 1.0, defMod: 1.0 },
+knight: { icon: '🛡️', hp: 140, dmgMod: 0.8, defMod: 0.7 },
+archer: { icon: '🏹', hp: 80, dmgMod: 1.5, defMod: 1.2 }
+};
+
+// Added 'inf' key for infinitives
+const questionPools = {
+"modal_presens": [
+{ q: "Ich ___ gut Deutsch.", c: "kann", a: ["kann", "können", "kannst"], inf: "können", cat: "Modalverben", tense: "Präsens" },
+{ q: "Er ___ heute arbeiten.", c: "muss", a: ["muss", "müssen", "musst"], inf: "müssen", cat: "Modalverben", tense: "Präsens" },
+{ q: "___ wir hier rauchen?", c: "Dürfen", a: ["Dürfen", "Darf", "Dürft"], inf: "dürfen", cat: "Modalverben", tense: "Präsens" },
+{ q: "Du ___ mehr Wasser trinken.", c: "sollst", a: ["sollst", "sollen", "sollt"], inf: "sollen", cat: "Modalverben", tense: "Präsens" },
+{ q: "___ ihr mit ins Kino kommen?", c: "Wollt", a: ["Wollt", "Wollen", "Willst"], inf: "wollen", cat: "Modalverben", tense: "Präsens" },
+{ q: "Sie ___ Schokolade sehr gern.", c: "mag", a: ["mag", "mögen", "mögst"], inf: "mögen", cat: "Modalverben", tense: "Präsens" },
+{ q: "Wir ___ jetzt leider gehen.", c: "müssen", a: ["müssen", "muss", "müsst"], inf: "müssen", cat: "Modalverben", tense: "Präsens" },
+{ q: "Ich ___ später Arzt werden.", c: "will", a: ["will", "wolle", "wollen"], inf: "wollen", cat: "Modalverben", tense: "Präsens" },
+{ q: "___ du mir bitte helfen?", c: "Kannst", a: ["Kannst", "Kann", "Können"], inf: "können", cat: "Modalverben", tense: "Präsens" },
+{ q: "Das Kind ___ heute länger aufbleiben.", c: "darf", a: ["darf", "dürfen", "darfst"], inf: "dürfen", cat: "Modalverben", tense: "Präsens" }
+],
+"imperativ_du": [
+{ q: "___ nach Hause!", c: "Geh", a: ["Geh", "Gehe", "Gehst"], inf: "gehen", cat: "Imperativ", tense: "du-Form" },
+{ q: "___ den Text vor!", c: "Lies", a: ["Lies", "Lese", "Lesen"], inf: "lesen", cat: "Imperativ", tense: "du-Form" },
+{ q: "___ vorsichtig!", c: "Fahr", a: ["Fahr", "Fahre", "Fährst"], inf: "fahren", cat: "Imperativ", tense: "du-Form" },
+{ q: "___ nicht so laut!", c: "Sei", a: ["Sei", "Seien", "Bist"], inf: "sein", cat: "Imperativ", tense: "du-Form" },
+{ q: "___ dein Gemüse!", c: "Iss", a: ["Iss", "Esse", "Esst"], inf: "essen", cat: "Imperativ", tense: "du-Form" },
+{ q: "___ mir das Buch!", c: "Gib", a: ["Gib", "Geben", "Gebe"], inf: "geben", cat: "Imperativ", tense: "du-Form" },
+{ q: "___ deiner Schwester!", c: "Hilf", a: ["Hilf", "Helfe", "Helfen"], inf: "helfen", cat: "Imperativ", tense: "du-Form" },
+{ q: "___ deutlicher!", c: "Sprich", a: ["Sprich", "Spreche", "Sprechen"], inf: "sprechen", cat: "Imperativ", tense: "du-Form" },
+{ q: "___ die Tür zu!", c: "Mach", a: ["Mach", "Mache", "Machst"], inf: "machen", cat: "Imperativ", tense: "du-Form" },
+{ q: "___ schneller!", c: "Lauf", a: ["Lauf", "Laufe", "Läufst"], inf: "laufen", cat: "Imperativ", tense: "du-Form" }
+],
+"modal_imperfekt": [
+{ q: "Früher ___ ich nicht schwimmen.", c: "konnte", a: ["konnte", "konntest", "könnte"], inf: "können", cat: "Modalverben", tense: "Imperfekt" },
+{ q: "Gestern ___ sie zum Arzt.", c: "musste", a: ["musste", "müsste", "mussten"], inf: "müssen", cat: "Modalverben", tense: "Imperfekt" },
+{ q: "Wir ___ früher draußen spielen.", c: "durften", a: ["durften", "dürften", "durfte"], inf: "dürfen", cat: "Modalverben", tense: "Imperfekt" },
+{ q: "Er ___ eigentlich kommen.", c: "wollte", a: ["wollte", "wollen", "wolltest"], inf: "wollen", cat: "Modalverben", tense: "Imperfekt" },
+{ q: "Ich ___ die Hausaufgaben machen.", c: "sollte", a: ["sollte", "solltest", "sollten"], inf: "sollen", cat: "Modalverben", tense: "Imperfekt" },
+{ q: "Ihr ___ damals gut tanzen.", c: "konntet", a: ["konntet", "konnten", "könntet"], inf: "können", cat: "Modalverben", tense: "Imperfekt" },
+{ q: "Du ___ das nicht tun.", c: "durftest", a: ["durftest", "durfte", "dürftest"], inf: "dürfen", cat: "Modalverben", tense: "Imperfekt" },
+{ q: "Sie ___ nach Berlin.", c: "wollten", a: ["wollten", "wollte", "wollten"], inf: "wollen", cat: "Modalverben", tense: "Imperfekt" },
+{ q: "Mein Opa ___ viel arbeiten.", c: "musste", a: ["musste", "mussten", "müsste"], inf: "müssen", cat: "Modalverben", tense: "Imperfekt" },
+{ q: "Das ___ eigentlich ein Witz sein.", c: "sollte", a: ["sollte", "sollten", "sollst"], inf: "sollen", cat: "Modalverben", tense: "Imperfekt" }
+],
+"imperativ_mix": [
+{ q: "___ Sie bitte leise!", c: "Seien", a: ["Seien", "Sind", "Sei"], inf: "sein", cat: "Imperativ", tense: "Sie-Form" },
+{ q: "___ wir eine Pause!", c: "Machen", a: ["Machen", "Macht", "Mache"], inf: "machen", cat: "Imperativ", tense: "wir-Form" },
+{ q: "___ ihr mir bitte?", c: "Helft", a: ["Helft", "Helfen", "Helfet"], inf: "helfen", cat: "Imperativ", tense: "ihr-Form" },
+{ q: "___ Sie das Kapitel!", c: "Lesen", a: ["Lesen", "Lese", "Lest"], inf: "lesen", cat: "Imperativ", tense: "Sie-Form" },
+{ q: "___ wir ins Restaurant!", c: "Gehen", a: ["Gehen", "Geht", "Gehe"], inf: "gehen", cat: "Imperativ", tense: "wir-Form" },
+{ q: "___ fleißig!", c: "Arbeitet", a: ["Arbeitet", "Arbeiten", "Arbeite"], inf: "arbeiten", cat: "Imperativ", tense: "ihr-Form" },
+{ q: "___ Sie Platz!", c: "Nehmen", a: ["Nehmen", "Nehmt", "Nimm"], inf: "nehmen", cat: "Imperativ", tense: "Sie-Form" },
+{ q: "___ wir jetzt!", c: "Essen", a: ["Essen", "Esst", "Esse"], inf: "essen", cat: "Imperativ", tense: "wir-Form" },
+{ q: "___ ihr hier!", c: "Bleibt", a: ["Bleibt", "Bleiben", "Bleibe"], inf: "bleiben", cat: "Imperativ", tense: "ihr-Form" },
+{ q: "___ Sie es nicht!", c: "Vergessen", a: ["Vergessen", "Vergesst", "Vergiss"], inf: "vergessen", cat: "Imperativ", tense: "Sie-Form" }
+]
+};
+
+const stations = [
+{ name: "Das Dorf", icon: "🏡", x: 10, y: 75, category: "Modalverben (Präsens)", pool: ["modal_presens"] },
+{ name: "Der Wald", icon: "🌲", x: 25, y: 50, category: "Imperativ (du)", pool: ["imperativ_du"] },
+{ name: "Troll Kampf", icon: "👹", x: 45, y: 65, category: "Präsens & Imperativ", isBoss: true, pool: ["modal_presens", "imperativ_du"] },
+{ name: "Die Brücke", icon: "🌉", x: 60, y: 35, category: "Modalverben (Imperfekt)", pool: ["modal_imperfekt"] },
+{ name: "Der Turm", icon: "🏰", x: 80, y: 55, category: "Alle Imperative", pool: ["imperativ_mix"] },
+{ name: "Drachenhöhle", icon: "🐉", x: 92, y: 20, category: "Der ultimative Mix", isBoss: true, pool: ["modal_presens", "imperativ_du", "modal_imperfekt", "imperativ_mix"] }
+];
+
+function hideAll() {
+['start-screen','difficulty-select','character-select','quest-map','question-screen','reward-screen','game-over-modal','global-nav', 'pvp-battle'].forEach(id => {
+const el = document.getElementById(id);
+if(el) el.classList.add('hidden');
+});
+}
+
+function startGameMode(mode) {
+state.gameMode = mode;
+hideAll();
+document.getElementById('global-nav').classList.remove('hidden');
+document.getElementById('difficulty-select').classList.remove('hidden');
+}
+
+function selectDifficulty(d) {
+state.difficulty = d;
+state.targetCorrect = d === 'easy' ? 5 : (d === 'normal' ? 7 : 10);
+hideAll();
+document.getElementById('character-select').classList.remove('hidden');
+['wizard', 'knight', 'archer'].forEach(c => document.getElementById(`card-${c}`).classList.remove('disabled'));
+state.p1Char = null; state.p2Char = null;
+document.getElementById('char-select-title').innerText = "Helden wählen!";
+}
+
+function pickCharacter(c) {
+if (!state.p1Char) {
+state.p1Char = c;
+state.hp = charData[c].hp; state.maxHp = state.hp;
+if (state.gameMode === 'solo') { initSolo(); } else {
+document.getElementById(`card-${c}`).classList.add('disabled');
+document.getElementById('char-select-title').innerText = "Spieler 2: Helden wählen!";
+}
+return;
+}
+if (state.gameMode === 'pvp' && !state.p2Char && c !== state.p1Char) {
+state.p2Char = c;
+state.p2Hp = charData[c].hp; state.p2MaxHp = state.p2Hp;
+initPvp();
+}
+}
+
+function initSolo() {
+hideAll();
+document.getElementById('global-nav').classList.remove('hidden');
+document.getElementById('quest-map').classList.remove('hidden');
+setTimeout(() => {
+setupMap();
+updateHUD();
+movePlayerToStation(0);
+}, 100);
+}
+
+function setupMap() {
+const container = document.getElementById('station-container');
+const polyline = document.getElementById('map-polyline');
+container.innerHTML = '';
+let pathPoints = "";
+stations.forEach((s) => { pathPoints += `${s.x * 10},${s.y * 10} `; });
+polyline.setAttribute("points", pathPoints.trim());
+stations.forEach((s, i) => {
+const div = document.createElement('div');
+div.className = `station absolute w-32 ${i <= state.unlockedIdx ? '' : 'locked'}`;
+div.style.left = `${s.x}%`; div.style.top = `${s.y}%`;
+div.innerHTML = `
+<div class="bg-white p-2 rounded-2xl border-4 border-amber-400 text-center shadow-lg transform -translate-x-1/2 -translate-y-1/2 min-w-[120px]">
+<div class="text-3xl">${s.icon}</div>
+<div class="text-[10px] font-bold leading-tight uppercase text-amber-900">${s.name}</div>
+<div class="text-[9px] text-amber-700 font-medium italic mt-1 leading-tight">${s.category}</div>
+</div>`;
+div.onclick = () => { if (i <= state.unlockedIdx) enterStation(i); };
+container.appendChild(div);
+});
+}
+
+function movePlayerToStation(idx) {
+const p = document.getElementById('player-token');
+p.style.left = `${stations[idx].x}%`; p.style.top = `${stations[idx].y}%`;
+p.style.transform = "translate(-50%, -100%) translateY(-20px)";
+p.innerText = charData[state.p1Char].icon;
+document.getElementById('map-hero-icons').innerText = charData[state.p1Char].icon;
+}
+
+function enterStation(idx) {
+state.currentStationIdx = idx; state.qIdx = 0; state.correctInStation = 0;
+const station = stations[idx];
+state.activeQuestions = [];
+station.pool.forEach(poolKey => state.activeQuestions = [...state.activeQuestions, ...questionPools[poolKey]]);
+state.activeQuestions.sort(() => Math.random() - 0.5);
+if(station.isBoss) {
+state.bossHp = 100;
+document.getElementById('boss-visual').classList.remove('hidden');
+document.getElementById('boss-emoji').innerText = station.icon;
+document.getElementById('boss-hp-bar').style.width = "100%";
+} else { document.getElementById('boss-visual').classList.add('hidden'); }
+document.getElementById('question-screen').classList.remove('hidden');
+renderQuestion();
+}
+
+function renderQuestion() {
+state.isAnswering = false;
+const q = state.activeQuestions[state.qIdx % state.activeQuestions.length];
+document.getElementById('q-counter').innerText = `Fortschritt: ${state.correctInStation} / ${state.targetCorrect}`;
+document.getElementById('q-header').innerText = q.cat;
+document.getElementById('feedback-box').classList.add('hidden');
+document.getElementById('btn-next').classList.add('hidden');
+const btnSubmit = document.getElementById('btn-submit-solo');
+btnSubmit.disabled = false; btnSubmit.classList.remove('opacity-50');
+let useTyping = (state.difficulty === 'hard') || (state.difficulty === 'normal' && state.qIdx % 2 === 1);
+// Show infinitive if typing
+if (useTyping) {
+document.getElementById('q-text').innerText = `${q.q} (${q.inf})`;
+document.getElementById('options-grid').classList.add('hidden');
+document.getElementById('input-area').classList.remove('hidden');
+const inp = document.getElementById('type-answer');
+inp.value = ''; inp.disabled = false; inp.focus();
+} else {
+document.getElementById('q-text').innerText = q.q;
+document.getElementById('options-grid').classList.remove('hidden');
+document.getElementById('input-area').classList.add('hidden');
+const grid = document.getElementById('options-grid');
+grid.innerHTML = '';
+[...q.a].sort(()=>Math.random()-0.5).forEach(opt => {
+const b = document.createElement('button');
+b.className = "option-btn w-full p-4 bg-amber-50 border-4 border-amber-100 rounded-2xl font-bold text-xl hover:bg-amber-100 transition-colors";
+b.innerText = opt; b.onclick = () => checkAnswer(opt); grid.appendChild(b);
+});
+}
+
+// Render Tense Hint below
+const tenseContainer = document.getElementById('q-tense-container');
+tenseContainer.innerHTML = q.tense ? `<span class="tense-tag">${q.tense}</span>` : '';
+}
+
+function checkAnswer(val) {
+if (state.isAnswering) return;
+state.isAnswering = true;
+const q = state.activeQuestions[state.qIdx % state.activeQuestions.length];
+const correct = val.toLowerCase().trim() === q.c.toLowerCase();
+const box = document.getElementById('feedback-box');
+document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+const btnSubmit = document.getElementById('btn-submit-solo');
+btnSubmit.disabled = true; btnSubmit.classList.add('opacity-50');
+document.getElementById('type-answer').disabled = true;
+box.classList.remove('hidden');
+if (correct) {
+state.score += 15; state.p1Coins += 5; state.correctInStation++;
+box.innerText = "✅ Richtig!";
+box.className = "p-6 rounded-3xl bg-green-100 text-green-700 font-bold mb-4";
+if(stations[state.currentStationIdx].isBoss) {
+state.bossHp -= (100 / state.targetCorrect);
+document.getElementById('boss-hp-bar').style.width = Math.max(0, state.bossHp) + "%";
+}
+} else {
+state.hp -= (20 * charData[state.p1Char].defMod);
+box.innerText = `❌ Falsch! Richtig: ${q.c}`;
+box.className = "p-6 rounded-3xl bg-red-100 text-red-700 font-bold mb-4";
+}
+updateHUD();
+if (state.hp <= 0) showGameOver();
+else document.getElementById('btn-next').classList.remove('hidden');
+document.getElementById('btn-next').onclick = () => {
+if (state.correctInStation >= state.targetCorrect) finishStation();
+else { state.qIdx++; renderQuestion(); }
+};
+}
+
+function updateHUD() {
+document.getElementById('stat-coins').innerText = state.p1Coins;
+document.getElementById('stat-score').innerText = state.score;
+document.getElementById('q-hp-val').innerText = Math.max(0, Math.floor(state.hp));
+document.getElementById('hp-bar').style.width = Math.max(0, (state.hp/state.maxHp)*100) + '%';
+}
+
+function finishStation() {
+document.getElementById('question-screen').classList.add('hidden');
+if (state.currentStationIdx === state.unlockedIdx) state.unlockedIdx++;
+if (state.unlockedIdx < stations.length) { setupMap(); movePlayerToStation(state.unlockedIdx); } else showReward();
+}
+
+function backToStart() { location.reload(); }
+function showGameOver() { hideAll(); document.getElementById('game-over-modal').classList.remove('hidden'); }
+function showReward() { hideAll(); document.getElementById('reward-screen').classList.remove('hidden'); document.getElementById('final-score').innerText = `Punkte: ${state.score}`; }
+function submitTypedAnswer() { const val = document.getElementById('type-answer').value; if(val.trim() !== "") checkAnswer(val); }
+window.addEventListener('resize', () => { if(!document.getElementById('quest-map').classList.contains('hidden')) setupMap(); });
+function initPvp() {
+hideAll();
+state.activePlayer = 1;
+document.getElementById('global-nav').classList.remove('hidden');
+document.getElementById('pvp-battle').classList.remove('hidden');
+state.activeQuestions = Object.values(questionPools).flat().sort(() => Math.random() - 0.5);
+document.getElementById('p1-icon').innerText = charData[state.p1Char].icon;
+document.getElementById('p2-icon').innerText = charData[state.p2Char].icon;
+updatePvpStats();
+renderPvpQuestion();
+}
+
+function renderPvpQuestion() {
+state.isAnswering = false;
+const q = state.activeQuestions[state.qIdx % state.activeQuestions.length];
+document.getElementById('pvp-feedback').classList.add('hidden');
+const btnSubmit = document.getElementById('btn-submit-pvp');
+btnSubmit.disabled = false; btnSubmit.classList.remove('opacity-50');
+
+const isSabotaged = (state.activePlayer === 1 && state.p1Sabotage) || (state.activePlayer === 2 && state.p2Sabotage);
+let useTyping = (state.difficulty === 'hard') || (state.difficulty === 'normal' && state.qIdx % 2 === 1) || isSabotaged;
+if (useTyping) {
+document.getElementById('pvp-q-text').innerText = `${q.q} (${q.inf})`;
+document.getElementById('pvp-options').classList.add('hidden');
+document.getElementById('pvp-input-area').classList.remove('hidden');
+const inp = document.getElementById('pvp-type-answer');
+inp.value = ''; inp.disabled = false; inp.focus();
+document.getElementById('pvp-status-msg').innerText = isSabotaged ? "🌀 SABOTAGE! Du musst die Antwort selbst tippen!" : "Schreibe die Antwort!";
+document.getElementById('pvp-status-msg').className = isSabotaged ? "text-center italic text-purple-600 font-bold mb-4 uppercase text-sm animate-pulse" : "text-center italic text-emerald-700 font-bold mb-4 uppercase text-sm";
+} else {
+document.getElementById('pvp-q-text').innerText = q.q;
+document.getElementById('pvp-options').classList.remove('hidden');
+document.getElementById('pvp-input-area').classList.add('hidden');
+document.getElementById('pvp-status-msg').innerText = "Wähle die richtige Antwort!";
+document.getElementById('pvp-status-msg').className = "text-center italic text-emerald-700 font-bold mb-4 uppercase text-sm";
+const grid = document.getElementById('pvp-options'); grid.innerHTML = '';
+[...q.a].sort(()=>Math.random()-0.5).forEach(opt => {
+const b = document.createElement('button');
+b.className = "option-btn w-full p-4 bg-emerald-50 border-4 border-emerald-100 rounded-2xl font-bold text-xl hover:bg-emerald-100 transition-colors";
+b.innerText = opt; b.onclick = () => checkPvpAnswer(opt); grid.appendChild(b);
+});
+}
+
+// Always render Tense Hint in PVP too
+const tenseContainer = document.getElementById('pvp-tense-container');
+tenseContainer.innerHTML = q.tense ? `<span class="tense-tag">${q.tense}</span>` : '';
+}
+
+function checkPvpAnswer(val) {
+if (state.isAnswering) return;
+state.isAnswering = true;
+const q = state.activeQuestions[state.qIdx % state.activeQuestions.length];
+const correct = val.toLowerCase().trim() === q.c.toLowerCase();
+document.querySelectorAll('#pvp-options .option-btn').forEach(b => b.disabled = true);
+const btnSubmit = document.getElementById('btn-submit-pvp');
+btnSubmit.disabled = true; btnSubmit.classList.add('opacity-50');
+document.getElementById('pvp-type-answer').disabled = true;
+const feedback = document.getElementById('pvp-feedback');
+feedback.classList.remove('hidden');
+if (state.activePlayer === 1) state.p1Sabotage = false; else state.p2Sabotage = false;
+
+if (correct) {
+const attacker = state.activePlayer === 1 ? state.p1Char : state.p2Char;
+const target = state.activePlayer === 1 ? 2 : 1;
+if ((target === 2 && state.p2Shield) || (target === 1 && state.p1Shield)) {
+document.getElementById('pvp-feedback-text').innerText = "🛡️ SCHILD GEBLOCKT!";
+if (target === 2) state.p2Shield = false; else state.p1Shield = false;
+} else {
+const targetChar = target === 1 ? state.p1Char : state.p2Char;
+const dmg = Math.floor(20 * charData[attacker].dmgMod * charData[targetChar].defMod);
+if (target === 2) state.p2Hp -= dmg; else state.hp -= dmg;
+document.getElementById('pvp-feedback-text').innerText = `TREFFER! ${dmg} Schaden!`;
+}
+if (state.activePlayer === 1) state.p1Coins += 10; else state.p2Coins += 10;
+document.getElementById('pvp-feedback-icon').innerText = "💥";
+} else {
+document.getElementById('pvp-feedback-text').innerText = `Verfehlt! Antwort: ${q.c}`;
+document.getElementById('pvp-feedback-icon').innerText = "💨";
+}
+updatePvpStats();
+document.getElementById('pvp-btn-next').onclick = () => {
+if (state.hp <= 0 || state.p2Hp <= 0) showPvpWinner();
+else { state.activePlayer = state.activePlayer === 1 ? 2 : 1; state.qIdx++; renderPvpQuestion(); updatePvpStats(); }
+};
+}
+
+function updatePvpStats() {
+document.getElementById('p1-hp-text').innerText = Math.max(0, Math.floor(state.hp));
+document.getElementById('p1-hp-bar').style.width = (state.hp/state.maxHp)*100 + '%';
+document.getElementById('p1-coins').innerText = state.p1Coins;
+document.getElementById('p2-hp-text').innerText = Math.max(0, Math.floor(state.p2Hp));
+document.getElementById('p2-hp-bar').style.width = (state.p2Hp/state.p2MaxHp)*100 + '%';
+document.getElementById('p2-coins').innerText = state.p2Coins;
+document.getElementById('p1-area').style.borderColor = state.activePlayer === 1 ? '#10B981' : 'rgba(255,255,255,0.2)';
+document.getElementById('p2-area').style.borderColor = state.activePlayer === 2 ? '#10B981' : 'rgba(255,255,255,0.2)';
+document.getElementById('pvp-turn-indicator').innerText = `Spieler ${state.activePlayer} am Zug`;
+
+document.getElementById('p1-active-effects').innerHTML =
+(state.p1Shield ? '<span class="bg-blue-500 text-[10px] px-2 py-0.5 rounded-full">🛡️</span>' : '') +
+(state.p1Sabotage ? '<span class="bg-purple-500 text-[10px] px-2 py-0.5 rounded-full animate-bounce">🌀</span>' : '');
+document.getElementById('p2-active-effects').innerHTML =
+(state.p2Shield ? '<span class="bg-blue-500 text-[10px] px-2 py-0.5 rounded-full">🛡️</span>' : '') +
+(state.p2Sabotage ? '<span class="bg-purple-500 text-[10px] px-2 py-0.5 rounded-full animate-bounce">🌀</span>' : '');
+
+const p1Prices = { heal: 15, shield: 20, sabotage: 25 };
+document.getElementById('p1-btn-heal').disabled = state.p1Coins < p1Prices.heal || state.activePlayer !== 1;
+document.getElementById('p1-btn-shield').disabled = state.p1Coins < p1Prices.shield || state.activePlayer !== 1 || state.p1Shield;
+document.getElementById('p1-btn-sabotage').disabled = state.p1Coins < p1Prices.sabotage || state.activePlayer !== 1 || state.p2Sabotage;
+
+const p2Prices = { heal: 15, shield: 20, sabotage: 25 };
+document.getElementById('p2-btn-heal').disabled = state.p2Coins < p2Prices.heal || state.activePlayer !== 2;
+document.getElementById('p2-btn-shield').disabled = state.p2Coins < p2Prices.shield || state.activePlayer !== 2 || state.p2Shield;
+document.getElementById('p2-btn-sabotage').disabled = state.p2Coins < p2Prices.sabotage || state.activePlayer !== 2 || state.p1Sabotage;
+}
+
+function buyItem(player, item) {
+if (state.activePlayer !== player || state.isAnswering) return;
+const coins = player === 1 ? state.p1Coins : state.p2Coins;
+const prices = { heal: 15, shield: 20, sabotage: 25 };
+if (coins >= prices[item]) {
+if (player === 1) state.p1Coins -= prices[item]; else state.p2Coins -= prices[item];
+if (item === 'heal') {
+if (player === 1) state.hp = Math.min(state.maxHp, state.hp + 30); else state.p2Hp = Math.min(state.p2MaxHp, state.p2Hp + 30);
+}
+else if (item === 'shield') { if (player === 1) state.p1Shield = true; else state.p2Shield = true; }
+else if (item === 'sabotage') { if (player === 1) state.p2Sabotage = true; else state.p1Sabotage = true; }
+updatePvpStats();
+}
+}
+function submitPvpTypedAnswer() { const val = document.getElementById('pvp-type-answer').value; if(val.trim() !== "") checkPvpAnswer(val); }
+function showPvpWinner() { hideAll(); document.getElementById('go-title').innerText = state.hp > 0 ? "Spieler 1 GEWINNT!" : "Spieler 2 GEWINNT!"; document.getElementById('game-over-modal').classList.remove('hidden'); }
+</script>
+</body>
+</html>
