@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading a Buret</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Bebas+Neue&family=Special+Elite&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        canvas { cursor: crosshair; touch-action: none; }
+        .buret-container {
+            background: linear-gradient(to right, #cbd5e1 0%, #f8fafc 50%, #cbd5e1 100%);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+        }
+        .license-bg {
+            background: radial-gradient(circle, #ffffff 0%, #fefce8 100%);
+            border: 12px double #e2e8f0;
+        }
+        .stamp {
+            transform: rotate(-15deg);
+            font-family: 'Bebas Neue', cursive;
+        }
+        .pulsate {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .8; transform: scale(1.02); }
+        }
+        #historyLog::-webkit-scrollbar { width: 4px; }
+        #historyLog::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Screen 1: Title Screen -->
+    <div id="setupScreen" class="max-w-md w-full bg-white p-8 rounded-3xl shadow-2xl text-center">
+        <h1 class="text-4xl font-extrabold text-slate-800 mb-4">Reading a Buret</h1>
+        <div class="w-20 h-1 bg-indigo-500 mx-auto mb-8"></div>
+        <p class="text-slate-600 mb-8 text-sm px-4 italic">"Accuracy is the equivalence point of science."</p>
+        <p class="text-slate-600 mb-8 text-sm px-4 font-medium text-slate-500">
+            Learn to "read between the lines." Earn your license by recording 10 measurements with at least 80% accuracy.
+        </p>
+        
+        <input type="text" id="studentNameInput" placeholder="Enter Your Full Name" 
+               class="w-full border-2 border-slate-200 rounded-xl p-4 text-center text-lg mb-4 focus:border-indigo-500 outline-none transition-all">
+        
+        <button id="startBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all transform active:scale-95 shadow-lg">
+            Begin Certification
+        </button>
+    </div>
+
+    <!-- Screen 2: Main Simulation -->
+    <div id="simScreen" class="hidden max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        
+        <!-- Left: Buret Visual -->
+        <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center border border-slate-100">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Buret View (0-50 mL)</h2>
+            <div class="relative buret-container border-x-4 border-slate-400 w-48 h-[550px] flex justify-center rounded-b-lg overflow-hidden">
+                <canvas id="buretCanvas" width="200" height="550"></canvas>
+            </div>
+            <button id="newVolBtn" class="mt-4 text-slate-400 hover:text-indigo-600 text-xs font-bold uppercase transition-colors">
+                Skip / New Volume
+            </button>
+        </div>
+
+        <!-- Right: Inputs and Stats -->
+        <div class="flex flex-col gap-6 self-stretch">
+            <div class="bg-white p-5 rounded-2xl shadow-md flex justify-between items-center border-l-8 border-indigo-500">
+                <div class="flex gap-8">
+                    <div class="flex flex-col">
+                        <p id="statAccuracy" class="text-4xl font-black text-indigo-600 leading-none">0%</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Accuracy</p>
+                    </div>
+                    <div class="flex flex-col">
+                        <p id="statAttempts" class="text-4xl font-black text-slate-800 leading-none">0</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Attempts</p>
+                    </div>
+                </div>
+                <div class="text-right flex flex-col justify-end h-full self-start">
+                    <p id="displayName" class="text-[10px] font-black text-slate-400 uppercase tracking-tighter leading-none mb-1">STU-NAME</p>
+                    <div class="w-full h-[2px] bg-slate-100"></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-xl flex-1 flex flex-col justify-center border border-slate-50">
+                <label class="block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-[0.2em] text-center">Record Volume</label>
+                <div class="flex flex-col gap-4">
+                    <div class="relative flex items-center bg-slate-50 rounded-t-xl border-b-4 border-slate-100 focus-within:border-indigo-500 transition-all">
+                        <input type="text" id="volumeInput" inputmode="decimal" placeholder="00.00" 
+                               class="w-full bg-transparent p-6 text-center text-5xl font-black outline-none text-slate-800 placeholder:text-slate-200">
+                        <span class="absolute right-6 text-2xl font-black text-slate-300 pointer-events-none">mL</span>
+                    </div>
+                    <button id="submitBtn" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-5 rounded-xl transition-all shadow-lg text-lg uppercase tracking-wider">
+                        Verify Reading
+                    </button>
+                </div>
+                <p id="feedback" class="mt-6 text-center font-bold text-lg min-h-[1.5rem]"></p>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-md overflow-hidden h-44 flex flex-col border border-slate-50">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Recent Measurements</h3>
+                <div id="historyLog" class="text-xs text-slate-600 space-y-1 overflow-y-auto pr-2">
+                    <p class="italic text-slate-300 text-center py-6">Begin measuring to log results.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen 3: License Screen -->
+    <div id="licenseScreen" class="hidden max-w-2xl w-full flex flex-col gap-4">
+        <div class="bg-indigo-600 text-white p-4 rounded-xl text-center shadow-lg pulsate">
+            <p class="text-xl font-black uppercase tracking-tighter">📸 STOP! SCREENSHOT THIS LICENSE NOW!</p>
+            <p class="text-xs font-medium opacity-90">Paste this into your Reading a Buret Worksheet to receive credit.</p>
+        </div>
+
+        <div class="license-bg p-12 rounded-lg shadow-2xl text-center relative border-slate-300">
+            <div class="border-4 border-indigo-900 p-8 relative">
+                <div class="flex justify-between items-center mb-6">
+                    <span class="text-[10px] font-bold text-indigo-900 uppercase">Bureau of Volumetric Control</span>
+                    <span class="text-[10px] font-bold text-indigo-900 uppercase">License No: titration-master</span>
+                </div>
+
+                <h1 class="text-5xl font-serif text-slate-800 mb-2 font-black">BURET OPERATOR LICENSE</h1>
+                <p class="text-lg italic text-indigo-600 mb-8 font-serif">"Master of the Meniscus"</p>
+                
+                <p class="text-slate-500 text-sm uppercase tracking-[0.3em] mb-1">Licensed Professional</p>
+                <h2 id="licenseName" class="text-5xl font-bold text-indigo-950 my-2 font-['Special_Elite']">Student Name</h2>
+                
+                <p class="text-slate-700 max-w-md mx-auto my-6 text-base leading-tight">
+                    This individual has demonstrated technical proficiency in volumetric analysis. 
+                    They have mastered the estimation of uncertain digits and correctly read 
+                    from the top-down scale with precision.
+                </p>
+
+                <div class="grid grid-cols-3 gap-4 mt-12 text-slate-800 border-t-2 border-indigo-900 pt-8">
+                    <div>
+                        <p class="text-[10px] uppercase font-black text-slate-400">Attempts</p>
+                        <p id="licenseAttempts" class="text-2xl font-black">0</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase font-black text-slate-400">Accuracy Rating</p>
+                        <p id="licenseAccuracy" class="text-2xl font-black text-indigo-600">0%</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase font-black text-slate-400">Certification Date</p>
+                        <p id="licenseDate" class="text-[10px] font-bold uppercase mt-2">-</p>
+                    </div>
+                </div>
+
+                <div class="absolute bottom-4 right-4 stamp border-8 border-red-600 text-red-600 px-6 py-2 text-4xl font-black opacity-30">
+                    CERTIFIED
+                </div>
+            </div>
+        </div>
+        
+        <button onclick="window.location.reload()" class="text-slate-400 font-bold hover:text-indigo-600 transition-colors text-sm uppercase tracking-widest mt-4">
+            ← Restart Training Session
+        </button>
+    </div>
+
+    <script>
+        const setupScreen = document.getElementById('setupScreen');
+        const simScreen = document.getElementById('simScreen');
+        const licenseScreen = document.getElementById('licenseScreen');
+        const nameInput = document.getElementById('studentNameInput');
+        const startBtn = document.getElementById('startBtn');
+
+        const canvas = document.getElementById('buretCanvas');
+        const ctx = canvas.getContext('2d');
+        const volInput = document.getElementById('volumeInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const newVolBtn = document.getElementById('newVolBtn');
+        const feedback = document.getElementById('feedback');
+        
+        const statAttempts = document.getElementById('statAttempts');
+        const statAccuracy = document.getElementById('statAccuracy');
+        const displayName = document.getElementById('displayName');
+        const historyLog = document.getElementById('historyLog');
+
+        let studentName = "";
+        let currentTargetVolume = 0;
+        let attempts = 0;
+        let correctAnswers = 0;
+
+        const ERROR_MARGIN = 0.05;
+
+        const PADDING_TOP = 40;
+        const PADDING_BOTTOM = 40;
+        const SCALE_HEIGHT = canvas.height - PADDING_TOP - PADDING_BOTTOM;
+
+        startBtn.addEventListener('click', () => {
+            if (nameInput.value.trim() === "") {
+                nameInput.classList.add('border-red-400');
+                return;
+            }
+            studentName = nameInput.value.trim();
+            displayName.textContent = studentName;
+            setupScreen.classList.add('hidden');
+            simScreen.classList.remove('hidden');
+            simScreen.classList.add('grid');
+            generateNewVolume();
+        });
+
+        newVolBtn.addEventListener('click', () => {
+            generateNewVolume();
+            feedback.textContent = "";
+        });
+        
+        submitBtn.addEventListener('click', checkVolume);
+        volInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') checkVolume(); });
+
+        function generateNewVolume() {
+            const modeRand = Math.random();
+            // 20% chance for volume between 0 and 1 ML as requested
+            if (modeRand < 0.20) {
+                currentTargetVolume = parseFloat((Math.random()).toFixed(2));
+            } else {
+                const subRand = Math.random();
+                if (subRand < 0.15) {
+                    // Whole numbers exactly (e.g., 21.00)
+                    currentTargetVolume = Math.floor(Math.random() * 48) + 1.00;
+                } else if (subRand < 0.30) {
+                    // Tenths exactly (e.g., 15.40)
+                    currentTargetVolume = parseFloat((Math.floor(Math.random() * 480 + 10) / 10).toFixed(2));
+                } else {
+                    // General random volume
+                    currentTargetVolume = parseFloat((Math.random() * 48 + 1).toFixed(2));
+                }
+            }
+            volInput.value = '';
+            feedback.textContent = '';
+            feedback.className = 'mt-6 text-center font-bold text-lg';
+            drawBuret();
+            volInput.focus();
+        }
+
+        function drawBuret() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const viewRange = 5; 
+            let startVal = Math.floor(currentTargetVolume - 2);
+            if (startVal < 0) startVal = 0;
+            if (startVal > 45) startVal = 45;
+            let endVal = startVal + viewRange;
+
+            const getYScaled = (val) => {
+                const ratio = (val - startVal) / (endVal - startVal);
+                return PADDING_TOP + ratio * SCALE_HEIGHT;
+            };
+
+            const meniscusY = getYScaled(currentTargetVolume);
+            ctx.fillStyle = 'rgba(186, 230, 253, 0.7)';
+            ctx.fillRect(0, meniscusY, canvas.width, canvas.height - meniscusY);
+
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#2563eb';
+            const curveOffset = 10;
+            ctx.moveTo(0, meniscusY - curveOffset);
+            ctx.bezierCurveTo(40, meniscusY + 4, 160, meniscusY + 4, canvas.width, meniscusY - curveOffset);
+            ctx.stroke();
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.lineTo(0, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = '#1e293b';
+            ctx.fillStyle = '#1e293b';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.font = 'bold 18px Inter';
+
+            for (let v = startVal; v <= endVal; v = parseFloat((v + 0.1).toFixed(1))) {
+                const y = getYScaled(v);
+                const isWhole = Math.abs(v - Math.round(v)) < 0.01;
+                const isHalf = Math.abs(v % 1 - 0.5) < 0.01;
+
+                ctx.beginPath();
+                if (isWhole) {
+                    ctx.lineWidth = 2.5;
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(80, y);
+                    ctx.fillText(Math.round(v).toString(), 95, y);
+                } else if (isHalf) {
+                    ctx.lineWidth = 1.5;
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(60, y);
+                } else {
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(40, y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function checkVolume() {
+            const rawValue = volInput.value.trim();
+            const val = parseFloat(rawValue);
+
+            if (isNaN(val)) {
+                feedback.textContent = "Please enter a valid number.";
+                feedback.className = "mt-6 text-center font-bold text-lg text-amber-600";
+                return;
+            }
+
+            // Enforce two decimal places (precision)
+            const parts = rawValue.split('.');
+            const decimalPart = parts[1] || "";
+            if (!rawValue.includes('.') || decimalPart.length !== 2) {
+                feedback.textContent = "Precision Error! Use two decimals (.00).";
+                feedback.className = "mt-6 text-center font-bold text-lg text-orange-600 uppercase tracking-tight";
+                return;
+            }
+
+            attempts++;
+
+            const diffTotal = Math.abs(val - currentTargetVolume);
+            
+            // Extract "Certain Digits" for matching (Whole number + Tenths)
+            const targetCertain = Math.floor(currentTargetVolume * 10) / 10;
+            const userCertain = Math.floor(val * 10) / 10;
+            
+            const targetOnes = Math.floor(currentTargetVolume);
+            const userOnes = Math.floor(val);
+
+            // First 3 digits must be accurate rule (Certain digits)
+            const matchesCertain = Math.abs(userCertain - targetCertain) < 0.01;
+
+            if (diffTotal <= ERROR_MARGIN && matchesCertain) {
+                correctAnswers++;
+                feedback.textContent = "Correct! High-precision work.";
+                feedback.className = "mt-6 text-center font-bold text-lg text-emerald-600";
+                logHistory(val, true);
+                
+                const accuracy = (correctAnswers / attempts);
+                if (attempts >= 10 && accuracy >= 0.80) {
+                    setTimeout(showLicense, 800);
+                    return;
+                }
+                setTimeout(generateNewVolume, 1200);
+            } else {
+                // Hint logic for "top down" reading error
+                const isOffOnes = Math.abs(userOnes - targetOnes) >= 1;
+                
+                if (isOffOnes) {
+                    feedback.textContent = "incorrect, are you reading the buret from top down?";
+                } else if (!matchesCertain) {
+                    feedback.textContent = "Incorrect. Check the tenths place.";
+                } else {
+                    feedback.textContent = "Incorrect. Look at the meniscus and try again.";
+                }
+                
+                feedback.className = "mt-6 text-center font-bold text-lg text-red-600";
+                volInput.value = '';
+                volInput.focus();
+                logHistory(val, false);
+            }
+            updateStats();
+        }
+
+        function updateStats() {
+            statAttempts.textContent = attempts;
+            const accVal = attempts === 0 ? 0 : Math.round((correctAnswers / attempts) * 100);
+            statAccuracy.textContent = `${accVal}%`;
+        }
+
+        function logHistory(userVal, success) {
+            if (historyLog.querySelector('p.italic')) historyLog.innerHTML = '';
+            const item = document.createElement('div');
+            item.className = `p-2 border-b flex justify-between items-center rounded ${success ? 'bg-emerald-50' : 'bg-red-50 border-red-100'}`;
+            // Correct answer hidden from history log as requested
+            item.innerHTML = `
+                <span class="font-mono">Logged: ${userVal.toFixed(2)} mL</span>
+                <span class="font-bold">${success ? '✓' : '✗'}</span>
+            `;
+            historyLog.prepend(item);
+        }
+
+        function showLicense() {
+            simScreen.classList.add('hidden');
+            licenseScreen.classList.remove('hidden');
+            licenseScreen.classList.add('flex');
+            document.getElementById('licenseName').textContent = studentName;
+            document.getElementById('licenseAttempts').textContent = attempts;
+            document.getElementById('licenseAccuracy').textContent = `${Math.round((correctAnswers / attempts) * 100)}%`;
+            document.getElementById('licenseDate').textContent = new Date().toLocaleString();
+        }
+    </script>
+</body>
+</html>
