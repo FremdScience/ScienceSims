@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An interactive plant growth simulation for a freshman biology controlled-experiment lab.">
+  <title>Plant Growth Lab</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to simulation</a>
+
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">Freshman biology simulation</p>
+      <h1>Plant Growth Lab</h1>
+      <p class="subtitle">Change one condition, grow the plants, and record evidence in your Plants Lab handout.</p>
+    </div>
+    <div class="header-note" aria-label="Simulation information">
+      <span>3 pots</span>
+      <span>50 days</span>
+      <span>No answers saved</span>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <nav class="view-tabs" role="tablist" aria-label="Simulation views">
+      <button id="experiment-tab" class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="experiment-panel">Experiment</button>
+      <button id="data-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="data-panel">Data</button>
+    </nav>
+
+    <section id="experiment-panel" class="view-panel" role="tabpanel" aria-labelledby="experiment-tab">
+      <div class="section-heading">
+        <div>
+          <p class="step-label">Set up your controlled experiment</p>
+          <h2>Growth chambers</h2>
+        </div>
+        <p class="section-help">Use the same settings in every pot except for the condition you are testing.</p>
+      </div>
+
+      <div id="setup-alert" class="setup-alert" role="alert" hidden></div>
+      <div id="pots-grid" class="pots-grid" aria-label="Three experimental pots"></div>
+
+      <div class="run-panel" aria-label="Simulation controls">
+        <div class="day-display">
+          <span class="day-label">Simulated time</span>
+          <strong><span id="day-number" class="tabular">0</span> <span id="day-unit">days</span></strong>
+          <div class="progress-track" aria-hidden="true"><span id="day-progress"></span></div>
+        </div>
+        <div class="run-actions">
+          <button id="play-button" class="primary-button" type="button">
+            <span aria-hidden="true">▶</span> Play
+          </button>
+          <button id="pause-button" class="secondary-button" type="button" disabled>
+            <span aria-hidden="true">Ⅱ</span> Pause
+          </button>
+          <button id="reset-button" class="secondary-button" type="button">
+            <span aria-hidden="true">↺</span> Reset day
+          </button>
+          <button id="clear-button" class="text-button" type="button">Clear pots</button>
+        </div>
+        <p id="run-status" class="run-status" aria-live="polite">Set up all three pots, then select Play.</p>
+      </div>
+
+      <details class="directions-card">
+        <summary>How to use the simulation</summary>
+        <ol>
+          <li>Choose a seed, soil treatment, daily water amount, and number of lights for each pot.</li>
+          <li>Select <strong>Play</strong>. You may pause at any time; the simulation stops at day 50.</li>
+          <li>Open <strong>Data</strong> to compare height, mass, and appearance.</li>
+          <li>Record your observations and conclusions in the separate Plants Lab handout.</li>
+        </ol>
+      </details>
+    </section>
+
+    <section id="data-panel" class="view-panel" role="tabpanel" aria-labelledby="data-tab" hidden>
+      <div class="section-heading">
+        <div>
+          <p class="step-label">Observe and compare</p>
+          <h2>Plant data</h2>
+        </div>
+        <p class="section-help">Use exact numbers from the table or graph as evidence in your handout.</p>
+      </div>
+
+      <div class="data-layout">
+        <section class="chart-card" aria-labelledby="chart-title">
+          <div class="chart-header">
+            <div>
+              <p class="chart-kicker">Results through day <span id="chart-day" class="tabular">0</span></p>
+              <h3 id="chart-title">Plant height</h3>
+            </div>
+            <div class="chart-options">
+              <fieldset>
+                <legend>Measure</legend>
+                <label><input type="radio" name="measure" value="height" checked> Height</label>
+                <label><input type="radio" name="measure" value="mass"> Mass</label>
+              </fieldset>
+              <fieldset>
+                <legend>Graph</legend>
+                <label><input type="radio" name="graph-type" value="bar" checked> Bar</label>
+                <label><input type="radio" name="graph-type" value="line"> Line</label>
+              </fieldset>
+              <label class="numbers-toggle"><input id="show-values" type="checkbox" checked> Show values</label>
+            </div>
+          </div>
+
+          <div class="chart-wrap">
+            <svg id="growth-chart" viewBox="0 0 760 410" role="img" aria-labelledby="chart-title chart-description"></svg>
+            <p id="chart-description" class="sr-only">No plant growth data are available yet.</p>
+          </div>
+          <div id="chart-legend" class="chart-legend" aria-label="Pot color key"></div>
+        </section>
+
+        <section class="summary-card" aria-labelledby="summary-title">
+          <div class="summary-heading">
+            <div>
+              <p class="chart-kicker">Current observations</p>
+              <h3 id="summary-title">Day <span id="summary-day" class="tabular">0</span></h3>
+            </div>
+            <span class="units-note">cm and g</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Pot</th>
+                  <th scope="col">Height</th>
+                  <th scope="col">Mass</th>
+                  <th scope="col">Appearance</th>
+                </tr>
+              </thead>
+              <tbody id="summary-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <details class="all-data-card">
+        <summary>View the complete data table</summary>
+        <div class="table-wrap full-data-wrap">
+          <table id="full-data-table">
+            <thead>
+              <tr>
+                <th scope="col">Day</th>
+                <th scope="col">Pot A height (cm)</th>
+                <th scope="col">Pot A mass (g)</th>
+                <th scope="col">Pot B height (cm)</th>
+                <th scope="col">Pot B mass (g)</th>
+                <th scope="col">Pot C height (cm)</th>
+                <th scope="col">Pot C mass (g)</th>
+              </tr>
+            </thead>
+            <tbody id="full-data-table-body"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <div class="export-panel">
+        <div>
+          <h3>Save your evidence</h3>
+          <p>The results image is designed to paste into Notability. The CSV contains every simulated day.</p>
+        </div>
+        <div class="export-actions">
+          <button id="image-button" class="primary-button" type="button">Download results image</button>
+          <button id="csv-button" class="secondary-button" type="button">Export data (CSV)</button>
+        </div>
+        <p id="export-status" class="sr-only" aria-live="polite"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p><strong>Model note:</strong> This classroom model shows patterns, not exact predictions for real plants. Real growth also depends on temperature, genetics, pests, drainage, and other conditions.</p>
+  </footer>
+
+  <script src="plant-model.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
