@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fremd Science Simulations Hub</title>
+        <!-- Favicon: Using a Viking emoji as a quick icon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔬</text></svg>">
+    <style>
+        :root {
+            /* Viking Green and Gold Color Scheme */
+            --viking-green: #005530; 
+            --viking-gold: #FFD100;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-light: #666666;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: var(--viking-green);
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 40px 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+            box-sizing: border-box;
+            border-bottom: 6px solid var(--viking-gold);
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.8rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            color: #e0e0e0;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 0 20px;
+            box-sizing: border-box;
+            flex-grow: 1;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+
+        /* --- Category Cards (Splash Screen) --- */
+        .category-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+            cursor: pointer;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-color: var(--viking-gold);
+        }
+
+        .category-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .category-title {
+            font-size: 1.5rem;
+            color: var(--viking-green);
+            font-weight: bold;
+            margin: 0;
+        }
+
+        /* --- Simulation Cards (Sub-screens) --- */
+        .sim-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            border-top: 5px solid var(--viking-green);
+        }
+
+        .sim-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .sim-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin: 0 0 15px 0;
+            color: var(--viking-green);
+        }
+
+        .sim-desc {
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-bottom: 25px;
+            flex-grow: 1;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+
+        .launch-btn {
+            background-color: var(--viking-green);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .launch-btn:hover {
+            background-color: #003d22;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            background-color: #eee;
+            color: #777;
+        }
+
+        .status-completed {
+            background-color: #e8f8f5;
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        /* Navigation & Views */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            background: none;
+            border: none;
+            color: var(--viking-green);
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0;
+            margin-bottom: 25px;
+            transition: color 0.2s;
+        }
+
+        .back-btn:hover {
+            color: var(--viking-gold);
+        }
+
+        .section-header {
+            font-size: 2rem;
+            color: var(--viking-green);
+            margin-top: 0;
+            margin-bottom: 30px;
+            border-bottom: 3px solid var(--viking-gold);
+            padding-bottom: 10px;
+            display: inline-block;
+        }
+
+        /* Privacy Notice */
+        .privacy-notice {
+            margin-top: 50px;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #eef2f5;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            max-width: 800px;
+            border: 1px dashed #ccc;
+            width: 100%;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Fremd Science Simulations</h1>
+        <p class="subtitle">Complete the activities for your class. Your progress is saved automatically to your iPad.</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- ==========================================
+             SPLASH SCREEN: CATEGORIES
+        =========================================== -->
+        <div id="view-home" class="view-section active">
+            <div class="dashboard-grid">
+                
+                <div class="category-card" onclick="showCategory('biology')">
+                    <div class="category-icon">🧬</div>
+                    <h2 class="category-title">Biology</h2>
+                </div>
+
+                <div class="category-card" onclick="showCategory('chemistry')">
+                    <div class="category-icon">🧪</div>
+                    <h2 class="category-title">Chemistry</h2>
+                </div>
+
+                <div class="category-card" onclick="showCategory('earth-science')">
+                    <div class="category-icon">🌍</div>
+                    <h2 class="category-title">Earth Science</h2>
+                </div>
+
+                <div class="category-card" onclick="showCategory('physical-science')">
+                    <div class="category-icon">⚖️</div>
+                    <h2 class="category-title">Physical Science</h2>
+                </div>
+
+                <div class="category-card" onclick="showCategory('physics')">
+                    <div class="category-icon">🚀</div>
+                    <h2 class="category-title">Physics</h2>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ==========================================
+             SUB-SCREEN: BIOLOGY SIMULATIONS
+        =========================================== -->
+        <div id="view-biology" class="view-section">
+            <button class="back-btn" onclick="showCategory('home')">← Back to Subjects</button>
+            <h2 class="section-header">Biology Simulations</h2>
+            
+            <div class="dashboard-grid">
+                <!-- Epigenetics Card -->
+                <div class="sim-card">
+                    <h2 class="sim-title">Epigenetics: Lick Your Rats</h2>
+                    <p class="sim-desc">
+                        Investigate how maternal care during the first week of a rat's life affects the GR gene, shaping their adult personality and response to stress.
+                    </p>
+                    <div class="card-footer">
+                        <a href="lick_your_rats.html" class="launch-btn">Launch Activity</a>
+                        <span id="rat-badge" class="status-badge">Incomplete</span>
+                    </div>
+                </div>
+
+                <!-- Egg Lab Card -->
+                <div class="sim-card">
+                    <h2 class="sim-title">Egg Lab</h2>
+                    <p class="sim-desc">
+                        Investigate an Egg in Different Environments
+                    </p>
+                    <div class="card-footer">
+                        <a href="Egg_Lab.html" class="launch-btn">Launch Activity</a>
+                        <span id="egg-badge" class="status-badge">Incomplete</span>
+                    </div>
+                </div>
+
+                <!-- Plant Growth Lab Card -->
+                <div class="sim-card">
+                    <h2 class="sim-title">Plant Growth Lab</h2>
+                    <p class="sim-desc">
+                        Investigate how light, water, seed type, and soil treatment affect plant growth over 50 simulated days.
+                    </p>
+                    <div class="card-footer">
+                        <a href="plant-growth-lab/" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Lab</span>
+                    </div>
+                </div>
+
+                <!-- Placeholder for future bio sim -->
+                <div class="sim-card" style="border-top-color: #bdc3c7; opacity: 0.7;">
+                    <h2 class="sim-title" style="color: #7f8c8d;">Cell Division (Coming Soon)</h2>
+                    <p class="sim-desc">
+                        Explore the phases of mitosis and meiosis. (This is a placeholder for future activities you want to add!)
+                    </p>
+                    <div class="card-footer">
+                        <span class="launch-btn" style="background: #bdc3c7; cursor: not-allowed;">Locked</span>
+                        <span class="status-badge">Pending</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             SUB-SCREEN: CHEMISTRY SIMULATIONS
+        =========================================== -->
+        <div id="view-chemistry" class="view-section">
+            <button class="back-btn" onclick="showCategory('home')">← Back to Subjects</button>
+            <h2 class="section-header">Chemistry Simulations</h2>
+            
+            <div class="dashboard-grid">
+                <!-- Atom and Ion Chart -->
+                <div class="sim-card">
+                    <h2 class="sim-title">Atom and Ion Chart</h2>
+                    <p class="sim-desc">
+                        Practice Atomic Number, Mass Number and Charge of Different Atoms!
+                    </p>
+                    <div class="card-footer">
+                        <a href="atom_and_ion_chart.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Incomplete</span>
+                    </div>
+                </div> 
+
+                <!-- Acid Base Perodicity -->
+                <div class="sim-card">
+                    <h2 class="sim-title">Acid Base Periodicity Lab</h2>
+                    <p class="sim-desc">
+                        Investigate the Patterns of Reactions of Different Metals and Non-Metals
+                    </p>
+                    <div class="card-footer">
+                        <a href="acid_base_perodicity.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Incomplete</span>
+                    </div>
+                </div> 
+
+                <!-- Formula Writing -->
+                <div class="sim-card">
+                    <h2 class="sim-title">Formula Writing and Naming Practice</h2>
+                    <p class="sim-desc">
+                        Practice your Ionic and Covalent Compound Naming and Formula Writing!
+                    </p>
+                    <div class="card-footer">
+                        <a href="Formula_Writing_and_Naming_Practice.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Incomplete</span>
+                    </div>
+                </div> 
+   <!-- Balancing -->
+                <div class="sim-card">
+                    <h2 class="sim-title">Balancing Equations</h2>
+                    <p class="sim-desc">
+                        Practice Balancing Equations While Visualizing Conservation of Matter
+                    </p>
+                    <div class="card-footer">
+                        <a href="balancing_equations.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Incomplete</span>
+                    </div>
+                </div> 
+                <!-- Mole Intro -->
+                <div class="sim-card">
+                    <h2 class="sim-title">Mole Intro</h2>
+                    <p class="sim-desc">
+                        Master the map, one step at a time.
+                    </p>
+                    <div class="card-footer">
+                        <a href="Mole_Intro.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Incomplete</span>
+                    </div>
+                </div> 
+     <!-- Burette Practice -->
+                <div class="sim-card">
+                    <h2 class="sim-title">Reading a Buret</h2>
+                    <p class="sim-desc">
+                        Practice Reading a Buret
+                    </p>
+                    <div class="card-footer">
+                        <a href="Titration_Practice.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Incomplete</span>
+                    </div>
+                </div> 
+                <!-- Placeholder -->
+                <div class="sim-card" style="border-top-color: #bdc3c7; opacity: 0.7;">
+                    <h2 class="sim-title" style="color: #7f8c8d;">Balancing Equations</h2>
+                    <p class="sim-desc">Coming soon to the chemistry portal.</p>
+                    <div class="card-footer">
+                        <span class="launch-btn" style="background: #bdc3c7; cursor: not-allowed;">Locked</span>
+                        <span class="status-badge">Pending</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             SUB-SCREEN: EARTH SCIENCE SIMULATIONS
+        =========================================== -->
+        <div id="view-earth-science" class="view-section">
+            <button class="back-btn" onclick="showCategory('home')">← Back to Subjects</button>
+            <h2 class="section-header">Earth Science Simulations</h2>
+            
+            <div class="dashboard-grid">
+                <!-- Placeholder -->
+                <div class="sim-card" style="border-top-color: #bdc3c7; opacity: 0.7;">
+                    <h2 class="sim-title" style="color: #7f8c8d;">Plate Tectonics</h2>
+                    <p class="sim-desc">Coming soon to the earth science portal.</p>
+                    <div class="card-footer">
+                        <span class="launch-btn" style="background: #bdc3c7; cursor: not-allowed;">Locked</span>
+                        <span class="status-badge">Pending</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             SUB-SCREEN: PHYSICAL SCIENCE SIMULATIONS
+        =========================================== -->
+        <div id="view-physical-science" class="view-section">
+            <button class="back-btn" onclick="showCategory('home')">← Back to Subjects</button>
+            <h2 class="section-header">Physical Science Simulations</h2>
+            
+            <div class="dashboard-grid">
+                <!-- Placeholder -->
+                <div class="sim-card" style="border-top-color: #bdc3c7; opacity: 0.7;">
+                    <h2 class="sim-title" style="color: #7f8c8d;">States of Matter</h2>
+                    <p class="sim-desc">Coming soon to the physical science portal.</p>
+                    <div class="card-footer">
+                        <span class="launch-btn" style="background: #bdc3c7; cursor: not-allowed;">Locked</span>
+                        <span class="status-badge">Pending</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+      <!-- ==========================================
+     SUB-SCREEN: PHYSICS SIMULATIONS
+=========================================== -->
+<div id="view-physics" class="view-section">
+    <button class="back-btn" onclick="showCategory('home')">← Back to Subjects</button>
+    <h2 class="section-header">Physics Simulations</h2>
+    
+    <div class="dashboard-grid">
+        <!-- Newton's Law Lab -->
+        <div class="sim-card">
+            <h2 class="sim-title">Newton's Law Lab</h2>
+            <p class="sim-desc">
+                Find out the relationship between Force, Acceleration and Mass
+            </p>
+            <div class="card-footer">
+                <a href="newtons_law_lab.html" class="launch-btn">Launch Activity</a>
+                <span class="status-badge">Incomplete</span>
+            </div>
+        </div> <!-- This was the missing closing tag -->
+ <div class="sim-card">
+            <h2 class="sim-title">Right Hand Rules</h2>
+            <p class="sim-desc">
+                Find out the relationship between Current in a wire, magnetic fields and moving charges.
+            </p>
+            <div class="card-footer">
+                <a href="Right_hand_rule.html" class="launch-btn">Launch Activity</a>
+                <span class="status-badge">Incomplete</span>
+            </div>
+        </div> <!-- This was the missing closing tag -->
+        <!-- Placeholder -->
+        <div class="sim-card" style="border-top-color: #bdc3c7; opacity: 0.7;">
+            <h2 class="sim-title" style="color: #7f8c8d;">Projectile Motion</h2>
+            <p class="sim-desc">Coming soon to the physics portal.</p>
+            <div class="card-footer">
+                <span class="launch-btn" style="background: #bdc3c7; cursor: not-allowed;">Locked</span>
+                <span class="status-badge">Pending</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+
+    <div class="privacy-notice">
+        <strong>🔒 SOPPA Compliant:</strong> This dashboard uses "Zero-Data" architecture. No names, emails, or personal information are collected. Progress is stored locally on your iPad, acting like a digital notebook.
+    </div>
+
+    <script>
+        // --- Navigation Logic ---
+        function showCategory(categoryId) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.view-section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Show the requested section
+            const activeSection = document.getElementById('view-' + categoryId);
+            if(activeSection) {
+                activeSection.classList.add('active');
+            }
+        }
+
+        // --- Local Storage Tracking Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for rat simulation completion
+            const ratStatus = localStorage.getItem('ratSimCompleted');
+            
+            if (ratStatus === 'true') {
+                const badge = document.getElementById('rat-badge');
+                if (badge) {
+                    badge.textContent = 'Completed ✓';
+                    badge.className = 'status-badge status-completed';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
