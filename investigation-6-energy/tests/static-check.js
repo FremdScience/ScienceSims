@@ -1,0 +1,51 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const { readFileSync } = require("node:fs");
+const { resolve } = require("node:path");
+
+const html = readFileSync(resolve(__dirname, "../index.html"), "utf8");
+const css = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+const app = readFileSync(resolve(__dirname, "../app.js"), "utf8");
+
+const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+assert.equal(new Set(ids).size, ids.length, "HTML IDs must be unique.");
+assert.match(html, /<title>Heat and Energy Simulation<\/title>/);
+assert.match(html, /<header class="site-header">\s*<h1>Heat and Energy Simulation<\/h1>\s*<\/header>/);
+assert.match(html, /Part 1 · Direct heating/);
+assert.match(html, /Part 2 · Energy transfer/);
+assert.doesNotMatch(html, /Day 1|Day 2/);
+assert.match(html, /role="tablist"/);
+assert.equal((html.match(/role="tab"/g) || []).length, 2);
+assert.equal((html.match(/role="tabpanel"/g) || []).length, 2);
+assert.match(html, /aria-live="polite"/);
+assert.match(html, /<th scope="col">/);
+assert.match(html, /Energy added by heating \(J\)/);
+assert.match(html, /Energy added to solid \(J\)/);
+assert.match(html, /Initial water temp\. \(°C\)/);
+assert.match(app, /trial\.startTemperature\.toFixed\(1\)/);
+assert.doesNotMatch(html, /contains heat/i);
+assert.doesNotMatch(html, /heats faster/i);
+assert.doesNotMatch(html, /<canvas|<svg/i, "No graphs or decorative SVG should be used.");
+assert.match(css, /min-height:\s*48px/);
+assert.match(css, /:focus-visible/);
+assert.match(css, /prefers-reduced-motion:\s*reduce/);
+assert.match(css, /@media \(max-width:\s*820px\)/);
+assert.match(app, /ArrowLeft/);
+assert.match(app, /ArrowRight/);
+assert.match(app, /motionQuery\.matches/);
+assert.match(html, /id="skip-heating-animation"/);
+assert.match(html, /id="skip-calorimetry-animation"/);
+assert.match(html, /id="sample-visual"[\s\S]*class="thermometer"[\s\S]*id="heating-mercury"/);
+assert.match(html, /id="solid-sample"[\s\S]*class="mini-thermometer"[\s\S]*id="solid-mercury"/);
+assert.match(app, /updateHeatingMass/);
+assert.match(app, /updateCalorimetryMass/);
+assert.match(app, /updateWaterMass/);
+assert.match(css, /\.mixed \.solid-sample \{ opacity: 0; visibility: hidden; \}/);
+assert.match(app, /state\.heating\.trials/);
+assert.match(app, /state\.calorimetry\.trials/);
+assert.doesNotMatch(html + app, /\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(/);
+assert.doesNotMatch(html + app, /\b(?:localStorage|sessionStorage|indexedDB)\b/);
+assert.doesNotMatch(html, /<(?:script|link|img)[^>]+(?:src|href)="https?:/i);
+
+console.log("Static checks passed: two tabs, tables, labels, privacy, responsive layout, keyboard hooks, and reduced-motion support.");

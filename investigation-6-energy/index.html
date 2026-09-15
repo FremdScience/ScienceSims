@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A two-part high-school chemistry investigation of energy added by heating, mass, material, and temperature change.">
+  <title>Heat and Energy Simulation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to investigation</a>
+
+  <header class="site-header">
+    <h1>Heat and Energy Simulation</h1>
+  </header>
+
+  <main id="main-content">
+    <nav class="investigation-tabs" role="tablist" aria-label="Investigation sections">
+      <button id="heating-tab" class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="heating-panel" tabindex="0">
+        <span class="tab-number" aria-hidden="true">1</span> Heating Substances
+      </button>
+      <button id="calorimetry-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="calorimetry-panel" tabindex="-1">
+        <span class="tab-number" aria-hidden="true">2</span> Calorimetry
+      </button>
+    </nav>
+
+    <section id="heating-panel" class="investigation-panel" role="tabpanel" aria-labelledby="heating-tab">
+      <div class="section-heading">
+        <div>
+          <p class="step-label">Part 1 · Direct heating</p>
+          <h2>Heating Substances</h2>
+        </div>
+        <p class="section-help">Keep two settings the same. Change one setting and compare the final temperatures.</p>
+      </div>
+
+      <div class="workbench-layout">
+        <section class="control-card" aria-labelledby="heating-controls-title">
+          <h3 id="heating-controls-title">Set the variables</h3>
+          <div class="field">
+            <label for="heating-material">Substance</label>
+            <select id="heating-material">
+              <option value="water">Water</option>
+              <option value="aluminum">Aluminum</option>
+              <option value="copper">Copper</option>
+              <option value="iron">Iron</option>
+              <option value="granite">Granite</option>
+            </select>
+          </div>
+          <fieldset class="choice-field">
+            <legend>Sample mass</legend>
+            <div class="segmented" id="heating-mass-choices">
+              <label><input type="radio" name="heating-mass" value="50"><span>50 g</span></label>
+              <label><input type="radio" name="heating-mass" value="100" checked><span>100 g</span></label>
+              <label><input type="radio" name="heating-mass" value="200"><span>200 g</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="choice-field">
+            <legend>Energy added by heating (J)</legend>
+            <div class="segmented energy-choices" id="heating-energy-choices">
+              <label><input type="radio" name="heating-energy" value="2090"><span>2,090 J</span></label>
+              <label><input type="radio" name="heating-energy" value="4180" checked><span>4,180 J</span></label>
+              <label><input type="radio" name="heating-energy" value="6270"><span>6,270 J</span></label>
+            </div>
+          </fieldset>
+          <div class="button-row">
+            <button id="add-energy-button" class="primary-button" type="button"><span aria-hidden="true">🔥</span> Add Energy</button>
+            <button id="heating-reset-button" class="secondary-button" type="button"><span aria-hidden="true">↺</span> Reset</button>
+          </div>
+          <button id="skip-heating-animation" class="text-button skip-button" type="button" hidden>Skip animation</button>
+          <p id="heating-status" class="status" aria-live="polite">Choose settings, then add energy.</p>
+        </section>
+
+        <section class="lab-stage" aria-labelledby="heating-stage-title">
+          <div class="stage-topline">
+            <div>
+              <p class="stage-kicker">Direct-heating setup</p>
+              <h3 id="heating-stage-title">One sample over a burner</h3>
+            </div>
+            <span class="ideal-badge">Ideal model</span>
+          </div>
+          <div class="apparatus heating-apparatus" id="heating-apparatus">
+            <div id="sample-visual" class="sample-vessel liquid" aria-hidden="true">
+              <span class="sample-fill"></span>
+              <span class="thermometer">
+                <span class="thermometer-scale"><span id="heating-mercury" class="mercury"></span></span>
+                <span class="thermometer-bulb"></span>
+              </span>
+              <span class="sample-label">Water</span>
+            </div>
+            <div class="burner" aria-hidden="true">
+              <span class="flame"></span>
+              <span class="burner-tube"></span>
+              <span class="burner-base"></span>
+            </div>
+          </div>
+          <div class="readings" aria-label="Temperature readings">
+            <div class="reading-card">
+              <span>Starting temperature</span>
+              <strong id="heating-start-temperature" class="tabular">20.0 °C</strong>
+            </div>
+            <div class="reading-arrow" aria-hidden="true">→</div>
+            <div class="reading-card final-reading">
+              <span>Final temperature</span>
+              <strong id="heating-final-temperature" class="tabular">—</strong>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="history-card" aria-labelledby="heating-history-title">
+        <div class="history-heading">
+          <div><p class="stage-kicker">Current browser session</p><h3 id="heating-history-title">Trial history</h3></div>
+          <button id="clear-heating-history" class="text-button" type="button">Clear table</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Trial</th><th scope="col">Substance</th><th scope="col">Mass (g)</th><th scope="col">Energy added (J)</th><th scope="col">Starting temp. (°C)</th><th scope="col">Final temp. (°C)</th></tr></thead>
+            <tbody id="heating-history-body"><tr class="empty-row"><td colspan="6">No trials yet.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="calorimetry-panel" class="investigation-panel" role="tabpanel" aria-labelledby="calorimetry-tab" hidden>
+      <div class="section-heading">
+        <div>
+          <p class="step-label">Part 2 · Energy transfer</p>
+          <h2>Calorimetry</h2>
+        </div>
+        <p class="section-help">Heat the solid first. Then place it in water and watch both readings reach the same temperature.</p>
+      </div>
+
+      <div class="sequence" aria-label="Required sequence">
+        <span id="sequence-set" class="sequence-step active"><b>1</b> Set variables</span>
+        <span id="sequence-heat" class="sequence-step"><b>2</b> Add energy</span>
+        <span id="sequence-transfer" class="sequence-step"><b>3</b> Transfer</span>
+        <span id="sequence-observe" class="sequence-step"><b>4</b> Observe</span>
+      </div>
+
+      <div class="workbench-layout">
+        <section class="control-card" aria-labelledby="calorimetry-controls-title">
+          <h3 id="calorimetry-controls-title">Set the variables</h3>
+          <div class="field">
+            <label for="solid-material">Solid material</label>
+            <select id="solid-material">
+              <option value="aluminum">Aluminum</option>
+              <option value="copper">Copper</option>
+              <option value="iron">Iron</option>
+              <option value="granite">Granite</option>
+            </select>
+          </div>
+          <fieldset class="choice-field">
+            <legend>Solid mass</legend>
+            <div class="segmented">
+              <label><input type="radio" name="solid-mass" value="50"><span>50 g</span></label>
+              <label><input type="radio" name="solid-mass" value="100" checked><span>100 g</span></label>
+              <label><input type="radio" name="solid-mass" value="200"><span>200 g</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="choice-field">
+            <legend>Energy added to solid (J)</legend>
+            <div class="segmented energy-choices">
+              <label><input type="radio" name="solid-energy" value="2090"><span>2,090 J</span></label>
+              <label><input type="radio" name="solid-energy" value="4180" checked><span>4,180 J</span></label>
+              <label><input type="radio" name="solid-energy" value="6270"><span>6,270 J</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="choice-field">
+            <legend>Water mass</legend>
+            <div class="segmented">
+              <label><input type="radio" name="water-mass" value="200"><span>200 g</span></label>
+              <label><input type="radio" name="water-mass" value="400" checked><span>400 g</span></label>
+              <label><input type="radio" name="water-mass" value="800"><span>800 g</span></label>
+            </div>
+          </fieldset>
+          <div class="stacked-actions">
+            <button id="heat-solid-button" class="primary-button" type="button"><span aria-hidden="true">🔥</span> Add Energy to Solid</button>
+            <button id="transfer-button" class="transfer-button" type="button" disabled><span aria-hidden="true">↘</span> Transfer Solid to Water</button>
+            <button id="calorimetry-reset-button" class="secondary-button" type="button"><span aria-hidden="true">↺</span> New Trial</button>
+          </div>
+          <button id="skip-calorimetry-animation" class="text-button skip-button" type="button" hidden>Skip animation</button>
+          <p id="calorimetry-status" class="status" aria-live="polite">Set the variables, then add energy to the solid.</p>
+        </section>
+
+        <section class="lab-stage" aria-labelledby="calorimetry-stage-title">
+          <div class="stage-topline">
+            <div><p class="stage-kicker">Insulated calorimeter</p><h3 id="calorimetry-stage-title">Solid and water temperatures</h3></div>
+            <span class="ideal-badge">No energy lost</span>
+          </div>
+          <div class="apparatus calorimetry-apparatus" id="calorimetry-apparatus">
+            <div class="solid-station">
+              <div id="solid-sample" class="solid-sample aluminum" aria-hidden="true">
+                <span id="solid-symbol" class="solid-symbol">Al</span>
+                <span class="mini-thermometer"><span id="solid-mercury" class="mini-mercury"></span></span>
+              </div>
+              <div class="burner mini-burner" aria-hidden="true"><span class="flame"></span><span class="burner-tube"></span><span class="burner-base"></span></div>
+            </div>
+            <div class="transfer-path" aria-hidden="true">→</div>
+            <div class="calorimeter" aria-hidden="true">
+              <div id="water-fill" class="water-fill"><span id="immersed-solid" class="immersed-solid"></span></div>
+              <span class="cup-label">Water</span>
+              <div class="water-thermometer"><span id="water-mercury" class="water-mercury"></span></div>
+            </div>
+          </div>
+          <div class="dual-readings" aria-label="Solid and water temperatures">
+            <div class="reading-card solid-reading">
+              <span>Solid temperature</span>
+              <strong id="solid-temperature" class="tabular">20.0 °C</strong>
+            </div>
+            <div class="reading-card water-reading">
+              <span>Water temperature</span>
+              <strong id="water-temperature" class="tabular">20.0 °C</strong>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="history-card" aria-labelledby="calorimetry-history-title">
+        <div class="history-heading">
+          <div><p class="stage-kicker">Current browser session</p><h3 id="calorimetry-history-title">Trial history</h3></div>
+          <button id="clear-calorimetry-history" class="text-button" type="button">Clear table</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Trial</th><th scope="col">Solid</th><th scope="col">Solid mass (g)</th><th scope="col">Energy added (J)</th><th scope="col">Water mass (g)</th><th scope="col">Initial water temp. (°C)</th><th scope="col">Solid after heating (°C)</th><th scope="col">Final solid temp. (°C)</th><th scope="col">Final water temp. (°C)</th></tr></thead>
+            <tbody id="calorimetry-history-body"><tr class="empty-row"><td colspan="9">No trials yet.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <details class="teacher-reveal">
+      <summary>Teacher reveal: model constants and assumptions</summary>
+      <div class="teacher-grid">
+        <div>
+          <h2>Material constants</h2>
+          <ul>
+            <li>Water: 4.18 J/(g·°C)</li><li>Aluminum: 0.90 J/(g·°C)</li><li>Copper: 0.385 J/(g·°C)</li><li>Iron: 0.45 J/(g·°C)</li><li>Granite: 0.79 J/(g·°C)</li>
+          </ul>
+        </div>
+        <div>
+          <h2>Ideal-model assumptions</h2>
+          <p>No energy is lost to the container or surroundings. All materials begin at 20.0 °C. The model does not represent heating rate or thermal conductivity.</p>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <footer>
+    <p><strong>Model note:</strong> This simplified investigation shows relationships among energy, mass, material, and temperature. It does not measure how quickly a sample warms.</p>
+  </footer>
+
+  <script src="energy-model.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
