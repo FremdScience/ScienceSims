@@ -70,6 +70,17 @@ main { width: min(1420px, 100%); margin: 0 auto; padding: 0 clamp(.75rem, 2.5vw,
 .segmented span { display: grid; min-height: 48px; padding: .45rem .3rem; place-items: center; border: 2px solid #9eb2aa; border-radius: .55rem; background: #fff; text-align: center; font-weight: 750; }
 .segmented input:checked + span { color: var(--green-dark); background: var(--green-soft); border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
 .segmented input:focus-visible + span { outline: 3px solid #1c70d5; outline-offset: 2px; }
+.heating-choice-field { padding: .85rem; background: var(--blue-soft); border: 2px solid #a9c9ec; border-radius: .75rem; }
+.heating-mode-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.heating-mode-choices span { min-height: 68px; padding: .55rem; }
+.target-temperature-field { margin: 0 0 1rem; padding: .85rem; background: var(--gold-soft); border: 2px solid #e0bd50; border-radius: .75rem; }
+.target-temperature-field > label { display: block; margin-bottom: .35rem; font-weight: 800; }
+.target-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .75rem; }
+.target-control input[type="range"] { width: 100%; min-height: 48px; accent-color: var(--green); }
+.target-output { min-width: 5rem; padding: .55rem .65rem; background: #fff; border: 2px solid #9eb2aa; border-radius: .55rem; text-align: center; font-weight: 850; }
+.calculated-energy { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin-top: .6rem; padding-top: .6rem; border-top: 1px solid #d5b449; }
+.calculated-energy span { font-weight: 750; }
+.calculated-energy strong { color: var(--green-dark); font-size: 1.15rem; white-space: nowrap; }
 .button-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: .6rem; }
 .stacked-actions { display: grid; gap: .55rem; }
 .primary-button, .secondary-button, .transfer-button, .text-button { border-radius: .6rem; font-weight: 800; }
@@ -161,6 +172,8 @@ main { width: min(1420px, 100%); margin: 0 auto; padding: 0 clamp(.75rem, 2.5vw,
 .history-heading h3 { margin-bottom: 0; }
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: .65rem; }
 table { width: 100%; min-width: 730px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.calorimetry-history-table { min-width: 1120px; }
+#calorimetry-history-body { white-space: nowrap; }
 th, td { padding: .72rem .65rem; border-bottom: 1px solid var(--line); text-align: left; }
 th { color: #fff; background: var(--green-dark); font-size: .8rem; }
 tbody tr:nth-child(even) { background: #f1f6f3; }
@@ -186,6 +199,9 @@ footer p { width: min(1350px,100%); margin: 0 auto; }
   .investigation-tabs { grid-template-columns: 1fr; gap: .25rem; }
   .tab-button { justify-content: flex-start; padding-left: .9rem; }
   .energy-choices { grid-template-columns: 1fr; }
+  .heating-mode-choices { grid-template-columns: 1fr; }
+  .target-control { grid-template-columns: 1fr; }
+  .target-output { width: 100%; }
   .sequence { grid-template-columns: repeat(2, 1fr); }
   .apparatus { min-height: 305px; margin-inline: .65rem; }
   .heating-apparatus { transform: scale(.9); transform-origin: bottom center; }

@@ -11,9 +11,11 @@
   const els = {};
 
   function byId(id) { return document.getElementById(id); }
+  function checkedValue(name) { return document.querySelector(`input[name="${name}"]:checked`).value; }
   function checkedNumber(name) { return Number(document.querySelector(`input[name="${name}"]:checked`).value); }
   function formatTemperature(value) { return `${Number(value).toFixed(1)} °C`; }
   function formatNumber(value) { return Number(value).toLocaleString("en-US"); }
+  function formatEnergy(value) { return `${Number(value).toLocaleString("en-US", { maximumFractionDigits: 1 })} J`; }
   function duration(normal) { return motionQuery.matches ? 0 : normal; }
 
   function initialize() {
@@ -27,6 +29,9 @@
       heatingHistoryBody: byId("heating-history-body"), clearHeatingHistory: byId("clear-heating-history"),
       skipHeatingAnimation: byId("skip-heating-animation"),
       solidMaterial: byId("solid-material"), heatSolidButton: byId("heat-solid-button"),
+      heatSolidButtonLabel: byId("heat-solid-button-label"), energyChoiceField: byId("energy-choice-field"),
+      targetTemperatureField: byId("target-temperature-field"), targetSolidTemperature: byId("target-solid-temperature"),
+      targetSolidTemperatureOutput: byId("target-solid-temperature-output"), calculatedSolidEnergy: byId("calculated-solid-energy"),
       transferButton: byId("transfer-button"), calorimetryResetButton: byId("calorimetry-reset-button"),
       calorimetryStatus: byId("calorimetry-status"), calorimetryApparatus: byId("calorimetry-apparatus"),
       solidSample: byId("solid-sample"), solidSymbol: byId("solid-symbol"), immersedSolid: byId("immersed-solid"), waterFill: byId("water-fill"),
@@ -45,6 +50,7 @@
     updateSolidSample();
     updateCalorimetryMass();
     updateWaterMass();
+    updateCalorimetryHeatingChoice(false);
     resetHeating(false);
     resetCalorimetry(false);
   }
@@ -62,10 +68,12 @@
     els.clearHeatingHistory.addEventListener("click", clearHeatingHistory);
     els.skipHeatingAnimation.addEventListener("click", () => { state.heating.skipAnimation = true; });
 
-    els.solidMaterial.addEventListener("change", () => { updateSolidSample(); resetCalorimetry(false); });
-    document.querySelectorAll('input[name="solid-mass"]').forEach((control) => control.addEventListener("change", () => { updateCalorimetryMass(); resetCalorimetry(false); }));
+    document.querySelectorAll('input[name="calorimetry-heating-choice"]').forEach((control) => control.addEventListener("change", () => updateCalorimetryHeatingChoice(true)));
+    els.solidMaterial.addEventListener("change", () => { updateSolidSample(); updateCalculatedEnergy(); resetCalorimetry(false); });
+    document.querySelectorAll('input[name="solid-mass"]').forEach((control) => control.addEventListener("change", () => { updateCalorimetryMass(); updateCalculatedEnergy(); resetCalorimetry(false); }));
     document.querySelectorAll('input[name="water-mass"]').forEach((control) => control.addEventListener("change", () => { updateWaterMass(); resetCalorimetry(false); }));
     document.querySelectorAll('input[name="solid-energy"]').forEach((control) => control.addEventListener("change", () => resetCalorimetry(false)));
+    els.targetSolidTemperature.addEventListener("input", () => { updateCalculatedEnergy(); resetCalorimetry(false); });
     els.heatSolidButton.addEventListener("click", heatSolid);
     els.transferButton.addEventListener("click", transferSolid);
     els.calorimetryResetButton.addEventListener("click", () => resetCalorimetry(true));
@@ -126,6 +134,35 @@
   function updateWaterMass() {
     const height = { 200: "35px", 400: "70px", 800: "140px" }[checkedNumber("water-mass")];
     els.waterFill.style.setProperty("--water-height", height);
+  }
+
+  function updateCalculatedEnergy() {
+    const targetTemperature = Number(els.targetSolidTemperature.value);
+    els.targetSolidTemperatureOutput.value = `${targetTemperature} °C`;
+    const energy = checkedNumber("solid-mass") * model.SPECIFIC_HEATS[els.solidMaterial.value] * (targetTemperature - model.START_TEMPERATURE);
+    els.calculatedSolidEnergy.textContent = formatEnergy(energy);
+  }
+
+  function applyCalorimetryModeAvailability() {
+    const useTargetTemperature = checkedValue("calorimetry-heating-choice") === model.CALORIMETRY_HEATING_CHOICES.TARGET_TEMPERATURE;
+    els.energyChoiceField.hidden = useTargetTemperature;
+    els.targetTemperatureField.hidden = !useTargetTemperature;
+    document.querySelectorAll('input[name="solid-energy"]').forEach((control) => { control.disabled = useTargetTemperature; });
+    els.targetSolidTemperature.disabled = !useTargetTemperature;
+    els.heatSolidButtonLabel.textContent = useTargetTemperature ? "Heat Solid to the Target Temperature" : "Add Energy to the Solid";
+  }
+
+  function updateCalorimetryHeatingChoice(resetDefaults) {
+    const heatingChoice = checkedValue("calorimetry-heating-choice");
+    if (resetDefaults) {
+      if (heatingChoice === model.CALORIMETRY_HEATING_CHOICES.TARGET_TEMPERATURE) {
+        els.targetSolidTemperature.value = "90";
+      } else {
+        document.querySelector('input[name="solid-energy"][value="4180"]').checked = true;
+      }
+    }
+    updateCalculatedEnergy();
+    resetCalorimetry(false);
   }
 
   function thermometerHeight(temperature) {
@@ -209,8 +246,11 @@
     els.transferButton.disabled = true;
     els.skipCalorimetryAnimation.hidden = true;
     setControlsDisabled("#calorimetry-panel select, #calorimetry-panel input", false);
+    applyCalorimetryModeAvailability();
     updateSequence("set");
-    els.calorimetryStatus.textContent = announce ? "New trial ready. Your settings and trial table are unchanged." : "Set the variables, then add energy to the solid.";
+    const useTargetTemperature = checkedValue("calorimetry-heating-choice") === model.CALORIMETRY_HEATING_CHOICES.TARGET_TEMPERATURE;
+    const direction = useTargetTemperature ? "Set the variables, then heat the solid to the target temperature." : "Set the variables, then add energy to the solid.";
+    els.calorimetryStatus.textContent = announce ? `New trial ready. ${direction}` : direction;
   }
 
   function updateSequence(current) {
@@ -225,11 +265,14 @@
 
   async function heatSolid() {
     if (state.calorimetry.phase !== "ready") return;
+    const heatingChoice = checkedValue("calorimetry-heating-choice");
     const inputs = {
+      heatingChoice,
       material: els.solidMaterial.value,
       solidMass: checkedNumber("solid-mass"),
-      energy: checkedNumber("solid-energy"),
-      waterMass: checkedNumber("water-mass")
+      waterMass: checkedNumber("water-mass"),
+      energy: heatingChoice === model.CALORIMETRY_HEATING_CHOICES.ENERGY ? checkedNumber("solid-energy") : undefined,
+      targetTemperature: heatingChoice === model.CALORIMETRY_HEATING_CHOICES.TARGET_TEMPERATURE ? Number(els.targetSolidTemperature.value) : undefined
     };
     const result = model.calorimetry(inputs);
     const runId = ++state.calorimetry.runId;
@@ -241,7 +284,9 @@
     updateSequence("heat");
     els.calorimetryApparatus.classList.add("heating");
     els.skipCalorimetryAnimation.hidden = false;
-    els.calorimetryStatus.textContent = `Adding ${formatNumber(inputs.energy)} J to the solid.`;
+    els.calorimetryStatus.textContent = heatingChoice === model.CALORIMETRY_HEATING_CHOICES.TARGET_TEMPERATURE
+      ? `Energy needed to heat the solid: ${formatEnergy(result.energy)}.`
+      : `Energy added to the solid: ${formatEnergy(result.energy)}.`;
     await waitForAnimation(850, "calorimetry");
     if (runId !== state.calorimetry.runId) return;
     els.solidMercury.style.height = thermometerHeight(result.hotTemperature);
@@ -294,7 +339,7 @@
     updateSequence("observe");
     els.calorimetryApparatus.classList.add("transferring");
     els.skipCalorimetryAnimation.hidden = false;
-    els.calorimetryStatus.textContent = "The warmer solid transfers energy to the cooler water.";
+    els.calorimetryStatus.textContent = "Energy transferred from the warmer solid to the cooler water.";
     await waitForAnimation(850, "calorimetry");
     if (runId !== state.calorimetry.runId) return;
     els.calorimetryApparatus.classList.remove("transferring");
@@ -303,19 +348,19 @@
     if (runId !== state.calorimetry.runId) return;
     showMixedTemperatures(result.roundedFinalTemperature, result.roundedFinalTemperature);
     state.calorimetry.phase = "complete";
-    state.calorimetry.trials.push(result);
+    state.calorimetry.trials.push(model.createCalorimetryHistoryRecord(result));
     els.skipCalorimetryAnimation.hidden = true;
     renderCalorimetryHistory();
-    els.calorimetryStatus.textContent = "Equilibrium reached. The solid and water now have the same temperature.";
+    els.calorimetryStatus.textContent = "The warmer solid transferred energy to the cooler water. The solid cooled and the water warmed until they reached the same temperature.";
   }
 
   function renderCalorimetryHistory() {
     if (!state.calorimetry.trials.length) {
-      els.calorimetryHistoryBody.innerHTML = '<tr class="empty-row"><td colspan="9">No trials yet.</td></tr>';
+      els.calorimetryHistoryBody.innerHTML = '<tr class="empty-row"><td colspan="11">No trials yet.</td></tr>';
       return;
     }
     els.calorimetryHistoryBody.innerHTML = state.calorimetry.trials.map((trial, index) => `
-      <tr><th scope="row">${index + 1}</th><td>${model.LABELS[trial.material]}</td><td>${trial.solidMass}</td><td>${formatNumber(trial.energy)}</td><td>${trial.waterMass}</td><td>${trial.startTemperature.toFixed(1)}</td><td>${trial.roundedHotTemperature.toFixed(1)}</td><td>${trial.roundedFinalTemperature.toFixed(1)}</td><td>${trial.roundedFinalTemperature.toFixed(1)}</td></tr>
+      <tr><th scope="row">${index + 1}</th><td>${trial.heatingChoice === model.CALORIMETRY_HEATING_CHOICES.ENERGY ? "Choose the energy added" : "Same target temperature"}</td><td>${model.LABELS[trial.material]}</td><td>${trial.solidMass}</td><td>${formatNumber(Math.round(trial.energy))}</td><td>${trial.targetTemperature === null ? "—" : trial.targetTemperature.toFixed(1)}</td><td>${trial.waterMass}</td><td>${trial.initialWaterTemperature.toFixed(1)}</td><td>${trial.solidTemperatureBeforeTransfer.toFixed(1)}</td><td>${trial.finalSolidTemperature.toFixed(1)}</td><td>${trial.finalWaterTemperature.toFixed(1)}</td></tr>
     `).join("");
   }
 
@@ -341,11 +386,23 @@
   window.Investigation6App = Object.freeze({
     getState: () => ({
       heating: { phase: state.heating.phase, trialCount: state.heating.trials.length },
-      calorimetry: { phase: state.calorimetry.phase, trialCount: state.calorimetry.trials.length }
+      calorimetry: {
+        phase: state.calorimetry.phase,
+        trialCount: state.calorimetry.trials.length,
+        heatingChoice: checkedValue("calorimetry-heating-choice"),
+        energyChoicesDisabled: [...document.querySelectorAll('input[name="solid-energy"]')].every((control) => control.disabled),
+        targetTemperatureDisabled: els.targetSolidTemperature.disabled
+      }
     }),
     switchTab,
     resetHeating: () => resetHeating(false),
-    resetCalorimetry: () => resetCalorimetry(false)
+    resetCalorimetry: () => resetCalorimetry(false),
+    selectCalorimetryHeatingChoice: (choice) => {
+      const control = document.querySelector(`input[name="calorimetry-heating-choice"][value="${choice}"]`);
+      if (!control) throw new RangeError("Unknown calorimetry heating choice.");
+      control.checked = true;
+      updateCalorimetryHeatingChoice(true);
+    }
   });
 
   initialize();

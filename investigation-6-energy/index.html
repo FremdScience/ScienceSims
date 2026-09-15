@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A two-part high-school chemistry investigation of energy added by heating, mass, material, and temperature change.">
-  <title>Heat and Energy Simulation</title>
+  <title>Energy and Temperature Change Simulation</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to investigation</a>
 
   <header class="site-header">
-    <h1>Heat and Energy Simulation</h1>
+    <h1>Energy and Temperature Change Simulation</h1>
   </header>
 
   <main id="main-content">
@@ -55,7 +55,7 @@
             </div>
           </fieldset>
           <fieldset class="choice-field">
-            <legend>Energy added by heating (J)</legend>
+            <legend>Energy added to the sample (J)</legend>
             <div class="segmented energy-choices" id="heating-energy-choices">
               <label><input type="radio" name="heating-energy" value="2090"><span>2,090 J</span></label>
               <label><input type="radio" name="heating-energy" value="4180" checked><span>4,180 J</span></label>
@@ -140,6 +140,13 @@
       <div class="workbench-layout">
         <section class="control-card" aria-labelledby="calorimetry-controls-title">
           <h3 id="calorimetry-controls-title">Set the variables</h3>
+          <fieldset class="choice-field heating-choice-field">
+            <legend>How should the solid be heated?</legend>
+            <div class="segmented heating-mode-choices">
+              <label><input type="radio" name="calorimetry-heating-choice" value="energy" checked><span>Choose the energy added</span></label>
+              <label><input type="radio" name="calorimetry-heating-choice" value="target-temperature"><span>Heat each solid to the same temperature</span></label>
+            </div>
+          </fieldset>
           <div class="field">
             <label for="solid-material">Solid material</label>
             <select id="solid-material">
@@ -157,14 +164,25 @@
               <label><input type="radio" name="solid-mass" value="200"><span>200 g</span></label>
             </div>
           </fieldset>
-          <fieldset class="choice-field">
-            <legend>Energy added to solid (J)</legend>
+          <fieldset id="energy-choice-field" class="choice-field">
+            <legend>Energy added to the solid</legend>
             <div class="segmented energy-choices">
               <label><input type="radio" name="solid-energy" value="2090"><span>2,090 J</span></label>
               <label><input type="radio" name="solid-energy" value="4180" checked><span>4,180 J</span></label>
               <label><input type="radio" name="solid-energy" value="6270"><span>6,270 J</span></label>
             </div>
           </fieldset>
+          <div id="target-temperature-field" class="target-temperature-field" hidden>
+            <label for="target-solid-temperature">Target solid temperature</label>
+            <div class="target-control">
+              <input id="target-solid-temperature" type="range" min="30" max="100" step="5" value="90">
+              <output id="target-solid-temperature-output" for="target-solid-temperature" class="target-output">90 °C</output>
+            </div>
+            <div class="calculated-energy" aria-live="polite">
+              <span>Energy needed to heat the solid</span>
+              <strong id="calculated-solid-energy" class="tabular">—</strong>
+            </div>
+          </div>
           <fieldset class="choice-field">
             <legend>Water mass</legend>
             <div class="segmented">
@@ -174,7 +192,7 @@
             </div>
           </fieldset>
           <div class="stacked-actions">
-            <button id="heat-solid-button" class="primary-button" type="button"><span aria-hidden="true">🔥</span> Add Energy to Solid</button>
+            <button id="heat-solid-button" class="primary-button" type="button"><span aria-hidden="true">🔥</span> <span id="heat-solid-button-label">Add Energy to the Solid</span></button>
             <button id="transfer-button" class="transfer-button" type="button" disabled><span aria-hidden="true">↘</span> Transfer Solid to Water</button>
             <button id="calorimetry-reset-button" class="secondary-button" type="button"><span aria-hidden="true">↺</span> New Trial</button>
           </div>
@@ -221,33 +239,33 @@
           <button id="clear-calorimetry-history" class="text-button" type="button">Clear table</button>
         </div>
         <div class="table-wrap">
-          <table>
-            <thead><tr><th scope="col">Trial</th><th scope="col">Solid</th><th scope="col">Solid mass (g)</th><th scope="col">Energy added (J)</th><th scope="col">Water mass (g)</th><th scope="col">Initial water temp. (°C)</th><th scope="col">Solid after heating (°C)</th><th scope="col">Final solid temp. (°C)</th><th scope="col">Final water temp. (°C)</th></tr></thead>
-            <tbody id="calorimetry-history-body"><tr class="empty-row"><td colspan="9">No trials yet.</td></tr></tbody>
+          <table class="calorimetry-history-table">
+            <thead><tr><th scope="col">Trial</th><th scope="col">Heating choice</th><th scope="col">Solid material</th><th scope="col">Solid mass (g)</th><th scope="col">Energy added or calculated (J)</th><th scope="col">Target solid temp. (°C)</th><th scope="col">Water mass (g)</th><th scope="col">Initial water temp. (°C)</th><th scope="col">Solid temp. before transfer (°C)</th><th scope="col">Final solid temp. (°C)</th><th scope="col">Final water temp. (°C)</th></tr></thead>
+            <tbody id="calorimetry-history-body"><tr class="empty-row"><td colspan="11">No trials yet.</td></tr></tbody>
           </table>
         </div>
       </section>
     </section>
 
     <details class="teacher-reveal">
-      <summary>Teacher reveal: model constants and assumptions</summary>
+      <summary>Model information — open when directed</summary>
       <div class="teacher-grid">
         <div>
           <h2>Material constants</h2>
           <ul>
-            <li>Water: 4.18 J/(g·°C)</li><li>Aluminum: 0.90 J/(g·°C)</li><li>Copper: 0.385 J/(g·°C)</li><li>Iron: 0.45 J/(g·°C)</li><li>Granite: 0.79 J/(g·°C)</li>
+            <li>Water: 4.184 J/(g·°C)</li><li>Aluminum: 0.90 J/(g·°C)</li><li>Copper: 0.385 J/(g·°C)</li><li>Iron: 0.45 J/(g·°C)</li><li>Granite: 0.79 J/(g·°C)</li>
           </ul>
         </div>
         <div>
           <h2>Ideal-model assumptions</h2>
-          <p>No energy is lost to the container or surroundings. All materials begin at 20.0 °C. The model does not represent heating rate or thermal conductivity.</p>
+          <p>This is an ideal model. No energy is lost to the container or surroundings. All materials begin at 20.0 °C. The model does not represent time, heating rate, or thermal conductivity.</p>
         </div>
       </div>
     </details>
   </main>
 
   <footer>
-    <p><strong>Model note:</strong> This simplified investigation shows relationships among energy, mass, material, and temperature. It does not measure how quickly a sample warms.</p>
+    <p><strong>Model note:</strong> This simplified investigation shows relationships among energy, mass, material, and temperature change. It does not model time, heating rate, or thermal conductivity.</p>
   </footer>
 
   <script src="energy-model.js"></script>

@@ -3,13 +3,16 @@
 const assert = require("node:assert/strict");
 const model = require("../energy-model.js");
 
+assert.equal(model.WATER_SPECIFIC_HEAT, 4.184);
+assert.equal(model.SPECIFIC_HEATS.water, 4.184);
+
 const water2090 = model.heatSubstance({ material: "water", mass: 100, energy: 2090 });
 const water4180 = model.heatSubstance({ material: "water", mass: 100, energy: 4180 });
 const water6270 = model.heatSubstance({ material: "water", mass: 100, energy: 6270 });
 assert.equal(water2090.roundedFinalTemperature, 25);
 assert.equal(water4180.roundedFinalTemperature, 30);
 assert.equal(water6270.roundedFinalTemperature, 35);
-assert.equal(water4180.finalTemperature - 20, 2 * (water2090.finalTemperature - 20));
+assert.ok(Math.abs((water4180.finalTemperature - 20) - 2 * (water2090.finalTemperature - 20)) < 1e-12);
 
 const aluminum50 = model.heatSubstance({ material: "aluminum", mass: 50, energy: 4180 });
 const aluminum100 = model.heatSubstance({ material: "aluminum", mass: 100, energy: 4180 });
@@ -33,6 +36,7 @@ for (const inputs of calorimetryCases) {
   assert.ok(result.finalTemperature > result.startTemperature);
   assert.ok(result.finalTemperature < result.hotTemperature);
   assert.ok(Math.abs(result.energyBalance - result.energy) < 1e-8, "Energy must be conserved.");
+  assert.ok(Math.abs(result.energyTransferredFromSolid - result.energyGainedByWater) < 1e-8, "Energy lost by the solid must equal energy gained by the water.");
 }
 
 const lessWater = model.calorimetry({ material: "iron", solidMass: 100, energy: 4180, waterMass: 200 });
@@ -45,5 +49,7 @@ assert.ok(moreEnergy.finalTemperature > lessEnergy.finalTemperature);
 
 assert.throws(() => model.heatSubstance({ material: "lead", mass: 100, energy: 2090 }), /Unknown material/);
 assert.throws(() => model.calorimetry({ material: "water", solidMass: 100, energy: 2090, waterMass: 400 }), /solid material/);
+assert.throws(() => model.calorimetry({ material: "iron", solidMass: 100, waterMass: 400, heatingChoice: "target-temperature", targetTemperature: 20 }), /above the starting temperature/);
+assert.throws(() => model.calorimetry({ material: "iron", solidMass: 100, waterMass: 400, heatingChoice: "unknown", energy: 2090 }), /Unknown calorimetry heating choice/);
 
-console.log("Energy model tests passed: exact water checks, comparison patterns, equilibrium bounds, and energy conservation.");
+console.log("Energy model tests passed: 4.184 water constant, direct-heating checks, comparison patterns, equilibrium bounds, and energy conservation.");
