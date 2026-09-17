@@ -150,10 +150,10 @@
           <div class="field">
             <label for="solid-material">Solid material</label>
             <select id="solid-material">
-              <option value="aluminum">Aluminum</option>
-              <option value="copper">Copper</option>
-              <option value="iron">Iron</option>
-              <option value="granite">Granite</option>
+              <option value="aluminum">Aluminum (Specific heat = 0.90 J/(g·°C))</option>
+              <option value="copper">Copper (Specific heat = 0.385 J/(g·°C))</option>
+              <option value="iron">Iron (Specific heat = 0.45 J/(g·°C))</option>
+              <option value="granite">Granite (Specific heat = 0.79 J/(g·°C))</option>
             </select>
           </div>
           <fieldset class="choice-field">
@@ -209,13 +209,18 @@
             <div class="solid-station">
               <div id="solid-sample" class="solid-sample aluminum" aria-hidden="true">
                 <span id="solid-symbol" class="solid-symbol">Al</span>
+                <span class="solid-specific-heat"><span id="solid-specific-heat-value">c = 0.90</span><span>J/(g·°C)</span></span>
                 <span class="mini-thermometer"><span id="solid-mercury" class="mini-mercury"></span></span>
               </div>
               <div class="burner mini-burner" aria-hidden="true"><span class="flame"></span><span class="burner-tube"></span><span class="burner-base"></span></div>
             </div>
             <div class="transfer-path" aria-hidden="true">→</div>
             <div class="calorimeter" aria-hidden="true">
-              <div id="water-fill" class="water-fill"><span id="immersed-solid" class="immersed-solid"></span></div>
+              <div id="water-fill" class="water-fill">
+                <span id="immersed-solid" class="immersed-solid">
+                  <span class="solid-specific-heat"><span id="immersed-specific-heat-value">c = 0.90</span><span>J/(g·°C)</span></span>
+                </span>
+              </div>
               <span class="cup-label">Water</span>
               <div class="water-thermometer"><span id="water-mercury" class="water-mercury"></span></div>
             </div>

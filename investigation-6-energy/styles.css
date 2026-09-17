@@ -146,8 +146,10 @@ main { width: min(1420px, 100%); margin: 0 auto; padding: 0 clamp(.75rem, 2.5vw,
 .solid-station { position: relative; min-height: 245px; }
 .mini-thermometer { position: absolute; left: 10px; bottom: 10px; z-index: 4; width: 16px; height: 145px; overflow: hidden; background: #fff; border: 2px solid #52615c; border-radius: 8px; }
 .mini-mercury { position: absolute; inset: auto 3px 2px; height: 14%; background: #d44236; transition: height .9s ease; }
-.solid-sample { position: absolute; left: 50%; bottom: 128px; z-index: 3; display: grid; width: var(--solid-width, 76px); height: var(--solid-height, 62px); place-items: center; transform: translateX(-50%); color: #243630; background: #b7c1bd; border: 3px solid #64716d; border-radius: 8px; font-weight: 900; box-shadow: inset 0 8px rgba(255,255,255,.3); transition: width .25s ease, height .25s ease, transform .8s ease, opacity .3s ease; }
-.solid-symbol { position: relative; z-index: 3; margin-left: 18px; }
+.solid-sample { position: absolute; left: 50%; bottom: 128px; z-index: 3; display: grid; grid-template-rows: auto auto; align-content: center; justify-items: center; width: var(--solid-width, 76px); height: var(--solid-height, 62px); padding: 3px 3px 3px 22px; transform: translateX(-50%); color: #243630; background: #b7c1bd; border: 3px solid #64716d; border-radius: 8px; font-weight: 900; box-shadow: inset 0 8px rgba(255,255,255,.3); transition: width .25s ease, height .25s ease, transform .8s ease, opacity .3s ease; }
+.solid-symbol { position: relative; z-index: 3; line-height: 1; }
+.solid-specific-heat { position: relative; z-index: 3; display: grid; justify-items: center; font-size: var(--solid-label-size, .5rem); line-height: 1.05; letter-spacing: -.02em; white-space: nowrap; }
+.solid-specific-heat span:last-child { font-size: .88em; }
 .solid-sample.copper { color: #fff; background: #a85d3a; }
 .solid-sample.iron { color: #fff; background: #59645f; }
 .solid-sample.granite { color: #fff; background: repeating-linear-gradient(135deg, #77736d 0 8px, #96918a 8px 15px); }
@@ -156,11 +158,12 @@ main { width: min(1420px, 100%); margin: 0 auto; padding: 0 clamp(.75rem, 2.5vw,
 .calorimeter { position: relative; justify-self: center; width: 180px; height: 190px; border: 8px double #66736f; border-top: 0; border-radius: 0 0 24px 24px; background: #f8fbfa; }
 .water-fill { position: absolute; left: 7px; right: 7px; bottom: 7px; height: var(--water-height, 50%); overflow: hidden; background: linear-gradient(#7fc5e8, #4999ce); border-radius: 2px 2px 15px 15px; transition: height .25s ease; }
 .water-fill::before { content: ""; position: absolute; left: -4px; right: -4px; top: -6px; height: 12px; background: rgba(255,255,255,.4); border-radius: 50%; }
-.cup-label { position: absolute; left: 0; right: 0; bottom: 35px; z-index: 2; color: #163a53; text-align: center; font-weight: 900; }
+.cup-label { position: absolute; left: 0; right: 0; top: 8px; z-index: 5; color: #163a53; text-align: center; font-weight: 900; }
 .water-thermometer { position: absolute; right: 24px; bottom: 20px; z-index: 4; width: 16px; height: 155px; overflow: hidden; background: #fff; border: 2px solid #52615c; border-radius: 8px; }
 .water-mercury { position: absolute; inset: auto 3px 2px; height: 14%; background: #d44236; transition: height .9s ease; }
-.immersed-solid { position: absolute; left: 12px; bottom: -100px; width: var(--solid-width, 76px); height: var(--solid-height, 62px); opacity: 0; background: #9aa6a1; border: 3px solid #5f6b67; border-radius: 8px; transition: width .25s ease, height .25s ease, bottom .8s ease, opacity .3s ease; }
+.immersed-solid { position: absolute; left: 12px; bottom: -100px; display: grid; width: var(--solid-width, 76px); height: var(--solid-height, 62px); padding: 3px; place-items: center; opacity: 0; color: #243630; background: #9aa6a1; border: 3px solid #5f6b67; border-radius: 8px; font-weight: 900; transition: width .25s ease, height .25s ease, bottom .8s ease, opacity .3s ease; }
 .immersed-solid.copper { background: #a85d3a; }
+.immersed-solid.copper, .immersed-solid.iron, .immersed-solid.granite { color: #fff; }
 .immersed-solid.iron { background: #59645f; }
 .immersed-solid.granite { background: repeating-linear-gradient(135deg, #77736d 0 8px, #96918a 8px 15px); }
 .transferring .solid-sample { transform: translate(210%, 55px) rotate(28deg); opacity: 0; }

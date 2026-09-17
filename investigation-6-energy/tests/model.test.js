@@ -5,6 +5,9 @@ const model = require("../energy-model.js");
 
 assert.equal(model.WATER_SPECIFIC_HEAT, 4.184);
 assert.equal(model.SPECIFIC_HEATS.water, 4.184);
+for (const [material, label] of Object.entries(model.SPECIFIC_HEAT_LABELS)) {
+  assert.equal(Number(label), model.SPECIFIC_HEATS[material], `${material} specific-heat label must match its calculation constant.`);
+}
 
 const water2090 = model.heatSubstance({ material: "water", mass: 100, energy: 2090 });
 const water4180 = model.heatSubstance({ material: "water", mass: 100, energy: 4180 });

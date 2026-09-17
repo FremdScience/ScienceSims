@@ -15,6 +15,14 @@
     granite: 0.79
   });
 
+  const SPECIFIC_HEAT_LABELS = Object.freeze({
+    water: "4.184",
+    aluminum: "0.90",
+    copper: "0.385",
+    iron: "0.45",
+    granite: "0.79"
+  });
+
   const LABELS = Object.freeze({
     water: "Water",
     aluminum: "Aluminum",
@@ -141,6 +149,7 @@
     START_TEMPERATURE,
     WATER_SPECIFIC_HEAT,
     SPECIFIC_HEATS,
+    SPECIFIC_HEAT_LABELS,
     CALORIMETRY_HEATING_CHOICES,
     LABELS,
     round1,

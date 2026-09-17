@@ -34,7 +34,8 @@
       targetSolidTemperatureOutput: byId("target-solid-temperature-output"), calculatedSolidEnergy: byId("calculated-solid-energy"),
       transferButton: byId("transfer-button"), calorimetryResetButton: byId("calorimetry-reset-button"),
       calorimetryStatus: byId("calorimetry-status"), calorimetryApparatus: byId("calorimetry-apparatus"),
-      solidSample: byId("solid-sample"), solidSymbol: byId("solid-symbol"), immersedSolid: byId("immersed-solid"), waterFill: byId("water-fill"),
+      solidSample: byId("solid-sample"), solidSymbol: byId("solid-symbol"), solidSpecificHeatValue: byId("solid-specific-heat-value"),
+      immersedSolid: byId("immersed-solid"), immersedSpecificHeatValue: byId("immersed-specific-heat-value"), waterFill: byId("water-fill"),
       solidMercury: byId("solid-mercury"), waterMercury: byId("water-mercury"),
       solidTemperature: byId("solid-temperature"), waterTemperature: byId("water-temperature"),
       calorimetryHistoryBody: byId("calorimetry-history-body"),
@@ -120,19 +121,23 @@
     els.solidSample.className = `solid-sample ${material}`;
     els.solidSymbol.textContent = MATERIAL_SYMBOLS[material];
     els.immersedSolid.className = `immersed-solid ${material}`;
+    const specificHeatLabel = `c = ${model.SPECIFIC_HEAT_LABELS[material]}`;
+    els.solidSpecificHeatValue.textContent = specificHeatLabel;
+    els.immersedSpecificHeatValue.textContent = specificHeatLabel;
   }
 
   function updateCalorimetryMass() {
     const mass = checkedNumber("solid-mass");
-    const dimensions = { 50: [54, 44], 100: [76, 62], 200: [107, 87] }[mass];
+    const dimensions = { 50: [54, 44, ".42rem"], 100: [76, 62, ".50rem"], 200: [107, 87, ".58rem"] }[mass];
     [els.solidSample, els.immersedSolid].forEach((element) => {
       element.style.setProperty("--solid-width", `${dimensions[0]}px`);
       element.style.setProperty("--solid-height", `${dimensions[1]}px`);
+      element.style.setProperty("--solid-label-size", dimensions[2]);
     });
   }
 
   function updateWaterMass() {
-    const height = { 200: "35px", 400: "70px", 800: "140px" }[checkedNumber("water-mass")];
+    const height = { 200: "110px", 400: "135px", 800: "165px" }[checkedNumber("water-mass")];
     els.waterFill.style.setProperty("--water-height", height);
   }
 
