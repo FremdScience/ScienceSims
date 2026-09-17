@@ -29,7 +29,7 @@ The simulation has no external dependencies, login, account, analytics, cloud se
 
 - Solid: Aluminum, Copper, Iron, or Granite, with each specific heat shown in the dropdown and on the animated solid
 - Solid mass: 50 g, 100 g, or 200 g
-- Heating choice: choose 2,090 J, 4,180 J, or 6,270 J, or heat each solid to the same target temperature
+- Heating choice: heat each solid to the same target temperature (the default), or choose 2,090 J, 4,180 J, or 6,270 J
 - Target-temperature mode defaults to 90 °C and calculates the energy required with `Q = m c ΔT`
 - Water mass: 200 g, 400 g, or 800 g
 - Water depth increases with water mass and always covers the largest available solid

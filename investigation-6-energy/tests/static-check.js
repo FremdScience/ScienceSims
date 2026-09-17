@@ -23,6 +23,13 @@ assert.match(html, /<th scope="col">/);
 assert.match(html, /How should the solid be heated\?/);
 assert.match(html, /Choose the energy added/);
 assert.match(html, /Heat each solid to the same temperature/);
+const heatingChoiceMarkup = html.match(/<div class="segmented heating-mode-choices">([\s\S]*?)<\/div>/)?.[1] || "";
+assert.match(heatingChoiceMarkup, /value="target-temperature" checked/);
+assert.doesNotMatch(heatingChoiceMarkup, /value="energy" checked/);
+assert.ok(
+  heatingChoiceMarkup.indexOf('value="target-temperature"') < heatingChoiceMarkup.indexOf('value="energy"'),
+  "Target-temperature mode must be the first calorimetry heating choice."
+);
 assert.match(html, /Aluminum \(Specific heat = 0\.90 J\/\(g·°C\)\)/);
 assert.match(html, /Copper \(Specific heat = 0\.385 J\/\(g·°C\)\)/);
 assert.match(html, /Iron \(Specific heat = 0\.45 J\/\(g·°C\)\)/);
