@@ -34,6 +34,16 @@ for (const app of apps) {
   }
 }
 
+for (const app of ['plate-boundary-expedition', 'watershed-under-pressure', 'matter-under-pressure']) {
+  const script = fs.readFileSync(path.join(__dirname, '..', app, 'app.js'), 'utf8');
+  assert.match(script, /\.setTransform\(dpr,0,0,dpr,0,0\)/, `${app} must scale its canvas for high-density displays`);
+}
+
+const matterScript = fs.readFileSync(path.join(__dirname, '..', 'matter-under-pressure', 'app.js'), 'utf8');
+assert.match(matterScript, /layoutParticles\(phase,w,h\)/, 'Matter simulation must deliberately lay out each phase');
+assert.match(matterScript, /phaseAt\(v\.key,temp,pressure\)/, 'Matter phase map must use the model boundaries');
+assert.match(matterScript, /compressed volume boundary/, 'Matter gas view must show the pressure-dependent volume boundary');
+
 const hub = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 for (const app of apps) assert.match(hub, new RegExp(`href="${app}/"`), `Hub does not link ${app}`);
 console.log('New simulation static checks passed.');

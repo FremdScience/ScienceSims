@@ -2,7 +2,7 @@
   const { MISSIONS, gradeReport } = window.PlateModel;
   const canvas = document.querySelector('#globe');
   const ctx = canvas.getContext('2d');
-  const state = { missionIndex: 0, score: 0, rotation: 0, tilt: -.14, dragging: false, lastX: 0, collected: new Set(), cutaway: false };
+  const state = { missionIndex: 0, score: 0, rotation: 0, tilt: -.14, dragging: false, lastX: 0, collected: new Set(), cutaway: false, canvasWidth: 720, canvasHeight: 475 };
   const colors = { quakes: '#ffd166', volcanoes: '#ef476f', age: '#8ecae6', motion: '#b7e4c7' };
 
   function mission() { return MISSIONS[state.missionIndex]; }
@@ -15,11 +15,11 @@
     const y2 = y * Math.cos(state.tilt) - z * Math.sin(state.tilt);
     const z2 = y * Math.sin(state.tilt) + z * Math.cos(state.tilt);
     const scale = 1 + z2 * .13;
-    return { x: canvas.width / 2 + x * radius * scale, y: canvas.height / 2 + y2 * radius * scale, z: z2 };
+    return { x: state.canvasWidth / 2 + x * radius * scale, y: state.canvasHeight / 2 + y2 * radius * scale, z: z2 };
   }
 
   function drawGlobe() {
-    const w = canvas.width, h = canvas.height, r = Math.min(w, h) * .37;
+    const w = state.canvasWidth, h = state.canvasHeight, r = Math.min(w, h) * .37;
     ctx.clearRect(0, 0, w, h);
     const glow = ctx.createRadialGradient(w*.43,h*.36,r*.12,w/2,h/2,r*1.12);
     glow.addColorStop(0,'#4ca3c7'); glow.addColorStop(.65,'#0d5d75'); glow.addColorStop(1,'#032b39');
@@ -98,6 +98,6 @@
     } else { feedback.className='feedback error'; const needs=[]; if(!result.enoughEvidence)needs.push('collect at least three evidence cards'); if(!result.classificationCorrect)needs.push('reconsider the boundary type'); if(!result.actionCorrect)needs.push('match the action to the hazards'); if(!result.claimReady)needs.push('write an explanation of at least eight words'); feedback.textContent=`Revise your report: ${needs.join('; ')}.`; }
   });
   document.querySelector('#reset-mission').addEventListener('click',renderMission);
-  function resize(){const dpr=Math.min(window.devicePixelRatio||1,2),rect=canvas.getBoundingClientRect();canvas.width=Math.max(520,Math.round(rect.width*dpr));canvas.height=Math.round(Math.max(380,rect.width*.66)*dpr);drawGlobe();}
+  function resize(){const dpr=Math.min(window.devicePixelRatio||1,2),rect=canvas.getBoundingClientRect(),width=Math.max(360,Math.round(rect.width)),height=Math.round(Math.max(380,width*.66));canvas.style.height=`${height}px`;canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);state.canvasWidth=width;state.canvasHeight=height;drawGlobe();}
   new ResizeObserver(resize).observe(canvas); renderMission();
 })();
