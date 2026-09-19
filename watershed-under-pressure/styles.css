@@ -1,0 +1,14 @@
+.scenario-head { display:flex; align-items:start; justify-content:space-between; gap:1rem; }
+.scenario-head h2, .scenario-head p { margin-top:0; }
+#watershed { min-height:340px; background:linear-gradient(#bce3f5 0 45%,#a9d18e 45%); }
+.legend { display:flex; flex-wrap:wrap; gap:1rem; padding:.7rem 1rem; background:#f4f8f6; }
+.legend i { display:inline-block; width:13px; height:13px; border-radius:50%; margin-right:.3rem; }
+.legend .rain { background:#2b9ed1; }.legend .sediment { background:#9c6644;}.legend .project { background:#ffd100;}
+.projects { display:grid; gap:.55rem; margin:.7rem 0; }
+.project-option { display:grid; grid-template-columns:auto 1fr auto; gap:.55rem; align-items:start; padding:.65rem; background:var(--wash); border-radius:10px; }
+.project-option strong,.project-option small { display:block; }.project-option small { color:var(--muted); }
+.results-row,.history { margin-top:1rem; }
+#hydrograph { width:100%; background:#f8fbfa; min-height:210px; }
+.table-wrap { overflow:auto; margin:.7rem 0 1rem; }
+.history textarea { margin-top:.4rem; }
+@media(max-width:620px){.scenario-head{display:grid}.project-option{grid-template-columns:auto 1fr}.project-option .cost{grid-column:2}}

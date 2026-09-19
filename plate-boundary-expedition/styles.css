@@ -1,0 +1,18 @@
+.mission-bar { display: flex; gap: 1rem; justify-content: space-between; align-items: start; }
+.mission-bar h2, .mission-bar p { margin-top: 0; }
+.mission-status { display: flex; flex-wrap: wrap; gap: .45rem; justify-content: end; }
+#globe { min-height: 360px; touch-action: none; background: radial-gradient(circle at 50% 45%, #113f54, #06151d 70%); }
+.globe-controls { display: flex; justify-content: center; gap: .6rem; padding: .8rem; background: #f4f8f6; border-top: 1px solid var(--line); }
+.layer-list, .choice-stack { display: grid; gap: .55rem; margin-top: .7rem; }
+.layer-list label, .choice-stack label { padding: .55rem; border-radius: 9px; background: var(--wash); }
+.report-panel { margin-top: 1rem; }
+.claim-label { display: block; margin: 1rem 0 .35rem; font-weight: 800; }
+.button-row { margin: .8rem 0; }
+.station-button { width: 100%; text-align: left; background: white; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: .65rem; }
+.station-button strong { display: block; color: var(--green); }
+.station-button[data-collected="true"] { border-color: var(--success); background: #e9f8ef; }
+@media (max-width: 620px) {
+  .mission-bar { display: grid; }
+  .mission-status { justify-content: start; }
+  .globe-controls { flex-wrap: wrap; }
+}

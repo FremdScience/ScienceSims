@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watershed Under Pressure | Fremd Science Simulations</title>
+  <link rel="stylesheet" href="../sim-shared.css"><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header"><div class="header-inner">
+    <a class="back-link" href="../">← Science Simulations Hub</a>
+    <p class="eyebrow">Earth Science · Watershed Design Lab</p><h1>Watershed Under Pressure</h1>
+    <p class="lede">Run storms, trace water and sediment through a watershed, and redesign a community to reduce flood risk without exceeding the budget.</p>
+  </div></header>
+  <main class="app-shell">
+    <section class="toolbar">
+      <div class="scenario-head"><div><p class="eyebrow">Design challenge</p><h2>Keep peak flow below 58 and sediment below 35</h2></div><span class="pill" id="budget">Budget remaining: 100 credits</span></div>
+      <p>Establish a baseline, add mitigation strategies, and run the same storm again. A successful design must meet both targets.</p>
+    </section>
+    <div class="grid two">
+      <section class="stage-card">
+        <div class="stage-title"><div><h2>Community watershed</h2><p>Animated water follows slope toward the stream gauge.</p></div><span class="pill" id="storm-state">Ready</span></div>
+        <canvas id="watershed" width="820" height="520" role="img" aria-label="Watershed cross-section with hills, buildings, vegetation, stream, and animated runoff"></canvas>
+        <div class="legend"><span><i class="rain"></i> runoff</span><span><i class="sediment"></i> sediment</span><span><i class="project"></i> project</span></div>
+      </section>
+      <aside class="grid">
+        <section class="panel controls" aria-labelledby="storm-controls">
+          <h2 id="storm-controls">1. Set the storm and landscape</h2>
+          <div class="control-row"><label for="rainfall">Rainfall intensity <span class="value" id="rainfall-value">70 mm/h</span></label><input id="rainfall" type="range" min="30" max="100" value="70" step="5"></div>
+          <div class="control-row"><label for="impervious">Impervious surface <span class="value" id="impervious-value">55%</span></label><input id="impervious" type="range" min="10" max="80" value="55" step="5"></div>
+          <div class="control-row"><label for="slope">Average slope <span class="value" id="slope-value">12°</span></label><input id="slope" type="range" min="3" max="24" value="12"></div>
+          <div class="control-row"><label for="soil">Soil</label><select id="soil"><option value="sand">Sandy — fast infiltration</option><option value="loam" selected>Loam — moderate infiltration</option><option value="clay">Clay — slow infiltration</option></select></div>
+          <button class="btn gold" id="run-storm">Run storm</button>
+        </section>
+        <section class="panel">
+          <h2>2. Add design projects</h2><p class="hint">Projects remain active until you reset the design.</p>
+          <div class="projects" id="projects"></div>
+          <button class="btn secondary" id="reset-design">Reset design</button>
+        </section>
+      </aside>
+    </div>
+    <section class="grid equal results-row">
+      <div class="panel"><h2>Storm results</h2><div class="metric-grid">
+        <div class="metric"><strong id="runoff">—</strong><span>runoff index</span></div><div class="metric"><strong id="peak">—</strong><span>peak flow</span></div><div class="metric"><strong id="sediment-result">—</strong><span>sediment index</span></div><div class="metric"><strong id="infiltration">—</strong><span>infiltration %</span></div>
+      </div><div id="feedback" class="feedback" role="status" aria-live="polite">Run the baseline storm before evaluating a design.</div></div>
+      <div class="panel"><h2>Stream-gauge hydrograph</h2><canvas id="hydrograph" width="560" height="250" role="img" aria-label="Hydrograph of stream flow over time"></canvas></div>
+    </section>
+    <section class="panel history"><h2>Investigation record</h2><div class="table-wrap"><table><thead><tr><th>Trial</th><th>Projects</th><th>Runoff</th><th>Peak</th><th>Sediment</th><th>Outcome</th></tr></thead><tbody id="history-body"></tbody></table></div>
+      <label for="claim"><strong>Evidence-based recommendation</strong></label><textarea id="claim" placeholder="Our most effective design was... The data show..."></textarea>
+      <div class="button-row"><button class="btn" id="download">Download investigation summary</button><button class="btn secondary" id="clear-history">Clear trials</button></div>
+    </section>
+    <p class="footer-note"><strong>Model note:</strong> Results are dimensionless classroom indices based on established runoff relationships: more intense rain, impervious cover, steep slopes, and low-infiltration soil increase runoff and erosion. This simplified model is not a site-specific flood forecast. Nothing is transmitted online.</p>
+  </main>
+  <script src="model.js"></script><script src="app.js"></script>
+</body></html>
