@@ -615,6 +615,7 @@
                 if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
                 event.preventDefault();
                 addFactor($(this).data('top'), $(this).data('bot'));
+                installAccessibleControls();
                 announceAccessible('Factor added. Select a value, then select an empty numerator or denominator.');
             });
 
