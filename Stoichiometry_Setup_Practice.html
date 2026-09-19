@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stoichiometry Set Up Practice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
+    <style>
+        body { 
+            min-height: 100vh; 
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .workspace-drop-zone {
+            min-height: 110px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px 12px;
+            gap: 8px;
+            background: #f8fafc;
+            overflow-x: auto;
+        }
+
+        .factor-template {
+            width: 65px;
+            height: 65px;
+            border: 2px solid #3b82f6;
+            background: #eff6ff;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            cursor: grab;
+            flex-shrink: 0;
+            transition: transform 0.1s;
+        }
+        .factor-template:hover { transform: scale(1.05); }
+
+        .template-inner-box {
+            width: 85%;
+            height: 30%;
+            border: 1px dashed #94a3b8;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 9px;
+            color: #64748b;
+        }
+
+        .factor-box {
+            width: 100px;
+            height: 95px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .fraction-line {
+            width: 80%;
+            height: 2px;
+            background: #94a3b8;
+            margin: 2px 0;
+        }
+
+        .val-pill {
+            border: 1px solid #f59e0b;
+            background: white;
+            padding: 3px 6px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+            cursor: grab;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .cancelled::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -10%;
+            width: 120%;
+            height: 2px;
+            background: rgba(239, 68, 68, 0.8);
+            transform: rotate(-15deg);
+            pointer-events: none;
+        }
+
+        .category-card {
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            flex-grow: 1;
+        }
+
+        .category-header {
+            text-align: left;
+            font-weight: 800;
+            font-size: 0.65rem;
+            padding: 0 0 8px 2px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .bank-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-content: flex-start;
+        }
+
+        .val-slot {
+            width: 100%;
+            text-align: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #cbd5e1;
+            min-height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .val-slot-empty {
+            border: 1px dashed #cbd5e1;
+            border-radius: 4px;
+            color: #94a3b8;
+            width: 90%;
+            height: 34px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #f8fafc;
+        }
+
+        sub { font-size: 0.7em; }
+        
+        .problem-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media print {
+            body { background: white !important; }
+            .no-print { display: none !important; }
+            #startScreen, #appScreen, #modal { display: none !important; }
+            #reportScreen { 
+                display: block !important; 
+                margin: 0; 
+                border: none; 
+                box-shadow: none; 
+            }
+        }
+    </style>
+</head>
+<body class="p-3 font-sans text-slate-900">
+
+    <!-- START SCREEN -->
+    <div id="startScreen" class="flex-1 flex flex-col items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center border border-slate-100">
+            <h1 class="text-3xl font-black text-indigo-900 mb-2">Stoichiometry Set Up Practice</h1>
+            <p class="text-slate-600 mb-6 font-medium text-sm">Drag and drop factors to properly set up your stoichiometry equations and calculate the answers.</p>
+            
+            <div class="mb-6 text-left">
+                <label class="block text-sm font-bold text-slate-700 mb-2" for="studentNameInput">Student Name</label>
+                <input type="text" id="studentNameInput" class="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-colors font-semibold text-slate-800" placeholder="Enter your full name">
+                <p id="nameError" class="text-rose-500 text-xs font-bold mt-1 hidden">Please enter your name to continue.</p>
+            </div>
+            
+            <button id="startAppBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-lg shadow-md hover:bg-indigo-700 active:scale-95 transition-all">Start Practice</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN -->
+    <div id="appScreen" class="problem-container space-y-3 hidden flex-1">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div>
+                <h1 class="text-xl font-black text-slate-800 tracking-tight">Stoichiometry Pro</h1>
+                <p class="text-xs font-bold text-slate-400">Student: <span id="displayStudentName" class="text-indigo-600"></span></p>
+            </div>
+            <div class="flex items-center gap-2 bg-white p-1 px-3 rounded-lg border shadow-sm flex-wrap justify-center">
+                <select id="stepSelect" class="border-none bg-transparent text-xs font-bold outline-none cursor-pointer text-slate-700">
+                    <option value="1" selected>1 Step</option>
+                    <option value="2">2 Step</option>
+                    <option value="3">3 Step</option>
+                    <option value="mixed">Mixed Levels</option>
+                </select>
+                <div class="h-4 w-px bg-slate-200"></div>
+                <button id="newProblem" class="text-blue-600 text-xs font-bold hover:underline">New Problem</button>
+                <button id="resetWorkspace" class="text-rose-500 text-xs font-bold hover:underline">Reset</button>
+                <div class="h-4 w-px bg-slate-200"></div>
+                <button id="showReportBtn" class="text-purple-600 text-xs font-black hover:underline flex items-center gap-1">
+                    Finish & Print
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <div id="equation" class="text-xl font-black text-indigo-900 bg-indigo-50 py-2 px-5 rounded-lg border border-indigo-100"></div>
+                <div id="problemInfo" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Problem 1</div>
+            </div>
+
+            <div id="problemText" class="text-base font-semibold mb-4 text-slate-700 leading-tight"></div>
+
+            <div id="workspace" class="workspace-drop-zone">
+                <div id="initialGiven" class="factor-box border-slate-100 bg-slate-50/50">
+                    <div class="val-slot flex gap-1 px-2" id="initialSlot">
+                        <span id="initialNum" class="font-bold text-slate-900">0.0</span>
+                        <span id="initialUnit" class="text-slate-700 relative inline-block px-1">unit</span>
+                    </div>
+                    <div class="fraction-line"></div>
+                    <div class="val-slot text-slate-300 font-black">1</div>
+                </div>
+                
+                <div id="factorList" class="flex items-center gap-2"></div>
+
+                <div class="text-2xl font-bold text-slate-300 mx-2">=</div>
+
+                <div class="flex flex-col items-center">
+                    <input type="text" id="finalAnswer" placeholder="?" readonly class="w-20 p-1 border-2 border-amber-400 rounded-lg text-center text-sm font-black outline-none shadow-inner bg-slate-50 cursor-default">
+                    <span id="finalUnit" class="text-[10px] mt-1 font-bold text-slate-500"></span>
+                </div>
+
+                <div class="ml-auto">
+                    <button id="checkAnswer" class="bg-emerald-600 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-emerald-700 active:scale-95 transition-transform">Check</button>
+                </div>
+            </div>
+
+            <div id="feedbackArea" class="hidden mt-3">
+                <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <div class="bg-emerald-600 text-white px-3 py-1.5 rounded text-sm font-bold">
+                            Ans: <span id="autoAnswerText">0.00</span> <span id="autoUnitText">g</span>
+                        </div>
+                        <div id="mathSteps" class="text-[10px] text-emerald-800 font-mono font-bold"></div>
+                    </div>
+                    <button id="nextProblemBtn" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-[10px] font-bold w-full sm:w-auto">Next Problem →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolboxes -->
+        <div class="space-y-3">
+            <div>
+                <h3 class="category-header">Drag or select factors to add them to the work area</h3>
+                <div class="flex gap-2 p-1 overflow-x-auto pb-2">
+                    <div class="factor-template draggable-template" data-top="mol" data-bot="g"><div class="template-inner-box">mol</div><div class="template-inner-box">g</div></div>
+                    <div class="factor-template draggable-template" data-top="g" data-bot="mol"><div class="template-inner-box">g</div><div class="template-inner-box">mol</div></div>
+                    <div class="factor-template draggable-template" data-top="mol" data-bot="mol"><div class="template-inner-box">mol</div><div class="template-inner-box">mol</div></div>
+                    <div class="factor-template draggable-template" data-top="particles" data-bot="mol"><div class="template-inner-box">particles</div><div class="template-inner-box">mol</div></div>
+                    <div class="factor-template draggable-template" data-top="mol" data-bot="particles"><div class="template-inner-box">mol</div><div class="template-inner-box">particles</div></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="category-card">
+                    <div class="category-header">Value Banks: Moles</div>
+                    <div id="bank-mol" class="bank-items"></div>
+                </div>
+                <div class="category-card">
+                    <div class="category-header">Value Banks: grams</div>
+                    <div id="bank-g" class="bank-items"></div>
+                </div>
+                <div class="category-card">
+                    <div class="category-header">Value Banks: Particles</div>
+                    <div id="bank-particles" class="bank-items"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT SCREEN -->
+    <div id="reportScreen" class="hidden bg-white p-8 max-w-2xl mx-auto w-full mt-4 sm:mt-10 border border-slate-200 shadow-sm rounded-xl">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-black text-slate-800">Stoichiometry Practice Report</h1>
+            <p class="text-slate-500 mt-2 font-medium" id="reportDate"></p>
+        </div>
+        
+        <div class="mb-6 flex justify-between items-end border-b pb-2">
+            <h2 class="text-xl font-bold text-slate-700">Student: <span id="reportName" class="text-indigo-600"></span></h2>
+        </div>
+
+        <table class="w-full text-left border-collapse mb-8">
+            <thead>
+                <tr class="bg-slate-50 text-slate-600 text-sm uppercase tracking-wider">
+                    <th class="p-3 border-b">Practice Mode</th>
+                    <th class="p-3 border-b text-center">Total Attempts</th>
+                    <th class="p-3 border-b text-center">Correct Setup</th>
+                    <th class="p-3 border-b text-center">Accuracy</th>
+                </tr>
+            </thead>
+            <tbody id="reportTableBody" class="text-slate-800 font-medium">
+            </tbody>
+        </table>
+
+        <div class="text-center no-print flex justify-center gap-3">
+            <button id="backToAppBtn" class="bg-slate-200 text-slate-700 px-6 py-2 rounded-lg font-bold shadow-sm hover:bg-slate-300">← Back to Practice</button>
+            <button id="printBtn" class="bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-emerald-700">Print to PDF</button>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div id="modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-2xl max-w-sm w-full text-center shadow-xl">
+            <div id="modalIcon" class="text-5xl mb-3"></div>
+            <h2 id="modalTitle" class="text-xl font-black mb-1 text-slate-800"></h2>
+            <p id="modalBody" class="text-sm text-slate-600 mb-5 font-medium"></p>
+            <button onclick="closeModal()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-black">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // Data Structures
+        const problems = {
+            1: [
+                { text: "How many moles of O<sub>2</sub> react with 4.5 moles of CH<sub>4</sub>?", eq: "CH<sub>4</sub> + 2 O<sub>2</sub> → CO<sub>2</sub> + 2 H<sub>2</sub>O", given: {val: 4.5, unit: "mol CH<sub>4</sub>"}, target: "mol O<sub>2</sub>", answer: 9.0, species: [{n: "CH<sub>4</sub>", m: 16.0, c: 1, type: 'molec'}, {n: "O<sub>2</sub>", m: 32.0, c: 2, type: 'molec'}, {n: "CO<sub>2</sub>", m: 44.0, c: 1, type: 'molec'}, {n: "H<sub>2</sub>O", m: 18.0, c: 2, type: 'molec'}] },
+                { text: "How many moles of NH<sub>3</sub> are produced from 2.5 moles of N<sub>2</sub>?", eq: "N<sub>2</sub> + 3 H<sub>2</sub> → 2 NH<sub>3</sub>", given: {val: 2.5, unit: "mol N<sub>2</sub>"}, target: "mol NH<sub>3</sub>", answer: 5.0, species: [{n: "N<sub>2</sub>", m: 28.0, c: 1, type: 'molec'}, {n: "H<sub>2</sub>", m: 2.0, c: 3, type: 'molec'}, {n: "NH<sub>3</sub>", m: 17.0, c: 2, type: 'molec'}] },
+                { text: "How many moles of H<sub>2</sub> form when 3.0 moles of Zn react?", eq: "Zn + 2 HCl → ZnCl<sub>2</sub> + H<sub>2</sub>", given: {val: 3.0, unit: "mol Zn"}, target: "mol H<sub>2</sub>", answer: 3.0, species: [{n: "Zn", m: 65.4, c: 1, type: 'atom'}, {n: "HCl", m: 36.5, c: 2, type: 'molec'}, {n: "ZnCl<sub>2</sub>", m: 136.3, c: 1, type: 'fu'}, {n: "H<sub>2</sub>", m: 2.0, c: 1, type: 'molec'}] }
+            ],
+            2: [
+                { text: "How many grams of O<sub>2</sub> react with 3.0 moles of H<sub>2</sub>?", eq: "2 H<sub>2</sub> + O<sub>2</sub> → 2 H<sub>2</sub>O", given: {val: 3.0, unit: "mol H<sub>2</sub>"}, target: "g O<sub>2</sub>", answer: 48.0, species: [{n: "H<sub>2</sub>", m: 2.0, c: 2, type: 'molec'}, {n: "O<sub>2</sub>", m: 32.0, c: 1, type: 'molec'}, {n: "H<sub>2</sub>O", m: 18.0, c: 2, type: 'molec'}] },
+                { text: "How many molecules of NH<sub>3</sub> are produced from 1.5 moles of N<sub>2</sub>?", eq: "N<sub>2</sub> + 3 H<sub>2</sub> → 2 NH<sub>3</sub>", given: {val: 1.5, unit: "mol N<sub>2</sub>"}, target: "molec NH<sub>3</sub>", answer: 1.806e24, species: [{n: "N<sub>2</sub>", m: 28.0, c: 1, type: 'molec'}, {n: "H<sub>2</sub>", m: 2.0, c: 3, type: 'molec'}, {n: "NH<sub>3</sub>", m: 17.0, c: 2, type: 'molec'}] },
+                { text: "How many moles of NaCl form from 3.01x10<sup>23</sup> molecules of Cl<sub>2</sub>?", eq: "2 Na + Cl<sub>2</sub> → 2 NaCl", given: {val: 3.01e23, unit: "molec Cl<sub>2</sub>"}, target: "mol NaCl", answer: 1.0, species: [{n: "Na", m: 23.0, c: 2, type: 'atom'}, {n: "Cl<sub>2</sub>", m: 71.0, c: 1, type: 'molec'}, {n: "NaCl", m: 58.4, c: 2, type: 'fu'}] },
+                { text: "How many grams of CO<sub>2</sub> are produced from 0.5 moles of C<sub>3</sub>H<sub>8</sub>?", eq: "C<sub>3</sub>H<sub>8</sub> + 5 O<sub>2</sub> → 3 CO<sub>2</sub> + 4 H<sub>2</sub>O", given: {val: 0.5, unit: "mol C<sub>3</sub>H<sub>8</sub>"}, target: "g CO<sub>2</sub>", answer: 66.0, species: [{n: "C<sub>3</sub>H<sub>8</sub>", m: 44.0, c: 1, type: 'molec'}, {n: "O<sub>2</sub>", m: 32.0, c: 5, type: 'molec'}, {n: "CO<sub>2</sub>", m: 44.0, c: 3, type: 'molec'}, {n: "H<sub>2</sub>O", m: 18.0, c: 4, type: 'molec'}] }
+            ],
+            3: [
+                { text: "How many grams of H<sub>2</sub>O are produced from 16.0 g of CH<sub>4</sub>?", eq: "CH<sub>4</sub> + 2 O<sub>2</sub> → CO<sub>2</sub> + 2 H<sub>2</sub>O", given: {val: 16.0, unit: "g CH<sub>4</sub>"}, target: "g H<sub>2</sub>O", answer: 36.0, species: [{n: "CH<sub>4</sub>", m: 16.0, c: 1, type: 'molec'}, {n: "O<sub>2</sub>", m: 32.0, c: 2, type: 'molec'}, {n: "CO<sub>2</sub>", m: 44.0, c: 1, type: 'molec'}, {n: "H<sub>2</sub>O", m: 18.0, c: 2, type: 'molec'}] },
+                { text: "How many molecules of O<sub>2</sub> form from the decomposition of 68.0 g of H<sub>2</sub>O<sub>2</sub>?", eq: "2 H<sub>2</sub>O<sub>2</sub> → 2 H<sub>2</sub>O + O<sub>2</sub>", given: {val: 68.0, unit: "g H<sub>2</sub>O<sub>2</sub>"}, target: "molec O<sub>2</sub>", answer: 6.02e23, species: [{n: "H<sub>2</sub>O<sub>2</sub>", m: 34.0, c: 2, type: 'molec'}, {n: "H<sub>2</sub>O", m: 18.0, c: 2, type: 'molec'}, {n: "O<sub>2</sub>", m: 32.0, c: 1, type: 'molec'}] },
+                { text: "How many grams of Fe<sub>2</sub>O<sub>3</sub> form from 1.204x10<sup>24</sup> atoms of Fe?", eq: "4 Fe + 3 O<sub>2</sub> → 2 Fe<sub>2</sub>O<sub>3</sub>", given: {val: 1.204e24, unit: "atoms Fe"}, target: "g Fe<sub>2</sub>O<sub>3</sub>", answer: 159.7, species: [{n: "Fe", m: 55.85, c: 4, type: 'atom'}, {n: "O<sub>2</sub>", m: 32.0, c: 3, type: 'molec'}, {n: "Fe<sub>2</sub>O<sub>3</sub>", m: 159.7, c: 2, type: 'fu'}] },
+                { text: "How many formula units of NaCl are produced from 46.0 g of Na?", eq: "2 Na + Cl<sub>2</sub> → 2 NaCl", given: {val: 46.0, unit: "g Na"}, target: "FU NaCl", answer: 1.204e24, species: [{n: "Na", m: 23.0, c: 2, type: 'atom'}, {n: "Cl<sub>2</sub>", m: 71.0, c: 1, type: 'molec'}, {n: "NaCl", m: 58.4, c: 2, type: 'fu'}] }
+            ]
+        };
+
+        const practiceStats = {
+            '1': { name: "1 Step Problems", attempts: 0, correct: 0 },
+            '2': { name: "2 Step Problems", attempts: 0, correct: 0 },
+            '3': { name: "3 Step Problems", attempts: 0, correct: 0 },
+            'mixed': { name: "Mixed Levels", attempts: 0, correct: 0 }
+        };
+
+        let currentProblem = null;
+        let problemIndex = 0;
+        let studentName = "";
+
+        // Helper Functions
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function getUnitForType(type) {
+            if (type === 'atom') return 'atoms';
+            if (type === 'fu') return 'FU';
+            return 'molec';
+        }
+
+        // App Initialization
+        function init() {
+            Object.values(problems).forEach(pool => shuffleArray(pool));
+            
+            $("#startAppBtn").on("click", () => {
+                const name = $("#studentNameInput").val().trim();
+                if (name === "") {
+                    $("#nameError").removeClass("hidden");
+                } else {
+                    studentName = name;
+                    $("#displayStudentName").text(studentName);
+                    $("#startScreen").addClass("hidden");
+                    $("#appScreen").removeClass("hidden");
+                    loadProblem();
+                }
+            });
+
+            $("#newProblem, #nextProblemBtn").on("click", () => { problemIndex++; loadProblem(); });
+            $("#resetWorkspace").on("click", loadProblem);
+            $("#stepSelect").on("change", () => { problemIndex = 0; loadProblem(); });
+            $("#checkAnswer").on("click", handleCheck);
+            $("#showReportBtn").on("click", generateReport);
+            $("#backToAppBtn").on("click", () => {
+                $("#reportScreen").addClass("hidden");
+                $("#appScreen").removeClass("hidden");
+            });
+            $("#printBtn").on("click", () => { window.print(); });
+            
+            $(".workspace-drop-zone").droppable({
+                accept: ".draggable-template",
+                drop: function(event, ui) {
+                    addFactor(ui.draggable.data("top"), ui.draggable.data("bot"));
+                }
+            });
+        }
+
+        function loadProblem() {
+            $("#feedbackArea").addClass("hidden");
+            let stepType = $("#stepSelect").val();
+            let poolToUse = stepType;
+            
+            if (stepType === "mixed") {
+                const keys = ["1", "2", "3"];
+                poolToUse = keys[Math.floor(Math.random() * keys.length)];
+            }
+            
+            const pool = problems[poolToUse] || problems[1];
+            currentProblem = pool[problemIndex % pool.length];
+            currentProblem.solvedThisAttempt = false;
+
+            const initUnitText = currentProblem.given.unit.replace(/<\/?sub>/g, '');
+            $("#initialSlot").attr("data-val", currentProblem.given.val).attr("data-unit", initUnitText);
+
+            $("#problemText").html(currentProblem.text);
+            $("#equation").html(currentProblem.eq);
+            
+            let displayVal = currentProblem.given.val;
+            if (displayVal >= 1e6) {
+                displayVal = displayVal.toExponential(2).replace("e+", "x10^");
+            }
+
+            $("#initialNum").text(displayVal);
+            $("#initialUnit").html(currentProblem.given.unit).removeClass("cancelled");
+            $("#finalUnit").html(currentProblem.target);
+            $("#finalAnswer").val("");
+            $("#factorList").empty();
+            
+            renderBanks();
+            setupDraggables();
+            $("#problemInfo").text(`Problem ${ (problemIndex % pool.length) + 1 }`);
+        }
+
+        function renderBanks() {
+            const b = { mol: $("#bank-mol").empty(), g: $("#bank-g").empty(), p: $("#bank-particles").empty() };
+            currentProblem.species.forEach(s => {
+                const cleanSpecies = s.n.replace(/<\/?sub>/g, '');
+                const particleUnit = getUnitForType(s.type);
+                
+                b.mol.append(`<div class="val-pill" data-val="${s.c}" data-unit="mol ${cleanSpecies}">${s.c} mol ${s.n}</div>`);
+                b.mol.append(`<div class="val-pill" data-val="1" data-unit="mol ${cleanSpecies}">1 mol ${s.n}</div>`);
+                b.g.append(`<div class="val-pill" data-val="${s.m}" data-unit="g ${cleanSpecies}">${s.m.toFixed(1)} g ${s.n}</div>`);
+                b.p.append(`<div class="val-pill" data-val="6.022e23" data-unit="${particleUnit} ${cleanSpecies}">6.02x10<sup>23</sup> ${particleUnit} ${s.n}</div>`);
+            });
+            setupDraggables();
+        }
+
+        function addFactor(topType, botType) {
+            const factorMarkup = $(`
+                <div class="flex items-center gap-1">
+                    <div class="text-lg font-bold text-slate-300">×</div>
+                    <div class="factor-box">
+                        <div class="val-slot val-slot-empty" data-hint="${topType}">${topType}</div>
+                        <div class="fraction-line"></div>
+                        <div class="val-slot val-slot-empty" data-hint="${botType}">${botType}</div>
+                    </div>
+                </div>
+            `);
+            $("#factorList").append(factorMarkup);
+            factorMarkup.find(".val-slot").droppable({
+                accept: ".val-pill",
+                hoverClass: "bg-blue-50",
+                greedy: true,
+                drop: function(event, ui) {
+                    const sourceSlot = ui.draggable.closest('.val-slot');
+                    const pillContent = ui.draggable.html();
+                    const pVal = ui.draggable.attr("data-val");
+                    const pUnit = ui.draggable.attr("data-unit");
+                    $(this).removeClass("val-slot-empty").empty().append(`<div class="val-pill border-none p-0 bg-transparent shadow-none text-slate-900 w-full flex items-center justify-center text-[10px]" data-val="${pVal}" data-unit="${pUnit}">${pillContent}</div>`);
+                    if (sourceSlot.length) {
+                        const hint = sourceSlot.attr("data-hint");
+                        sourceSlot.addClass("val-slot-empty").empty().text(hint);
+                    }
+                    setupDraggables();
+                }
+            });
+        }
+
+        function setupDraggables() {
+            $(".draggable-template").draggable({ helper: "clone", zIndex: 100, appendTo: "body" });
+            $(".val-pill").draggable({ helper: "clone", zIndex: 100, appendTo: "body", revert: "invalid" });
+        }
+
+        function handleCheck() {
+            $(".val-pill, #initialUnit").removeClass("cancelled");
+            const currentMode = $("#stepSelect").val();
+            practiceStats[currentMode].attempts++;
+
+            const initialSlot = $("#initialSlot");
+            const initVal = parseFloat(initialSlot.attr("data-val"));
+            const initUnit = initialSlot.attr("data-unit");
+            const steps = [{ el: $("#initialUnit"), unit: initUnit, val: initVal }];
+            let calcVal = initVal;
+            let allFilled = true;
+
+            $("#factorList .factor-box").each(function() {
+                const topPill = $(this).find(".val-slot:first-child .val-pill");
+                const botPill = $(this).find(".val-slot:last-child .val-pill");
+                if(topPill.length && botPill.length) {
+                    const tVal = parseFloat(topPill.attr("data-val"));
+                    const tUnit = topPill.attr("data-unit");
+                    const bVal = parseFloat(botPill.attr("data-val"));
+                    const bUnit = botPill.attr("data-unit");
+                    steps.push({ topEl: topPill, topUnit: tUnit, tVal, botEl: botPill, botUnit: bUnit, bVal });
+                    calcVal *= (tVal / bVal);
+                } else { allFilled = false; }
+            });
+
+            if (!allFilled) {
+                showModal("Incomplete", "Please fill all factor slots with values.", "⚠️");
+                return;
+            }
+
+            let unitsMatch = true;
+            for (let i = 1; i < steps.length; i++) {
+                const prevUnit = i === 1 ? steps[0].unit : steps[i-1].topUnit;
+                const currentBot = steps[i].botUnit;
+                if (prevUnit === currentBot) {
+                    if (i === 1) steps[0].el.addClass("cancelled");
+                    else steps[i-1].topEl.addClass("cancelled");
+                    steps[i].botEl.addClass("cancelled");
+                } else { unitsMatch = false; }
+            }
+
+            const finalPill = steps[steps.length - 1];
+            const resultUnit = finalPill ? finalPill.topUnit : steps[0].unit;
+            const targetUnit = currentProblem.target.replace(/<\/?sub>/g, '');
+            if (resultUnit !== targetUnit) unitsMatch = false;
+
+            if (unitsMatch) {
+                const diff = Math.abs(calcVal - currentProblem.answer) / currentProblem.answer;
+                if (diff < 0.05) {
+                    if (!currentProblem.solvedThisAttempt) {
+                        practiceStats[currentMode].correct++;
+                        currentProblem.solvedThisAttempt = true;
+                    }
+                    let displayAns = calcVal >= 1e6 ? calcVal.toExponential(2).replace("e+", "x10^") : calcVal.toFixed(2);
+                    $("#finalAnswer").val(displayAns);
+                    $("#autoAnswerText").text(displayAns);
+                    $("#autoUnitText").html(currentProblem.target);
+                    $("#feedbackArea").removeClass("hidden");
+                    showModal("Correct!", `Excellent! The conversion factors are set up correctly.`, "🎉");
+                } else {
+                    showModal("Check Values", "Your units cancel correctly, but the values seem wrong. Check your molar masses or mole ratios.", "🤔");
+                }
+            } else {
+                showModal("Check Units", "Diagonal units must match to cancel, and your final top unit must match the target.", "⚠️");
+            }
+        }
+
+        function generateReport() {
+            $("#appScreen").addClass("hidden");
+            $("#reportScreen").removeClass("hidden");
+            $("#reportName").text(studentName);
+            $("#reportDate").text(new Date().toLocaleDateString() + " at " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+            let tableHTML = "";
+            for (const key in practiceStats) {
+                const stat = practiceStats[key];
+                const acc = stat.attempts > 0 ? Math.round((stat.correct / stat.attempts) * 100) + "%" : "N/A";
+                tableHTML += `<tr><td class="p-3 border-b">${stat.name}</td><td class="p-3 border-b text-center font-bold">${stat.attempts}</td><td class="p-3 border-b text-center font-bold text-emerald-600">${stat.correct}</td><td class="p-3 border-b text-center font-black ${stat.attempts > 0 ? 'text-indigo-600' : 'text-slate-400'}">${acc}</td></tr>`;
+            }
+            $("#reportTableBody").html(tableHTML);
+        }
+
+        function showModal(t, b, i) {
+            $("#modalTitle").text(t); $("#modalBody").text(b); $("#modalIcon").text(i);
+            $("#modal").removeClass("hidden");
+        }
+        function closeModal() { $("#modal").addClass("hidden"); }
+        $(document).ready(init);
+    </script>
+<p id="accessibleStatus" class="sr-only" aria-live="polite"></p>
+    <script>
+        // Keyboard and click alternative to drag-and-drop controls.
+        let selectedAccessiblePill = null;
+
+        function announceAccessible(message) {
+            const status = document.getElementById('accessibleStatus');
+            if (status) status.textContent = message;
+        }
+
+        function installAccessibleControls() {
+            $('.draggable-template').attr({ role: 'button', tabindex: '0' }).each(function () {
+                const top = $(this).data('top');
+                const bottom = $(this).data('bot');
+                $(this).attr('aria-label', 'Add factor with ' + top + ' over ' + bottom);
+            }).off('.accessible').on('click.accessible keydown.accessible', function (event) {
+                if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                addFactor($(this).data('top'), $(this).data('bot'));
+                announceAccessible('Factor added. Select a value, then select an empty numerator or denominator.');
+            });
+
+            $('.bank-items .val-pill').attr({ role: 'button', tabindex: '0', 'aria-pressed': 'false' })
+                .off('.accessible').on('click.accessible keydown.accessible', function (event) {
+                    if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    $('.bank-items .val-pill').attr('aria-pressed', 'false').removeClass('ring-4 ring-amber-300');
+                    selectedAccessiblePill = {
+                        html: $(this).html(),
+                        value: $(this).attr('data-val'),
+                        unit: $(this).attr('data-unit')
+                    };
+                    $(this).attr('aria-pressed', 'true').addClass('ring-4 ring-amber-300');
+                    announceAccessible('Selected ' + $(this).text().trim() + '. Now select an empty factor slot.');
+                });
+
+            $('#factorList .val-slot-empty').attr({ role: 'button', tabindex: '0' })
+                .off('.accessible').on('click.accessible keydown.accessible', function (event) {
+                    if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+                    if (!selectedAccessiblePill) {
+                        announceAccessible('Select a value from a value bank first.');
+                        return;
+                    }
+                    event.preventDefault();
+                    $(this).removeClass('val-slot-empty').empty().append(
+                        '<div class="val-pill border-none p-0 bg-transparent shadow-none text-slate-900 w-full flex items-center justify-center text-[10px]" data-val="' + selectedAccessiblePill.value + '" data-unit="' + selectedAccessiblePill.unit + '">' + selectedAccessiblePill.html + '</div>'
+                    );
+                    announceAccessible('Value placed in factor.');
+                    selectedAccessiblePill = null;
+                    setupDraggables();
+                });
+        }
+
+        const originalSetupDraggables = setupDraggables;
+        setupDraggables = function () {
+            originalSetupDraggables();
+            installAccessibleControls();
+        };
+        $(installAccessibleControls);
+    </script>
+</body>
+</html>
