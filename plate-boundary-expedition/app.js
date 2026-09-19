@@ -35,15 +35,22 @@
     ctx.fillStyle=mission().colors[1]; ctx.fillRect(w/2,h/2-r,r,h);
     ctx.globalAlpha=1;
     if (state.cutaway) drawCutaway(w,h,r);
+    ctx.restore();
     const stations = mission().stations.map(s=>({s,p:project(s.lon,s.lat,r)})).sort((a,b)=>a.p.z-b.p.z);
     for (const {s,p} of stations) if (p.z>-.12) {
       const enabled = document.querySelector(`input[value="${s.layer}"]`).checked;
       ctx.beginPath(); ctx.arc(p.x,p.y,enabled?10:6,0,Math.PI*2);
       ctx.fillStyle=enabled?colors[s.layer]:'#78909c'; ctx.fill();
       ctx.lineWidth=3; ctx.strokeStyle=state.collected.has(s.id)?'#fff':'rgba(0,0,0,.35)'; ctx.stroke();
-      if (enabled) { ctx.fillStyle='#fff'; ctx.font='700 14px system-ui'; ctx.fillText(s.title,p.x+14,p.y+5); }
+      if (enabled) {
+        ctx.font='700 14px system-ui';
+        const labelWidth=ctx.measureText(s.title).width;
+        const labelX=p.x+14+labelWidth>w-10?p.x-14-labelWidth:p.x+14;
+        const labelY=Math.max(20,Math.min(h-10,p.y+5));
+        ctx.fillStyle='rgba(3,43,57,.78)';ctx.fillRect(labelX-5,labelY-16,labelWidth+10,22);
+        ctx.fillStyle='#fff';ctx.fillText(s.title,labelX,labelY);
+      }
     }
-    ctx.restore();
     ctx.beginPath(); ctx.arc(w/2,h/2,r,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,.38)'; ctx.lineWidth=3; ctx.stroke();
     document.querySelector('#coordinate-readout').textContent=`Rotation ${Math.round(state.rotation)}°`;
   }
