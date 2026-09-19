@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Chemistry Detective: Find the Mistake</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <style>
+       .latex-font { font-family: 'Times New Roman', Times, serif; font-style: italic; }
+       .sub { vertical-align: sub; font-size: 0.75em; font-style: normal; }
+       .sup { vertical-align: super; font-size: 0.75em; font-style: normal; }
+       .equation-box {
+           background: #f8fafc;
+           border-left: 4px solid #3b82f6;
+           white-space: nowrap;
+           overflow-x: auto;
+           scrollbar-width: thin;
+       }
+       .equation-box::-webkit-scrollbar { height: 4px; }
+       .equation-box::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+       .step-container { display: none; }
+       .step-active { display: block; animation: fadeIn 0.3s ease-in-out; }
+       @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+      
+       .opt-btn.selected {
+           border-color: #3b82f6;
+           background-color: #eff6ff;
+           box-shadow: inset 0 0 0 2px #3b82f6;
+       }
+
+
+       #score-pop {
+           position: absolute;
+           animation: floatUp 1s ease-out forwards;
+           pointer-events: none;
+       }
+       @keyframes floatUp {
+           0__ { opacity: 1; transform: translateY(0); }
+           100% { opacity: 0; transform: translateY(-30px); }
+       }
+
+
+       /* Print Styles */
+       @media print {
+           body { background: white; padding: 0; margin: 0; }
+           #app { max-width: 100%; padding: 0; }
+           .no-print { display: none !important; }
+           #end-screen { box-shadow: none; border: none; padding: 0; }
+           .print-only { display: block !important; }
+       }
+       .print-only { display: none; }
+   </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans">
+   <div id="app" class="max-w-5xl mx-auto py-8 px-4">
+      
+       <!-- START SCREEN: Name Entry -->
+       <div id="start-screen" class="bg-white rounded-xl shadow-lg p-10 text-center max-w-lg mx-auto border-t-8 border-blue-600">
+           <div class="text-6xl mb-4">🔬</div>
+           <h1 class="text-3xl font-bold text-slate-800 mb-2">Chemistry Detective</h1>
+           <p class="text-slate-600 mb-8 italic">Find the mistakes in the ionic equations.</p>
+          
+           <div class="text-left mb-6">
+               <label class="block text-sm font-bold text-slate-700 mb-2">Investigator Name:</label>
+               <input type="text" id="user-name-input" placeholder="Enter your full name"
+                      class="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none transition-all">
+           </div>
+          
+           <button onclick="startGame()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all">
+               Start Simulation
+           </button>
+       </div>
+
+
+       <!-- MAIN GAME UI -->
+       <div id="game-ui" class="hidden">
+           <!-- Header -->
+           <header class="text-center mb-6">
+               <h1 class="text-3xl font-bold text-slate-800">Chemistry Detective 🧪</h1>
+               <p class="text-slate-600 italic">Investigator: <span id="display-name" class="font-bold text-blue-600"></span></p>
+               <div class="mt-4 flex justify-center gap-4 relative">
+                   <span class="bg-white px-4 py-2 rounded-full shadow-sm border text-sm">
+                       Points: <span id="score" class="font-bold text-green-600">0</span>
+                   </span>
+                   <span class="bg-white px-4 py-2 rounded-full shadow-sm border text-sm">
+                       Case: <span id="current-num" class="font-bold">1</span>/<span id="total-num">10</span>
+                   </span>
+               </div>
+           </header>
+
+
+           <!-- Game Card -->
+           <div id="game-card" class="bg-white rounded-xl shadow-lg p-8 mb-6">
+              
+               <!-- STEP 1: Identify Reaction Type -->
+               <div id="step-1" class="step-container step-active">
+                   <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+                       <p class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1">Investigation Scenario</p>
+                       <h2 id="description-text" class="text-xl font-semibold text-slate-800 italic"></h2>
+                   </div>
+                  
+                   <p class="text-center font-bold text-slate-700 mb-4">First, identify the type of reaction:</p>
+                   <div class="flex gap-4">
+                       <button onclick="handleTypeGuess('SR')" class="flex-1 border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 py-4 rounded-xl font-bold transition-all">Single Replacement</button>
+                       <button onclick="handleTypeGuess('DR')" class="flex-1 border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 py-4 rounded-xl font-bold transition-all">Double Replacement</button>
+                   </div>
+               </div>
+
+
+               <!-- STEP 2: Review Equations -->
+               <div id="step-2" class="step-container">
+                   <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                       <h2 id="scenario-title" class="text-lg font-bold text-blue-800 italic"></h2>
+                       <span id="badge-type" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase"></span>
+                   </div>
+
+
+                   <div class="space-y-4">
+                       <div>
+                           <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Balanced Chemical Equation (BCE)</span>
+                           <div id="bce-box" class="equation-box p-3 rounded text-base latex-font mt-1"></div>
+                       </div>
+                       <div>
+                           <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Complete Ionic Equation (CIE)</span>
+                           <div id="cie-box" class="equation-box p-3 rounded text-base latex-font mt-1"></div>
+                       </div>
+                       <div>
+                           <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Net Ionic Equation (NIE)</span>
+                           <div id="nie-box" class="equation-box p-3 rounded text-base latex-font mt-1"></div>
+                       </div>
+                   </div>
+
+
+                   <div id="initial-actions" class="mt-8">
+                       <p class="text-center font-bold text-slate-700 mb-4">Are there mistakes in the CIE or NIE?</p>
+                       <div class="flex gap-4">
+                           <button onclick="handleInitialGuess(true)" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow-md transition-all">✅ Equations are Correct</button>
+                           <button onclick="handleInitialGuess(false)" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-md transition-all">❌ Found a Mistake</button>
+                       </div>
+                   </div>
+
+
+                   <div id="identify-mistake-step" class="hidden mt-8 p-6 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300">
+                       <p class="text-center font-bold text-slate-700 mb-4 text-lg">Which equation(s) contain mistakes?</p>
+                       <div class="flex gap-4 mb-6">
+                           <button id="btn-part-CIE" onclick="togglePartSelection('CIE')" class="flex-1 bg-white border-2 border-slate-300 p-3 rounded-lg font-bold transition-all">Complete Ionic</button>
+                           <button id="btn-part-NIE" onclick="togglePartSelection('NIE')" class="flex-1 bg-white border-2 border-slate-300 p-3 rounded-lg font-bold transition-all">Net Ionic</button>
+                       </div>
+                       <div class="flex justify-center">
+                           <button onclick="verifyPartSelection()" class="bg-slate-800 text-white px-8 py-2 rounded-lg font-bold shadow-md hover:bg-black transition-all">Confirm Locations</button>
+                       </div>
+                   </div>
+
+
+                   <div id="identify-specific-step" class="hidden mt-8 p-6 bg-blue-50 rounded-xl border-2 border-blue-200">
+                       <p class="text-center font-bold text-blue-800 mb-4 text-lg">Select the errors found in the flagged equations:</p>
+                       <div id="mistake-options" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6"></div>
+                       <div class="flex justify-center">
+                           <button onclick="verifySpeciesSelection()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition-all">
+                               Verify Evidence
+                           </button>
+                       </div>
+                   </div>
+               </div>
+
+
+               <!-- Feedback Area -->
+               <div id="feedback-area" class="hidden mt-8 p-6 rounded-xl border-4 transition-all">
+                   <div class="flex items-start gap-4">
+                       <div id="feedback-icon" class="text-4xl"></div>
+                       <div class="flex-1">
+                           <p id="feedback-text" class="font-black text-2xl mb-2"></p>
+                           <div id="correction-box" class="text-slate-700 leading-relaxed mb-4 p-3 bg-white/50 rounded"></div>
+                           <button id="feedback-btn" onclick="nextQuestion()" class="bg-slate-800 hover:bg-black text-white px-6 py-2 rounded-lg font-bold transition-all shadow-lg">
+                               Continue →
+                           </button>
+                       </div>
+                   </div>
+               </div>
+           </div>
+       </div>
+
+
+       <!-- End Screen / Printable Report -->
+       <div id="end-screen" class="hidden bg-white rounded-xl shadow-lg p-10 border-t-8 border-blue-600">
+           <div class="text-center no-print">
+               <div class="text-6xl mb-4">🎓</div>
+               <h2 class="text-4xl font-bold mb-2">Review Complete!</h2>
+           </div>
+
+
+           <!-- Report Header (Printable) -->
+           <div class="border-b-2 border-slate-800 pb-4 mb-8">
+               <h1 class="text-2xl font-black uppercase tracking-tighter">Investigation Lab Report</h1>
+               <div class="grid grid-cols-2 mt-4 gap-y-2">
+                   <div><span class="font-bold text-slate-500 uppercase text-xs">Investigator:</span> <span id="final-name" class="font-bold block text-lg"></span></div>
+                   <div><span class="font-bold text-slate-500 uppercase text-xs">Date:</span> <span id="final-date" class="font-bold block text-lg"></span></div>
+                   <div><span class="font-bold text-slate-500 uppercase text-xs">Total Score:</span> <span id="final-points" class="font-bold block text-lg text-green-600"></span></div>
+                   <div><span class="font-bold text-slate-500 uppercase text-xs">Accuracy:</span> <span id="final-score" class="font-bold block text-lg text-blue-600"></span></div>
+               </div>
+           </div>
+          
+           <div class="text-left max-w-3xl mx-auto mb-8">
+               <h3 class="font-bold text-slate-800 border-b pb-2 mb-4">Investigation Log (Mistakes Tracked):</h3>
+               <div id="struggle-list" class="space-y-2"></div>
+               <div id="perfect-msg" class="hidden text-green-700 font-bold bg-green-50 p-4 rounded-lg text-center border border-green-200">
+                   Excellent work! No mistakes were made during this investigation.
+               </div>
+           </div>
+
+
+           <div class="flex flex-col sm:flex-row justify-center gap-4 no-print">
+               <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-xl font-bold shadow-xl transition-all">
+                   🖨️ Print Results
+               </button>
+               <button onclick="location.reload()" class="bg-slate-800 hover:bg-black text-white px-10 py-4 rounded-xl font-bold shadow-xl transition-all">
+                   Restart Simulation
+               </button>
+           </div>
+
+
+           <div class="print-only mt-12 pt-8 border-t text-sm text-slate-400 italic text-center">
+               Chemistry Detective Simulation Results - Digital Lab Certification
+           </div>
+       </div>
+   </div>
+
+
+   <script>
+       const questions = [
+           { id: 1, description: "A reaction occurs between solutions of barium chloride and sulfuric acid.", title: "Barium Chloride + Sulfuric Acid", correctType: "DR", typeText: "Double Replacement", bce: "BaCl<span class='sub'>2</span>(aq) + H<span class='sub'>2</span>SO<span class='sub'>4</span>(aq) → BaSO<span class='sub'>4</span>(s) + 2 HCl(aq)", cie: "Ba<span class='sup'>+2</span>(aq) + Cl<span class='sub'>2</span>(g) + H<span class='sub'>2</span>(g) + SO<span class='sub'>4</span><span class='sup'>-2</span>(aq) → BaSO<span class='sub'>4</span>(s) + H<span class='sub'>2</span>(g) + Cl<span class='sub'>2</span>(g)", nie: "Ba<span class='sup'>+2</span>(aq) + SO<span class='sub'>4</span><span class='sup'>-2</span>(aq) → BaSO<span class='sub'>4</span>(s)", isCorrect: false, wrongParts: ["CIE"], specificMistakes: ["Cl2(g)", "H2(g)"], mistakeOptions: ["Ba<span class='sup'>+2</span>(aq)", "Cl<span class='sub'>2</span>(g)", "H<span class='sub'>2</span>(g)", "SO<span class='sub'>4</span><span class='sup'>-2</span>(aq)"], mistake: "The <strong>CIE</strong> incorrectly shows Chlorine and Hydrogen as diatomic gases instead of aqueous ions (2 Cl<span class='sup'>-1</span> and 2 H<span class='sup'>+1</span>)." },
+           { id: 2, description: "A reaction occurs between a solution of magnesium sulfate and ammonium carbonate.", title: "Magnesium Sulfate + Ammonium Carbonate", correctType: "DR", typeText: "Double Replacement", bce: "MgSO<span class='sub'>4</span>(aq) + (NH<span class='sub'>4</span>)<span class='sub'>2</span>CO<span class='sub'>3</span>(aq) → MgCO<span class='sub'>3</span>(s) + (NH<span class='sub'>4</span>)<span class='sub'>2</span>SO<span class='sub'>4</span>(aq)", cie: "Mg<span class='sup'>+2</span>(aq) + SO<span class='sub'>4</span><span class='sup'>-2</span>(aq) + 2 NH<span class='sub'>4</span><span class='sup'>+1</span>(aq) + CO<span class='sub'>3</span><span class='sup'>-2</span>(aq) → MgCO<span class='sub'>3</span>(s) + 2 NH<span class='sub'>4</span><span class='sup'>+1</span>(aq) + SO<span class='sub'>4</span><span class='sup'>-2</span>(aq)", nie: "Mg<span class='sup'>+2</span>(aq) + CO<span class='sub'>3</span><span class='sup'>-2</span>(aq) → MgCO<span class='sub'>3</span>(s)", isCorrect: true, wrongParts: [], mistake: "This report is perfect. All ions are dissociated and the precipitate is correctly identified." },
+           { id: 3, description: "A reaction occurs between solutions of lead (II) nitrate and sodium hydroxide.", title: "Lead (II) Nitrate + Sodium Hydroxide", correctType: "DR", typeText: "Double Replacement", bce: "Pb(NO<span class='sub'>3</span>)<span class='sub'>2</span>(aq) + 2 NaOH(aq) → Pb(OH)<span class='sub'>2</span>(s) + 2 NaNO<span class='sub'>3</span>(aq)", cie: "Pb(s) + N<span class='sub'>2</span>(g) + 3 O<span class='sub'>2</span>(g) + 2 Na(s) + O<span class='sub'>2</span>(g) + H<span class='sub'>2</span>(g) → Pb(OH)<span class='sub'>2</span>(s) + 2 Na(s) + N<span class='sub'>2</span>(g) + 3 O<span class='sub'>2</span>(g)", nie: "Pb(s) + O<span class='sub'>2</span>(g) + H<span class='sub'>2</span>(g) → Pb(OH)<span class='sub'>2</span>(s)", isCorrect: false, wrongParts: ["CIE", "NIE"], specificMistakes: ["Pb(s)", "N2(g)", "3O2(g)", "2Na(s)", "O2(g)", "H2(g)"], mistakeOptions: ["Pb(s)", "N<span class='sub'>2</span>(g)", "3 O<span class='sub'>2</span>(g)", "2 Na(s)", "O<span class='sub'>2</span>(g)", "H<span class='sub'>2</span>(g)", "Pb(OH)<span class='sub'>2</span>(s)"], mistake: "Both the <strong>CIE and NIE</strong> are incorrect. They show elements as pure solids/gases instead of ions." },
+           { id: 4, description: "A reaction occurs between solutions of barium acetate and potassium phosphate.", title: "Barium Acetate + Potassium Phosphate", correctType: "DR", typeText: "Double Replacement", bce: "3 Ba(C<span class='sub'>2</span>H<span class='sub'>3</span>O<span class='sub'>2</span>)<span class='sub'>2</span>(aq) + 2 K<span class='sub'>3</span>PO<span class='sub'>4</span>(aq) → Ba<span class='sub'>3</span>(PO<span class='sub'>4</span>)<span class='sub'>2</span>(s) + 6 KC<span class='sub'>2</span>H<span class='sub'>3</span>O<span class='sub'>2</span>(aq)", cie: "3 Ba<span class='sup'>+2</span>(aq) + 6 C<span class='sub'>2</span>H<span class='sub'>3</span>O<span class='sub'>2</span><span class='sup'>-1</span>(aq) + 6 K<span class='sup'>+1</span>(aq) + 2 PO<span class='sub'>4</span><span class='sup'>-3</span>(aq) → Ba<span class='sub'>3</span>(PO<span class='sub'>4</span>)<span class='sub'>2</span>(s) + 6 K<span class='sup'>+1</span>(aq) + 6 C<span class='sub'>2</span>H<span class='sub'>3</span>O<span class='sub'>2</span><span class='sup'>-1</span>(aq)", nie: "Ba<span class='sup'>+2</span>(aq) + 2 PO<span class='sub'>4</span><span class='sup'>-3</span>(aq) → Ba<span class='sub'>3</span>(PO<span class='sub'>4</span>)<span class='sub'>2</span>(s)", isCorrect: false, wrongParts: ["NIE"], specificMistakes: ["Ba+2(aq)"], mistakeOptions: ["Ba<span class='sup'>+2</span>(aq)", "PO<span class='sub'>4</span><span class='sup'>-3</span>(aq)", "Ba<span class='sub'>3</span>(PO<span class='sub'>4</span>)<span class='sub'>2</span>(s)"], mistake: "The <strong>NIE</strong> is not balanced. It needs a coefficient of '3' for the Barium ion (3 Ba<span class='sup'>+2</span>)." },
+           { id: 5, description: "A reaction occurs between solutions of silver nitrate and strontium bromide.", title: "Silver Nitrate + Strontium Bromide", correctType: "DR", typeText: "Double Replacement", bce: "2 AgNO<span class='sub'>3</span>(aq) + SrBr<span class='sub'>2</span>(aq) → 2 AgBr(s) + Sr(NO<span class='sub'>3</span>)<span class='sub'>2</span>(aq)", cie: "2 Ag(s) + 2 NO<span class='sub'>3</span><span class='sup'>-1</span>(aq) + Sr<span class='sup'>+2</span>(aq) + Br<span class='sub'>2</span>(g) → 2 AgBr(s) + Sr<span class='sup'>+2</span>(aq) + 2 NO<span class='sub'>3</span><span class='sup'>-1</span>(aq)", nie: "2 Ag(s) + Br<span class='sub'>2</span>(g) → 2 AgBr(s)", isCorrect: false, wrongParts: ["CIE", "NIE"], specificMistakes: ["2 Ag(s)", "Br2(g)"], mistakeOptions: ["2 Ag(s)", "2 NO<span class='sub'>3</span><span class='sup'>-1</span>(aq)", "Br<span class='sub'>2</span>(g)", "2 AgBr(s)"], mistake: "For this <strong>Double Replacement</strong> reaction, the reactants should be ions (2 Ag<span class='sup'>+1</span> and 2 Br<span class='sup'>-1</span>), not solid silver and bromine gas." },
+           { id: 6, description: "A piece of magnesium reacts with a solution of iron (II) chloride.", title: "Magnesium + Iron (II) Chloride", correctType: "SR", typeText: "Single Replacement", bce: "Mg(s) + FeCl<span class='sub'>2</span>(aq) → MgCl<span class='sub'>2</span>(aq) + Fe(s)", cie: "Mg<span class='sup'>+2</span>(s) + Fe<span class='sup'>+2</span>(aq) + 2 Cl<span class='sup'>-1</span>(aq) → Mg<span class='sup'>+2</span>(aq) + 2 Cl<span class='sup'>-1</span>(aq) + Fe<span class='sup'>+2</span>(s)", nie: "Mg<span class='sup'>+2</span>(s) + Fe<span class='sup'>+2</span>(aq) → Mg<span class='sup'>+2</span>(aq) + Fe<span class='sup'>+2</span>(s)", isCorrect: false, wrongParts: ["CIE", "NIE"], specificMistakes: ["Mg+2(s)", "Fe+2(s)"], mistakeOptions: ["Mg<span class='sup'>+2</span>(s)", "Fe<span class='sup'>+2</span>(aq)", "2 Cl<span class='sup'>-1</span>(aq)", "Fe<span class='sup'>+2</span>(s)"], mistake: "The report incorrectly treats neutral magnesium and iron metals as ions. Neutral metals should be written Mg(s) and Fe(s)." },
+           { id: 7, description: "A piece of zinc reacts with a solution of chromium (III) nitrate.", title: "Zinc + Chromium (III) Nitrate", correctType: "SR", typeText: "Single Replacement", bce: "3 Zn(s) + 2 Cr(NO<span class='sub'>3</span>)<span class='sub'>3</span>(aq) → 3 Zn(NO<span class='sub'>3</span>)<span class='sub'>2</span>(aq) + 2 Cr(s)", cie: "3 Zn(s) + 2 Cr<span class='sup'>+3</span>(aq) + 6 NO<span class='sub'>3</span><span class='sup'>-1</span>(aq) → 3 Zn<span class='sup'>+2</span>(aq) + 6 NO<span class='sub'>3</span><span class='sup'>-1</span>(aq) + 2 Cr(s)", nie: "3 Zn(s) + 2 Cr<span class='sup'>+3</span>(aq) → 3 Zn<span class='sup'>+2</span>(aq) + 2 Cr(s)", isCorrect: true, wrongParts: [], mistake: "Report is correct." },
+           { id: 8, description: "A piece of zinc is added to a solution of copper(II) sulfate.", title: "Zinc + Copper(II) Sulfate", correctType: "SR", typeText: "Single Replacement", bce: "Zn(s) + CuSO<span class='sub'>4</span>(aq) → ZnSO<span class='sub'>4</span>(aq) + Cu(s)", cie: "Zn<span class='sup'>+2</span>(s) + Cu<span class='sup'>+2</span>(aq) + SO<span class='sub'>4</span><span class='sup'>-2</span>(aq) → Zn<span class='sup'>+2</span>(aq) + SO<span class='sub'>4</span><span class='sup'>-2</span>(aq) + Cu<span class='sup'>+2</span>(s)", nie: "Zn<span class='sup'>+2</span>(s) + Cu<span class='sup'>+2</span>(aq) → Zn<span class='sup'>+2</span>(aq) + Cu<span class='sup'>+2</span>(s)", isCorrect: false, wrongParts: ["CIE", "NIE"], specificMistakes: ["Zn+2(s)", "Cu+2(s)"], mistakeOptions: ["Zn<span class='sup'>+2</span>(s)", "Cu<span class='sup'>+2</span>(aq)", "Cu<span class='sup'>+2</span>(s)"], mistake: "Neutral solids Zn and Cu should not have charges in either the CIE or NIE." },
+           { id: 9, description: "A piece of aluminum is added to a solution of hydrochloric acid.", title: "Aluminum + Hydrochloric Acid", correctType: "SR", typeText: "Single Replacement", bce: "2 Al(s) + 6 HCl(aq) → 2 AlCl<span class='sub'>3</span>(aq) + 3 H<span class='sub'>2</span>(g)", cie: "2 Al(s) + 6 H<span class='sup'>+1</span>(aq) + 6 Cl<span class='sup'>-1</span>(aq) → 2 Al<span class='sup'>+3</span>(aq) + 6 Cl<span class='sup'>-1</span>(aq) + 3 H<span class='sub'>2</span>(g)", nie: "2 Al(s) → 2 Al<span class='sup'>+3</span>(aq)", isCorrect: false, wrongParts: ["NIE"], specificMistakes: ["equation is missing species"], mistakeOptions: ["2 Al(s)", "2 Al<span class='sup'>+3</span>(aq)", "Equation is missing species"], mistake: "The <strong>NIE</strong> is incomplete. It correctly identifies the Aluminum change, but it's missing the Hydrogen ions (6 H<span class='sup'>+1</span>) and Hydrogen gas (3 H<span class='sub'>2</span>)." },
+           { id: 10, description: "A piece of copper reacts with a solution of silver nitrate.", title: "Copper + Silver Nitrate", correctType: "SR", typeText: "Single Replacement", bce: "Cu(s) + 2 AgNO<span class='sub'>3</span>(aq) → Cu(NO<span class='sub'>3</span>)<span class='sub'>2</span>(aq) + 2 Ag(s)", cie: "Cu(s) + 2 Ag<span class='sup'>+1</span>(aq) + 2 NO<span class='sub'>3</span><span class='sup'>-1</span>(aq) → Cu<span class='sup'>+2</span>(aq) + 2 NO<span class='sub'>3</span><span class='sup'>-1</span>(aq) + 2 Ag(s)", nie: "Cu(s) + 2 Ag<span class='sup'>+1</span>(aq) → Cu<span class='sup'>+2</span>(aq) + 2 Ag(s)", isCorrect: true, wrongParts: [], mistake: "Report is correct." }
+           
+       ];
+
+
+       let investigatorName = "";
+       let currentIndex = 0;
+       let points = 0;
+       let totalAttempts = 0;
+       let mistakesMade = 0;
+       let currentCaseMistakes = 0;
+       let selectedSpecies = new Set();
+       let selectedParts = new Set();
+       let struggles = {};
+
+
+       function startGame() {
+           const nameInput = document.getElementById('user-name-input').value.trim();
+           if (!nameInput) {
+               alert("Please enter your name to begin the investigation.");
+               return;
+           }
+           investigatorName = nameInput;
+           document.getElementById('display-name').innerText = investigatorName;
+           document.getElementById('start-screen').classList.add('hidden');
+           document.getElementById('game-ui').classList.remove('hidden');
+           updateUI();
+       }
+
+
+       function updateUI() {
+           const q = questions[currentIndex];
+           document.getElementById('current-num').innerText = currentIndex + 1;
+           document.getElementById('total-num').innerText = questions.length;
+           document.getElementById('description-text').innerText = q.description;
+           document.getElementById('scenario-title').innerText = q.title;
+           document.getElementById('badge-type').innerText = q.typeText;
+           document.getElementById('bce-box').innerHTML = q.bce;
+           document.getElementById('cie-box').innerHTML = q.cie;
+           document.getElementById('nie-box').innerHTML = q.nie;
+           document.getElementById('score').innerText = points;
+           selectedSpecies.clear();
+           selectedParts.clear();
+           currentCaseMistakes = 0;
+          
+           ['CIE', 'NIE'].forEach(p => {
+               const btn = document.getElementById(`btn-part-${p}`);
+               if(btn) btn.className = "flex-1 bg-white border-2 border-slate-300 p-3 rounded-lg font-bold transition-all";
+           });
+
+
+           showStep(1);
+       }
+
+
+       function showStep(step) {
+           document.querySelectorAll('.step-container').forEach(el => el.classList.remove('step-active'));
+           document.getElementById(`step-${step}`).classList.add('step-active');
+           document.getElementById('feedback-area').classList.add('hidden');
+          
+           // If going back to step 2 after a retry, hide the specific mistake steps
+           if(step === 2) {
+               document.getElementById('initial-actions').classList.remove('hidden');
+               document.getElementById('identify-mistake-step').classList.add('hidden');
+               document.getElementById('identify-specific-step').classList.add('hidden');
+           }
+       }
+
+
+       function rewardPoints(amt, isBonus = false) {
+           const adjustedAmt = Math.max(5, amt - (currentCaseMistakes * 10));
+           points += adjustedAmt;
+           document.getElementById('score').innerText = points;
+          
+           const pop = document.createElement('div');
+           pop.id = "score-pop";
+           pop.className = "text-green-600 font-bold text-lg";
+           pop.innerHTML = `+${adjustedAmt}${isBonus ? ' Bonus!' : ''}`;
+           document.getElementById('score').parentElement.appendChild(pop);
+           setTimeout(() => pop.remove(), 1000);
+       }
+
+
+       function trackMistake() {
+           mistakesMade++;
+           currentCaseMistakes++;
+           if (!struggles[currentIndex]) struggles[currentIndex] = 0;
+           struggles[currentIndex]++;
+       }
+
+
+       function handleTypeGuess(type) {
+           totalAttempts++;
+           const q = questions[currentIndex];
+           if (type === q.correctType) {
+               rewardPoints(50);
+               showStep(2);
+           } else {
+               trackMistake();
+               showFeedback(false, `Incorrect Reaction Type. Actually, this is a ${q.typeText} reaction.`, true);
+           }
+       }
+
+
+       function handleInitialGuess(userSaysCorrect) {
+           totalAttempts++;
+           const q = questions[currentIndex];
+           if (userSaysCorrect && q.isCorrect) {
+               rewardPoints(100, true);
+               showFeedback(true, "Great job! You confirmed this report is 100% correct.", false);
+           } else if (!userSaysCorrect && !q.isCorrect) {
+               rewardPoints(25);
+               document.getElementById('initial-actions').classList.add('hidden');
+               document.getElementById('identify-mistake-step').classList.remove('hidden');
+           } else if (userSaysCorrect && !q.isCorrect) {
+               trackMistake();
+               showFeedback(false, `You missed mistakes hidden in the report equations.`, true);
+           } else {
+               trackMistake();
+               showFeedback(false, "You flagged a mistake, but this report was actually correct!", true);
+           }
+       }
+
+
+       function togglePartSelection(part) {
+           const btn = document.getElementById(`btn-part-${part}`);
+           if (selectedParts.has(part)) {
+               selectedParts.delete(part);
+               btn.className = "flex-1 bg-white border-2 border-slate-300 p-3 rounded-lg font-bold transition-all";
+           } else {
+               selectedParts.add(part);
+               btn.className = "flex-1 border-2 border-blue-500 bg-blue-50 text-blue-600 p-3 rounded-lg font-bold transition-all shadow-inner";
+           }
+       }
+
+
+       function verifyPartSelection() {
+           totalAttempts++;
+           const q = questions[currentIndex];
+           const userSet = Array.from(selectedParts).sort();
+           const correctSet = [...q.wrongParts].sort();
+
+
+           const isMatch = userSet.length === correctSet.length && userSet.every((v, i) => v === correctSet[i]);
+
+
+           if (isMatch) {
+               rewardPoints(25);
+               document.getElementById('identify-mistake-step').classList.add('hidden');
+               document.getElementById('identify-specific-step').classList.remove('hidden');
+               setupSpeciesOptions();
+           } else {
+               trackMistake();
+               const msg = userSet.length < correctSet.length ? "You haven't found all the equations with errors." : "One of the equations you flagged is actually correct.";
+               showFeedback(false, msg, true);
+           }
+       }
+
+
+       function setupSpeciesOptions() {
+           const q = questions[currentIndex];
+           const optContainer = document.getElementById('mistake-options');
+           optContainer.innerHTML = '';
+          
+           q.mistakeOptions.forEach((opt, idx) => {
+               const btn = document.createElement('button');
+               btn.className = "opt-btn bg-white border-2 border-slate-200 hover:border-blue-400 p-4 rounded-lg font-bold transition-all text-sm latex-font";
+               btn.innerHTML = opt;
+               btn.id = `opt-${idx}`;
+               btn.onclick = () => {
+                   if (selectedSpecies.has(opt)) {
+                       selectedSpecies.delete(opt);
+                       btn.classList.remove('selected');
+                   } else {
+                       selectedSpecies.add(opt);
+                       btn.classList.add('selected');
+                   }
+               };
+               optContainer.appendChild(btn);
+           });
+       }
+
+
+       function verifySpeciesSelection() {
+           totalAttempts++;
+           const q = questions[currentIndex];
+          
+           const clean = (str) => str.replace(/<[^>]*>/g, "").replace(/\s+/g, "").toLowerCase();
+           const userSelections = Array.from(selectedSpecies).map(clean);
+           const correctSelections = q.specificMistakes.map(clean);
+
+
+           const foundAll = correctSelections.every(s => userSelections.includes(s));
+           const noExtras = userSelections.length === correctSelections.length;
+
+
+           if (foundAll && noExtras) {
+               rewardPoints(50, currentCaseMistakes === 0);
+               showFeedback(true, `Evidence gathered! All errors accounted for.`, false);
+           } else {
+               trackMistake();
+               const msg = userSelections.length < correctSelections.length
+                   ? "You haven't flagged all the specific errors yet."
+                   : "You flagged some species that aren't actually errors.";
+               showFeedback(false, msg, true);
+           }
+       }
+
+
+       function showFeedback(isSuccess, mainText, isRetry) {
+           const q = questions[currentIndex];
+           const area = document.getElementById('feedback-area');
+           const icon = document.getElementById('feedback-icon');
+           const txt = document.getElementById('feedback-text');
+           const correction = document.getElementById('correction-box');
+           const btn = document.getElementById('feedback-btn');
+
+
+           document.getElementById('step-1').classList.remove('step-active');
+           document.getElementById('step-2').classList.remove('step-active');
+           area.classList.remove('hidden');
+
+
+           if (isSuccess) {
+               area.className = "mt-8 p-6 rounded-xl border-4 bg-green-50 border-green-500 text-green-800";
+               icon.innerText = "⭐";
+               txt.innerText = "Case Resolved!";
+               btn.innerText = "Next Case →";
+               btn.onclick = nextQuestion;
+               correction.innerHTML = `<p>${q.mistake}</p>`;
+           } else {
+               area.className = "mt-8 p-6 rounded-xl border-4 bg-red-50 border-red-500 text-red-800";
+               icon.innerText = "❌";
+               txt.innerText = "Evidence Invalid";
+               btn.innerText = "Retry Case ⟲";
+               btn.onclick = updateUI;
+               correction.innerHTML = `<p class="font-bold">${mainText}</p><p class="mt-2 text-sm opacity-80">Check the equations and your reaction type logic carefully.</p>`;
+           }
+       }
+
+
+       function nextQuestion() {
+           currentIndex++;
+           if (currentIndex < questions.length) {
+               updateUI();
+           } else {
+               showEndScreen();
+           }
+       }
+
+
+       function showEndScreen() {
+           document.getElementById('game-ui').classList.add('hidden');
+           document.getElementById('end-screen').classList.remove('hidden');
+          
+           // Set Report Data
+           const accuracy = Math.round(((totalAttempts - mistakesMade) / totalAttempts) * 100);
+           document.getElementById('final-score').innerText = isNaN(accuracy) ? "0%" : (accuracy < 0 ? "0%" : accuracy + "%");
+           document.getElementById('final-points').innerText = points;
+           document.getElementById('final-name').innerText = investigatorName;
+           document.getElementById('final-date').innerText = new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
+
+
+           const list = document.getElementById('struggle-list');
+           const perfMsg = document.getElementById('perfect-msg');
+           list.innerHTML = '';
+          
+           const sortedStruggles = Object.entries(struggles).sort((a, b) => b[1] - a[1]);
+          
+           if (sortedStruggles.length === 0) {
+               perfMsg.classList.remove('hidden');
+           } else {
+               perfMsg.classList.add('hidden');
+               sortedStruggles.forEach(([idx, count]) => {
+                   const q = questions[idx];
+                   const item = document.createElement('div');
+                   item.className = "p-3 bg-slate-50 rounded border flex justify-between items-center";
+                   item.innerHTML = `
+                       <div class="flex-1">
+                           <span class="font-bold text-slate-800">Case ${q.id}:</span>
+                           <span class="text-slate-600">${q.title}</span>
+                           <div class="text-xs text-slate-400 mt-1 italic">${q.description}</div>
+                       </div>
+                       <div class="text-right">
+                            <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">${count} Mistakes Made</span>
+                       </div>
+                   `;
+                   list.appendChild(item);
+               });
+           }
+       }
+   </script>
+</body>
+</html>
