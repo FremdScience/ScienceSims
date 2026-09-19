@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classifying and Predicting Products Practice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; overflow-x: hidden; }
+        
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float {
+            0% { transform: translateY(0px) translateX(0px); }
+            50% { transform: translateY(-10px) translateX(5px); }
+            100% { transform: translateY(0px) translateX(0px); }
+        }
+
+        .animate-fade-in-down { animation: fadeInDown 0.8s ease-out forwards; }
+        .animate-fade-in-up { animation: fadeInUp 0.8s ease-out 0.2s forwards; opacity: 0; }
+        .floating-blob { position: absolute; border-radius: 50%; filter: blur(40px); z-index: -1; opacity: 0.15; animation: float 6s ease-in-out infinite; }
+
+        /* Chemistry Styling */
+        .formula { font-family: 'Times New Roman', Times, serif; font-style: italic; white-space: nowrap; display: inline-flex; align-items: baseline; font-size: 1.1rem; }
+        @media (min-width: 640px) { .formula { font-size: 1.4rem; } }
+        
+        .sub { font-size: 0.65em; line-height: 0; position: relative; bottom: -0.25em; font-style: normal; margin: 0 0.15em; font-weight: bold; }
+        .state { font-size: 0.7em; font-style: normal; color: #64748b; margin-left: 0.15em; font-weight: 800; }
+        
+        .glass-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 1.5rem; }
+        
+        .coeff-box { width: 2.8rem; height: 2.8rem; text-align: center; background: #fff; border: 3px solid #cbd5e1; border-radius: 0.8rem; font-weight: 900; font-size: 1.2rem; transition: all 0.2s; color: #1e293b; }
+        .coeff-box:focus { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2); outline: none; }
+
+        .btn-type { transition: all 0.2s; border: 2px solid #e2e8f0; background: white; font-weight: 700; padding: 0.75rem 0.25rem; border-radius: 0.75rem; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.025em; }
+        .btn-type.selected { background-color: #6366f1; color: white; border-color: #4f46e5; }
+
+        .predict-wrapper { position: relative; min-width: 120px; border-bottom: 3px solid #6366f1; margin: 0 0.25rem; }
+        .predict-input { width: 100%; background: transparent; border: none; outline: none; font-family: 'Times New Roman', Times, serif; font-style: italic; text-align: center; color: transparent; caret-color: #6366f1; font-size: 1.2rem; position: relative; z-index: 10; }
+        .predict-render { position: absolute; inset: 0; display: flex; align-items: baseline; justify-content: center; pointer-events: none; color: #4338ca; }
+
+        .operator { font-size: 1.4rem; font-weight: 700; color: #94a3b8; margin: 0 0.25rem; }
+
+        .charge-hint { font-size: 0.7rem; font-weight: 900; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; margin-left: 4px; border: 1px solid #fde68a; }
+        
+        /* Print Styles */
+        @media print {
+            body { background: white; }
+            nav, #type-selector, #no-rxn-toggle, #btn-action, #btn-next, #alert-container, .btn-print-container, #nav-back, #screen-entry, #streak-badge {
+                display: none !important;
+            }
+            .glass-card { box-shadow: none; border: 1px solid #ccc; }
+            #print-report { display: block !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen relative overflow-x-hidden">
+
+    <div class="floating-blob w-64 h-64 bg-indigo-400 top-10 left-10"></div>
+    <div class="floating-blob w-96 h-96 bg-emerald-300 bottom-10 right-10" style="animation-delay: -3s;"></div>
+
+    <!-- ENTRY SCREEN -->
+    <section id="screen-entry" class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div class="max-w-2xl w-full animate-fade-in-down">
+            <div class="flex justify-center mb-6">
+                <div class="bg-indigo-600 p-4 rounded-3xl shadow-xl rotate-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.641.32a2 2 0 01-1.536.107l-1.9-.712a2 2 0 00-1.576.124l-.69.345a2 2 0 00-1.022 1.29l-.33 1.647a2 2 0 001.961 2.393h10.17a2 2 0 001.962-2.393l-.33-1.647zm-4.72-9.155a3 3 0 11-4.416 4.416 3 3 0 014.416-4.416z" />
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tighter uppercase italic">
+                Classifying and Predicting <span class="text-indigo-600">Products</span>
+            </h1>
+            <p class="text-slate-500 font-bold uppercase tracking-widest text-sm mb-12">Chemical Reaction Simulation Portal</p>
+        </div>
+
+        <div class="glass-card max-w-md w-full p-8 animate-fade-in-up">
+            <div class="mb-6 text-left">
+                <label class="block text-xs font-black text-slate-400 uppercase mb-2 ml-1">Student Identification</label>
+                <input type="text" id="student-name-input" oninput="toggleStartBtn()" placeholder="Enter full name..." class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-5 py-4 font-bold text-lg focus:border-indigo-500 focus:ring-0 outline-none transition-all">
+            </div>
+            <button id="btn-start-sim" onclick="enterMenu()" disabled class="w-full bg-slate-200 text-slate-400 py-4 rounded-xl font-black text-lg uppercase tracking-widest transition-all cursor-not-allowed">
+                Start Simulation
+            </button>
+        </div>
+    </section>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="app-content" class="hidden">
+        <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-50 gap-4">
+            <div class="flex flex-col items-center md:items-start">
+                <div class="flex items-center gap-3">
+                    <button onclick="goMenu()" id="nav-back" class="hidden bg-slate-800 text-white px-3 py-1 rounded-md font-bold text-xs hover:bg-black transition">MENU</button>
+                    <div class="flex flex-col">
+                        <h1 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chemical Simulation</h1>
+                        <span id="display-student-name" class="text-sm font-black text-slate-800 uppercase italic"></span>
+                    </div>
+                </div>
+            </div>
+            <div id="stats-bar" class="hidden md:flex gap-6 text-xs font-black uppercase">
+                <div id="streak-badge" class="hidden items-center bg-orange-100 text-orange-700 px-3 py-1 rounded-full">
+                    🔥 STREAK: <span id="stat-streak" class="text-lg ml-1">0</span>
+                </div>
+                <span class="bg-slate-100 px-3 py-1 rounded-full text-slate-500">ATTEMPTS: <span id="stat-attempts" class="text-indigo-600 text-lg ml-1">0</span></span>
+                <span id="score-pill" class="bg-indigo-600 text-white px-6 py-1 rounded-full font-black shadow-md text-sm self-center">Score: 0</span>
+            </div>
+        </nav>
+
+        <main class="max-w-6xl mx-auto p-4">
+            <!-- Print Header -->
+            <div id="print-report" class="hidden text-center mb-8">
+                <h1 class="text-2xl font-black uppercase mb-2">Student Chemistry Performance Report</h1>
+                <p class="text-slate-500 font-bold uppercase mb-4">Student: <span id="print-student-name" class="text-slate-900 underline"></span></p>
+                <div id="print-summary" class="grid grid-cols-3 gap-4 border-y-2 border-slate-900 py-4 mb-4">
+                    <div><p class="text-xs font-bold uppercase">Final Score</p><p id="print-score" class="text-xl font-black">0</p></div>
+                    <div><p class="text-xs font-bold uppercase">Total Attempts</p><p id="print-attempts" class="text-xl font-black">0</p></div>
+                    <div><p class="text-xs font-bold uppercase">Accuracy</p><p id="print-accuracy" class="text-xl font-black">0%</p></div>
+                </div>
+            </div>
+
+            <!-- LEVEL SELECTION SCREEN -->
+            <div id="screen-menu" class="py-8 hidden">
+                <p class="text-center text-slate-500 font-bold uppercase tracking-widest text-sm mb-12">Select Practice Level</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <button onclick="startLevel(1)" class="glass-card p-6 text-left hover:border-indigo-500 transition border-2 border-transparent flex flex-col group">
+                        <span class="bg-indigo-100 text-indigo-700 text-[10px] font-black px-3 py-1 rounded-full uppercase self-start mb-4">Level 1</span>
+                        <h3 class="text-xl font-bold mb-2 group-hover:text-indigo-600">Identify & Balance</h3>
+                        <p class="text-slate-500 text-xs">Classify equations and find correct coefficients for provided products.</p>
+                    </button>
+                    <button onclick="startLevel(2)" class="glass-card p-6 text-left hover:border-emerald-500 transition border-2 border-transparent flex flex-col group">
+                        <span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase self-start mb-4">Level 2</span>
+                        <h3 class="text-xl font-bold mb-2 group-hover:text-emerald-600">Predict Products</h3>
+                        <p class="text-slate-500 text-xs">Predict outcomes for binary synthesis, chlorates, and basic ionic swaps.</p>
+                    </button>
+                    <button onclick="startLevel(3)" class="glass-card p-6 text-left hover:border-rose-500 transition border-2 border-transparent flex flex-col group h-full">
+                        <span class="bg-rose-100 text-rose-700 text-[10px] font-black px-3 py-1 rounded-full uppercase self-start mb-4">Level 3</span>
+                        <h3 class="text-xl font-bold mb-2 group-hover:text-rose-600 leading-tight">Predict products and no reaction scenarios</h3>
+                        <p class="text-slate-500 text-xs">Apply activity series and solubility rules to detect "No Reaction" cases.</p>
+                    </button>
+                </div>
+                
+                <div class="btn-print-container flex justify-center mt-8">
+                    <button onclick="printResults()" class="flex items-center gap-3 bg-white border-2 border-slate-200 px-8 py-3 rounded-2xl font-black text-slate-600 hover:bg-slate-50 transition shadow-sm active:scale-95 uppercase tracking-widest text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        Print Progress Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- LAB SCREEN -->
+            <div id="screen-lab" class="hidden space-y-4">
+                <div class="text-center">
+                    <div id="step-badge" class="bg-indigo-600 text-white text-[9px] font-black px-2.5 py-1 rounded-full inline-block uppercase tracking-widest mb-1">Step 1</div>
+                    <h2 id="instruction" class="text-xl font-black text-slate-900 uppercase italic leading-tight">Classify Reaction</h2>
+                </div>
+
+                <div id="type-selector" class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-2 px-2">
+                    <button data-type="S" onclick="selectType('S', this)" class="btn-type">Synthesis</button>
+                    <button data-type="D" onclick="selectType('D', this)" class="btn-type">Decomposition</button>
+                    <button data-type="SR" onclick="selectType('SR', this)" class="btn-type">Single Replacement</button>
+                    <button data-type="DR" onclick="selectType('DR', this)" class="btn-type">Double Replacement</button>
+                    <button data-type="C" onclick="selectType('C', this)" class="btn-type">Combustion</button>
+                </div>
+
+                <div class="flex flex-col items-center gap-2">
+                    <div class="glass-card w-full p-4 md:p-8 min-h-[160px] flex flex-col items-center justify-center relative overflow-hidden bg-white/50 backdrop-blur">
+                        <div id="equation-stage" class="flex flex-wrap justify-center items-center gap-2"></div>
+                    </div>
+                    
+                    <div id="no-rxn-toggle" class="flex justify-center h-10 opacity-0 pointer-events-none transition-all">
+                        <button id="btn-no-rxn" onclick="toggleNoRxn()" class="bg-slate-100 text-slate-500 border-2 border-slate-200 px-6 py-1 rounded-full font-black text-[10px] uppercase hover:bg-slate-200 transition-all">
+                            No Reaction?
+                        </button>
+                    </div>
+
+                    <div id="feedback" class="h-6 font-black uppercase text-center tracking-widest"></div>
+                    
+                    <div class="w-full max-w-md flex flex-col gap-2">
+                        <button id="btn-action" onclick="handlePrimaryAction()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-base hover:bg-indigo-600 transition-all shadow-lg active:scale-95 uppercase tracking-widest">Check Answer</button>
+                        <button id="btn-next" onclick="nextProblem()" class="hidden w-full bg-emerald-600 text-white py-4 rounded-2xl font-black text-base hover:bg-emerald-700 transition-all shadow-lg uppercase tracking-widest">Next Problem &rarr;</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl flex flex-col items-center text-center">
+            <div id="modal-icon" class="text-6xl font-black mb-2 text-rose-500">×</div>
+            <h3 id="modal-title" class="text-2xl font-black mb-6 uppercase">Incorrect</h3>
+            <div class="w-full bg-indigo-50 border-l-4 border-indigo-500 p-5 rounded-lg mb-8 text-left">
+                <p class="text-indigo-900 font-black text-xs uppercase mb-1">Simulation Guidance:</p>
+                <p id="modal-hint" class="text-indigo-800 text-sm font-medium italic"></p>
+            </div>
+            <button id="modal-btn-primary" onclick="closeModal()" class="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 transition shadow-lg active:scale-95 uppercase">Continue Study</button>
+            <button id="modal-btn-menu" onclick="closeModalToMenu()" class="hidden w-full mt-2 bg-slate-200 text-slate-700 font-black py-4 rounded-xl hover:bg-slate-300 transition uppercase">Return to Level Selection</button>
+        </div>
+    </div>
+
+    <script>
+        const DB = [
+            // LEVEL 1: Identification & Balancing
+            { level: 1, type: 'S', reactants: ['Cs(s)', 'Cl2(g)'], products: ['CsCl(s)'], ans: '2, 1, 2' },
+            { level: 1, type: 'S', reactants: ['H2(g)', 'O2(g)'], products: ['H2O(l)'], ans: '2, 1, 2' },
+            { level: 1, type: 'S', reactants: ['Al(s)', 'O2(g)'], products: ['Al2O3(s)'], ans: '4, 3, 2' },
+            { level: 1, type: 'S', reactants: ['Na(s)', 'I2(s)'], products: ['NaI(s)'], ans: '2, 1, 2' },
+            { level: 1, type: 'S', reactants: ['N2(g)', 'H2(g)'], products: ['NH3(g)'], ans: '1, 3, 2' },
+            { level: 1, type: 'S', reactants: ['P4(s)', 'Cl2(g)'], products: ['PCl3(l)'], ans: '1, 6, 4' },
+            { level: 1, type: 'S', reactants: ['Mg(s)', 'O2(g)'], products: ['MgO(s)'], ans: '2, 1, 2' },
+            { level: 1, type: 'S', reactants: ['Ca(s)', 'Cl2(g)'], products: ['CaCl2(s)'], ans: '1, 1, 1' },
+            { level: 1, type: 'D', reactants: ['KCl(s)'], products: ['K(s)', 'Cl2(g)'], ans: '2, 2, 1' },
+            { level: 1, type: 'D', reactants: ['LiClO3(s)'], products: ['LiCl(s)', 'O2(g)'], ans: '2, 2, 3' },
+            { level: 1, type: 'D', reactants: ['MgCO3(s)'], products: ['MgO(s)', 'CO2(g)'], ans: '1, 1, 1' },
+            { level: 1, type: 'D', reactants: ['Ag2O(s)'], products: ['Ag(s)', 'O2(g)'], ans: '2, 4, 1' },
+            { level: 1, type: 'D', reactants: ['H2O2(l)'], products: ['H2O(l)', 'O2(g)'], ans: '2, 2, 1' },
+            { level: 1, type: 'D', reactants: ['NH4NO3(s)'], products: ['N2O(g)', 'H2O(g)'], ans: '1, 1, 2' },
+            { level: 1, type: 'D', reactants: ['NaHCO3(s)'], products: ['Na2CO3(s)', 'H2O(g)', 'CO2(g)'], ans: '2, 1, 1, 1' },
+            { level: 1, type: 'D', reactants: ['HgO(s)'], products: ['Hg(l)', 'O2(g)'], ans: '2, 2, 1' },
+            { level: 1, type: 'SR', reactants: ['K(s)', 'MgCl2(aq)'], products: ['KCl(aq)', 'Mg(s)'], ans: '2, 1, 2, 1' },
+            { level: 1, type: 'SR', reactants: ['Zn(s)', 'HCl(aq)'], products: ['ZnCl2(aq)', 'H2(g)'], ans: '1, 2, 1, 1' },
+            { level: 1, type: 'SR', reactants: ['Mg(s)', 'AgNO3(aq)'], products: ['Mg(NO3)2(aq)', 'Ag(s)'], ans: '1, 2, 1, 2' },
+            { level: 1, type: 'SR', reactants: ['Al(s)', 'CuSO4(aq)'], products: ['Al2(SO4)3(aq)', 'Cu(s)'], ans: '2, 3, 1, 3' },
+            { level: 1, type: 'SR', reactants: ['Cu(s)', 'AgNO3(aq)'], products: ['Cu(NO3)2(aq)', 'Ag(s)'], ans: '1, 2, 1, 2' },
+            { level: 1, type: 'DR', reactants: ['K2SO4(aq)', 'Ba(NO3)2(aq)'], products: ['KNO3(aq)', 'BaSO4(s)'], ans: '1, 1, 2, 1' },
+            { level: 1, type: 'DR', reactants: ['AgNO3(aq)', 'K2CrO4(aq)'], products: ['Ag2CrO4(s)', 'KNO3(aq)'], ans: '2, 1, 1, 2' },
+            { level: 1, type: 'DR', reactants: ['KOH(aq)', 'H2SO4(aq)'], products: ['K2SO4(aq)', 'H2O(l)'], ans: '2, 1, 1, 2' },
+            { level: 1, type: 'DR', reactants: ['NaOH(aq)', 'FeCl3(aq)'], products: ['NaCl(aq)', 'Fe(OH)3(s)'], ans: '3, 1, 3, 1' },
+            { level: 1, type: 'C', reactants: ['C3H8(g)', 'O2(g)'], products: ['H2O(g)', 'CO2(g)'], ans: '1, 5, 4, 3' },
+            { level: 1, type: 'C', reactants: ['C2H6(g)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '2, 7, 4, 6' },
+            { level: 1, type: 'C', reactants: ['CH4(g)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '1, 2, 1, 2' },
+            { level: 1, type: 'C', reactants: ['C4H10(g)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '2, 13, 8, 10' },
+
+            // LEVEL 2: Predicting Simple Products
+            { level: 2, type: 'S', reactants: ['Li(s)', 'N2(g)'], products: ['Li3N(s)'], ans: '6, 1, 2' },
+            { level: 2, type: 'S', reactants: ['Mg(s)', 'Br2(l)'], products: ['MgBr2(s)'], ans: '1, 1, 1' },
+            { level: 2, type: 'S', reactants: ['Ca(s)', 'O2(g)'], products: ['CaO(s)'], ans: '2, 1, 2' },
+            { level: 2, type: 'S', reactants: ['Al(s)', 'I2(s)'], products: ['AlI3(s)'], ans: '2, 3, 2' },
+            { level: 2, type: 'S', reactants: ['Ba(s)', 'Cl2(g)'], products: ['BaCl2(s)'], ans: '1, 1, 1' },
+            { level: 2, type: 'S', reactants: ['Sr(s)', 'O2(g)'], products: ['SrO(s)'], ans: '2, 1, 2' },
+            { level: 2, type: 'S', reactants: ['K(s)', 'S(s)'], products: ['K2S(s)'], ans: '2, 1, 1' },
+            { level: 2, type: 'S', reactants: ['H2(g)', 'O2(g)'], products: ['H2O(l)'], ans: '2, 1, 2' },
+            { level: 2, type: 'D', reactants: ['CuCO3(s)'], products: ['CuO(s)', 'CO2(g)'], ans: '1, 1, 1', hint: "Cu²⁺" },
+            { level: 2, type: 'D', reactants: ['Na2CO3(s)'], products: ['Na2O(s)', 'CO2(g)'], ans: '1, 1, 1' },
+            { level: 2, type: 'D', reactants: ['Ba(ClO3)2(s)'], products: ['BaCl2(s)', 'O2(g)'], ans: '1, 1, 3' },
+            { level: 2, type: 'D', reactants: ['KClO3(s)'], products: ['KCl(s)', 'O2(g)'], ans: '2, 2, 3' },
+            { level: 2, type: 'D', reactants: ['Ca(OH)2(s)'], products: ['CaO(s)', 'H2O(g)'], ans: '1, 1, 1' },
+            { level: 2, type: 'D', reactants: ['Mg(OH)2(s)'], products: ['MgO(s)', 'H2O(g)'], ans: '1, 1, 1' },
+            { level: 2, type: 'D', reactants: ['Ag2O(s)'], products: ['Ag(s)', 'O2(g)'], ans: '2, 4, 1' },
+            { level: 2, type: 'D', reactants: ['Au2O3(s)'], products: ['Au(s)', 'O2(g)'], ans: '2, 4, 3', hint: "Au³⁺" },
+            { level: 2, type: 'SR', reactants: ['Li(s)', 'H2O(l)'], products: ['LiOH(aq)', 'H2(g)'], ans: '2, 2, 2, 1' },
+            { level: 2, type: 'SR', reactants: ['Zn(s)', 'CuSO4(aq)'], products: ['ZnSO4(aq)', 'Cu(s)'], ans: '1, 1, 1, 1' },
+            { level: 2, type: 'SR', reactants: ['Ca(s)', 'HCl(aq)'], products: ['CaCl2(aq)', 'H2(g)'], ans: '1, 2, 1, 1' },
+            { level: 2, type: 'SR', reactants: ['Mg(s)', 'FeCl2(aq)'], products: ['MgCl2(aq)', 'Fe(s)'], ans: '1, 1, 1, 1' },
+            { level: 2, type: 'SR', reactants: ['Cl2(g)', 'NaBr(aq)'], products: ['NaCl(aq)', 'Br2(l)'], ans: '1, 2, 2, 1' },
+            { level: 2, type: 'DR', reactants: ['AgNO3(aq)', 'NaCl(aq)'], products: ['AgCl(s)', 'NaNO3(aq)'], ans: '1, 1, 1, 1' },
+            { level: 2, type: 'DR', reactants: ['Pb(NO3)2(aq)', 'KI(aq)'], products: ['PbI2(s)', 'KNO3(aq)'], ans: '1, 2, 1, 2', hint: "Pb²⁺" },
+            { level: 2, type: 'DR', reactants: ['Na2SO4(aq)', 'BaCl2(aq)'], products: ['BaSO4(s)', 'NaCl(aq)'], ans: '1, 1, 1, 2' },
+            { level: 2, type: 'DR', reactants: ['NaOH(aq)', 'H3PO4(aq)'], products: ['Na3PO4(aq)', 'H2O(l)'], ans: '3, 1, 1, 3' },
+            { level: 2, type: 'C', reactants: ['CH3OH(l)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '2, 3, 2, 4' },
+            { level: 2, type: 'C', reactants: ['C2H2(g)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '2, 5, 4, 2' },
+            { level: 2, type: 'C', reactants: ['C5H12(g)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '1, 8, 5, 6' },
+
+            // LEVEL 3: Logic & "No Reaction"
+            { level: 3, type: 'S', reactants: ['CaO(s)', 'H2O(l)'], products: ['Ca(OH)2(s)'], ans: '1, 1, 1' },
+            { level: 3, type: 'S', reactants: ['SO3(g)', 'H2O(l)'], products: ['H2SO4(aq)'], ans: '1, 1, 1' },
+            { level: 3, type: 'S', reactants: ['MgO(s)', 'CO2(g)'], products: ['MgCO3(s)'], ans: '1, 1, 1' },
+            { level: 3, type: 'S', reactants: ['Li2O(s)', 'H2O(l)'], products: ['LiOH(aq)'], ans: '1, 1, 2' },
+            { level: 3, type: 'S', reactants: ['Fe(s)', 'O2(g)'], products: ['Fe2O3(s)'], ans: '4, 3, 2', hint: "Fe³⁺" },
+            { level: 3, type: 'S', reactants: ['P2O5(s)', 'H2O(l)'], products: ['H3PO4(aq)'], ans: '1, 3, 2' },
+            { level: 3, type: 'D', reactants: ['H2SO4(aq)'], products: ['SO2(g)', 'H2O(l)', 'O2(g)'], ans: '2, 2, 2, 1' },
+            { level: 3, type: 'D', reactants: ['Fe(OH)3(s)'], products: ['Fe2O3(s)', 'H2O(g)'], ans: '2, 1, 3', hint: "Fe³⁺" },
+            { level: 3, type: 'D', reactants: ['Al2(SO4)3(s)'], products: ['Al2O3(s)', 'SO3(g)'], ans: '1, 1, 3' },
+            { level: 3, type: 'D', reactants: ['HNO3(aq)'], products: ['NO2(g)', 'H2O(l)', 'O2(g)'], ans: '4, 4, 2, 1' },
+            { level: 3, type: 'SR', reactants: ['Cu(s)', 'AgNO3(aq)'], products: ['Cu(NO3)2(aq)', 'Ag(s)'], ans: '1, 2, 1, 2', hint: "Cu²⁺" },
+            { level: 3, type: 'SR', reactants: ['F2(g)', 'NaCl(aq)'], products: ['NaF(aq)', 'Cl2(g)'], ans: '1, 2, 2, 1' },
+            { level: 3, type: 'SR', reactants: ['Al(s)', 'Fe2O3(s)'], products: ['Al2O3(s)', 'Fe(s)'], ans: '2, 1, 1, 2' },
+            { level: 3, type: 'SR', reactants: ['Br2(l)', 'KI(aq)'], products: ['KBr(aq)', 'I2(s)'], ans: '1, 2, 2, 1' },
+            { level: 3, type: 'SR', reactants: ['Na(s)', 'MgCl2(aq)'], products: ['NaCl(aq)', 'Mg(s)'], ans: '2, 1, 2, 1' },
+            { level: 3, type: 'SR', reactants: ['Ag(s)', 'Cu(NO3)2(aq)'], products: ['No Reaction'], ans: '1, 1, 1' },
+            { level: 3, type: 'SR', reactants: ['Cl2(g)', 'NaF(aq)'], products: ['No Reaction'], ans: '1, 1, 1' },
+            { level: 3, type: 'SR', reactants: ['Au(s)', 'HCl(aq)'], products: ['No Reaction'], ans: '1, 1, 1' },
+            { level: 3, type: 'SR', reactants: ['Zn(s)', 'MgCl2(aq)'], products: ['No Reaction'], ans: '1, 1, 1' },
+            { level: 3, type: 'SR', reactants: ['I2(s)', 'KCl(aq)'], products: ['No Reaction'], ans: '1, 1, 1' },
+            { level: 3, type: 'SR', reactants: ['Sn(s)', 'NaNO3(aq)'], products: ['No Reaction'], ans: '1, 1, 1' },
+            { level: 3, type: 'DR', reactants: ['KI(aq)', 'Pb(NO3)2(aq)'], products: ['PbI2(s)', 'KNO3(aq)'], ans: '2, 1, 1, 2', hint: "Pb²⁺" },
+            { level: 3, type: 'DR', reactants: ['FeCl3(aq)', 'AgNO3(aq)'], products: ['AgCl(s)', 'Fe(NO3)3(aq)'], ans: '1, 3, 3, 1', hint: "Fe³⁺" },
+            { level: 3, type: 'DR', reactants: ['Na2CO3(aq)', 'CaCl2(aq)'], products: ['CaCO3(s)', 'NaCl(aq)'], ans: '1, 1, 1, 2' },
+            { level: 3, type: 'DR', reactants: ['(NH4)2S(aq)', 'Cd(NO3)2(aq)'], products: ['CdS(s)', 'NH4NO3(aq)'], ans: '1, 1, 1, 2' },
+            { level: 3, type: 'DR', reactants: ['AgNO3(aq)', 'K3PO4(aq)'], products: ['Ag3PO4(s)', 'KNO3(aq)'], ans: '3, 1, 1, 3' },
+            { level: 3, type: 'DR', reactants: ['CuSO4(aq)', 'Na2S(aq)'], products: ['CuS(s)', 'Na2SO4(aq)'], ans: '1, 1, 1, 1', hint: "Cu²⁺" },
+            { level: 3, type: 'DR', reactants: ['KNO3(aq)', 'NaCl(aq)'], products: ['No Reaction'], ans: '1, 1, 1' },
+            { level: 3, type: 'DR', reactants: ['NaOH(aq)', 'KCl(aq)'], products: ['No Reaction'], ans: '1, 1, 1' },
+            { level: 3, type: 'C', reactants: ['C6H6(l)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '2, 15, 12, 6' },
+            { level: 3, type: 'C', reactants: ['C2H5OH(l)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '1, 3, 2, 3' },
+            { level: 3, type: 'C', reactants: ['C8H18(l)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '2, 25, 16, 18' },
+            { level: 3, type: 'C', reactants: ['C6H12O6(s)', 'O2(g)'], products: ['CO2(g)', 'H2O(g)'], ans: '1, 6, 6, 6' }
+        ];
+
+        let state = {
+            studentName: "",
+            level: 1, step: 1, current: null, score: 0,
+            selectedType: null, isNoRxn: false,
+            attempts: 0, corrects: 0, streak: 0,
+            inputs: { coeffs: [], predicts: [] },
+            shuffledPool: []
+        };
+
+        function toggleStartBtn() {
+            const name = document.getElementById('student-name-input').value.trim();
+            const btn = document.getElementById('btn-start-sim');
+            if (name.length > 2) {
+                btn.disabled = false;
+                btn.className = "w-full bg-indigo-600 text-white py-4 rounded-xl font-black text-lg uppercase tracking-widest transition-all hover:bg-indigo-700 active:scale-95 shadow-lg shadow-indigo-200 cursor-pointer";
+            } else {
+                btn.disabled = true;
+                btn.className = "w-full bg-slate-200 text-slate-400 py-4 rounded-xl font-black text-lg uppercase tracking-widest transition-all cursor-not-allowed";
+            }
+        }
+
+        function enterMenu() {
+            state.studentName = document.getElementById('student-name-input').value.trim();
+            document.getElementById('display-student-name').innerText = state.studentName;
+            document.getElementById('screen-entry').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+        }
+
+        function startLevel(lvl) {
+            state.level = lvl;
+            state.score = 0;
+            state.streak = 0;
+            state.shuffledPool = [];
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-lab').classList.remove('hidden');
+            document.getElementById('nav-back').classList.remove('hidden');
+            document.getElementById('stats-bar').classList.remove('hidden');
+            document.getElementById('streak-badge').classList.add('hidden');
+            nextProblem();
+        }
+
+        function formatChem(text) {
+            if (!text || text === "No Reaction") return text || "";
+            return text.replace(/(\((s|l|g|aq)\))/g, '<span class="state">$1</span>')
+                       .replace(/(\d+)(?![^(]*\))/g, '<span class="sub">$1</span>');
+        }
+
+        function shuffle(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function nextProblem() {
+            if (state.shuffledPool.length === 0) {
+                state.shuffledPool = shuffle(DB.filter(d => d.level === state.level));
+            }
+            state.current = state.shuffledPool.pop();
+            state.step = 1;
+            state.selectedType = null;
+            state.isNoRxn = false;
+            
+            document.getElementById('feedback').innerText = "";
+            document.getElementById('btn-next').classList.add('hidden');
+            document.getElementById('btn-action').classList.remove('hidden');
+            document.querySelectorAll('.btn-type').forEach(b => b.classList.remove('selected'));
+            
+            const btn = document.getElementById('btn-no-rxn');
+            btn.className = "bg-slate-100 text-slate-500 border-2 border-slate-200 px-6 py-1 rounded-full font-black text-[10px] uppercase hover:bg-slate-200 transition-all";
+
+            renderLab();
+            updateUI();
+        }
+
+        function renderLab() {
+            const stage = document.getElementById('equation-stage');
+            stage.innerHTML = "";
+            state.inputs.coeffs = [];
+            state.inputs.predicts = [];
+
+            state.current.reactants.forEach((r, idx) => {
+                stage.appendChild(createPart(r, true));
+                if (idx < state.current.reactants.length - 1) stage.appendChild(createOp('+'));
+            });
+
+            stage.appendChild(createOp('&rarr;'));
+
+            if (state.level === 1) {
+                state.current.products.forEach((p, idx) => {
+                    stage.appendChild(createPart(p, true));
+                    if (idx < state.current.products.length - 1) stage.appendChild(createOp('+'));
+                });
+            } else {
+                let productCount = state.current.products.length;
+                if (state.current.products[0] === "No Reaction") productCount = 2;
+                for (let i = 0; i < productCount; i++) {
+                    stage.appendChild(createPart("", false, true));
+                    if (i < productCount - 1) stage.appendChild(createOp('+'));
+                }
+            }
+        }
+
+        function createPart(formula, isStatic, isPredict = false) {
+            const wrap = document.createElement('div');
+            wrap.className = "flex items-center";
+            const cIn = document.createElement('input');
+            cIn.type = 'number'; cIn.className = "coeff-box";
+            state.inputs.coeffs.push(cIn);
+            wrap.appendChild(cIn);
+
+            if (isStatic) {
+                const fWrap = document.createElement('div');
+                fWrap.className = "flex items-center ml-2";
+                
+                const f = document.createElement('span');
+                f.className = "formula font-bold";
+                f.innerHTML = formatChem(formula);
+                fWrap.appendChild(f);
+
+                if (state.current.hint && state.level >= 2 && formula.match(/^(Fe|Cu|Pb|Sn|Au|Ag|Ni|Cr|Mn)/)) {
+                    const h = document.createElement('span');
+                    h.className = "charge-hint transition-opacity duration-300";
+                    h.innerText = state.current.hint;
+                    h.id = `hint-${formula}`;
+                    fWrap.appendChild(h);
+                }
+                
+                wrap.appendChild(fWrap);
+            } else if (isPredict) {
+                const pWrap = document.createElement('div');
+                pWrap.className = "predict-wrapper ml-2";
+                const pIn = document.createElement('input');
+                pIn.className = "predict-input";
+                const pRen = document.createElement('div');
+                pRen.className = "predict-render formula font-bold";
+                pIn.oninput = (e) => pRen.innerHTML = formatChem(e.target.value);
+                state.inputs.predicts.push(pIn);
+                pWrap.appendChild(pIn);
+                pWrap.appendChild(pRen);
+                wrap.appendChild(pWrap);
+            }
+            return wrap;
+        }
+
+        function createOp(sym) {
+            const s = document.createElement('span');
+            s.className = "operator";
+            s.innerHTML = sym;
+            return s;
+        }
+
+        function selectType(type, btn) {
+            state.selectedType = type;
+            document.querySelectorAll('.btn-type').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        }
+
+        function updateUI() {
+            const badge = document.getElementById('step-badge');
+            const instr = document.getElementById('instruction');
+            const nrToggle = document.getElementById('no-rxn-toggle');
+
+            state.inputs.coeffs.forEach(c => c.disabled = true);
+            state.inputs.predicts.forEach(p => p.disabled = true);
+
+            const hints = document.querySelectorAll('.charge-hint');
+            hints.forEach(h => {
+                h.style.opacity = (state.step === 2) ? "1" : "0.4";
+            });
+
+            if (state.step === 1) {
+                badge.innerText = "Step 1"; instr.innerText = "Classify Reaction";
+                nrToggle.style.opacity = "0"; nrToggle.style.pointerEvents = "none";
+            } else if (state.step === 2 && state.level > 1) {
+                badge.innerText = "Step 2"; instr.innerText = "Predict Products";
+                state.inputs.predicts.forEach(p => p.disabled = false);
+                if (['SR', 'DR'].includes(state.current.type)) {
+                    nrToggle.style.opacity = "1"; nrToggle.style.pointerEvents = "auto";
+                }
+            } else {
+                badge.innerText = "Step 3"; instr.innerText = "Balance Equation";
+                state.inputs.coeffs.forEach(c => c.disabled = false);
+                nrToggle.style.opacity = "0";
+            }
+        }
+
+        function handlePrimaryAction() {
+            state.attempts++;
+            if (state.step === 1) {
+                if (state.selectedType === state.current.type) {
+                    state.corrects++; state.step = 2;
+                    notify("Correct Type!", "text-emerald-600"); updateUI();
+                } else {
+                    state.streak = 0;
+                    showError("Classification", "Identify the reaction pattern first.");
+                }
+            } else if (state.step === 2 && state.level > 1) {
+                checkPredict();
+            } else checkBalance();
+            updateStats();
+        }
+
+        function checkPredict() {
+            if (state.isNoRxn) {
+                if (state.current.products[0] === "No Reaction") {
+                    state.corrects++; notify("Correct! No reaction occurs.", "text-emerald-600"); 
+                    state.streak++;
+                    finishProblem();
+                } else {
+                    state.streak = 0;
+                    showError("No Reaction?", "This reaction does proceed. Try predicting the products.");
+                }
+                return;
+            }
+            const user = state.inputs.predicts.map(p => p.value.toLowerCase().replace(/\s/g, ''));
+            const target = state.current.products.map(p => p.toLowerCase().replace(/\s/g, ''));
+            
+            const isMatch = target.every(t => {
+                const foundInUser = user.find(u => {
+                    if (state.current.type === 'C' && (t.includes('h2o'))) {
+                        return u.includes('h2o') && (u.includes('(g)') || u.includes('(l)'));
+                    }
+                    if (['S', 'D'].includes(state.current.type)) {
+                        const baseT = t.replace('(s)', '').replace('(aq)', '').replace('(l)', '').replace('(g)', '');
+                        const baseU = u.replace('(s)', '').replace('(aq)', '').replace('(l)', '').replace('(g)', '');
+                        if (baseT === baseU) return true;
+                    }
+                    return u === t;
+                });
+                return !!foundInUser;
+            });
+
+            if (isMatch && user.length === target.length) {
+                state.corrects++; state.step = 3; notify("Correct Products!", "text-emerald-600"); updateUI();
+            } else {
+                state.streak = 0;
+                showError("Prediction", "Formulas or states are incorrect. Ensure you include states of matter.");
+            }
+        }
+
+        function checkBalance() {
+            const user = state.inputs.coeffs.map(c => c.value || "1").join(", ");
+            if (user === state.current.ans) {
+                state.corrects++; 
+                state.streak++;
+                notify("Balanced!", "text-emerald-600"); 
+                finishProblem();
+            } else {
+                state.streak = 0;
+                showError("Balancing", "Atom counts don't match on both sides.");
+            }
+        }
+
+        function notify(msg, colorClass) {
+            const f = document.getElementById('feedback');
+            f.innerText = msg;
+            f.className = `h-6 font-black uppercase text-center tracking-widest ${colorClass}`;
+        }
+
+        function finishProblem() {
+            state.score += 10;
+            document.getElementById('score-pill').innerText = `Score: ${state.score}`;
+            document.getElementById('btn-action').classList.add('hidden');
+            document.getElementById('btn-next').classList.remove('hidden');
+            
+            if (state.streak >= 5 && state.level < 3) {
+                showPromotionModal();
+            }
+        }
+
+        function showError(title, hint) {
+            document.getElementById('modal-icon').innerText = "×";
+            document.getElementById('modal-icon').className = "text-6xl font-black mb-2 text-rose-500";
+            document.getElementById('modal-title').innerText = `Incorrect ${title}`;
+            document.getElementById('modal-hint').innerText = hint;
+            document.getElementById('modal-btn-menu').classList.add('hidden');
+            document.getElementById('feedback-modal').classList.remove('hidden');
+        }
+
+        function showPromotionModal() {
+            document.getElementById('modal-icon').innerText = "🔥";
+            document.getElementById('modal-icon').className = "text-6xl font-black mb-2";
+            document.getElementById('modal-title').innerText = "Great Job!";
+            document.getElementById('modal-hint').innerText = `You've gotten ${state.streak} problems right in a row! You're clearly mastering Level ${state.level}. Ready to challenge yourself with Level ${state.level + 1}?`;
+            document.getElementById('modal-btn-menu').classList.remove('hidden');
+            document.getElementById('feedback-modal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('feedback-modal').classList.add('hidden'); }
+        
+        function closeModalToMenu() {
+            closeModal();
+            goMenu();
+        }
+
+        function toggleNoRxn() {
+            state.isNoRxn = !state.isNoRxn;
+            const btn = document.getElementById('btn-no-rxn');
+            btn.className = state.isNoRxn ? 
+                "bg-rose-600 text-white border-2 border-rose-600 px-6 py-1 rounded-full font-black text-[10px] uppercase shadow-md" :
+                "bg-slate-100 text-slate-500 border-2 border-slate-200 px-6 py-1 rounded-full font-black text-[10px] uppercase hover:bg-slate-200 transition-all";
+            state.inputs.predicts.forEach(p => p.style.opacity = state.isNoRxn ? "0.3" : "1");
+        }
+
+        function updateStats() {
+            document.getElementById('stat-attempts').innerText = state.attempts;
+            document.getElementById('stat-streak').innerText = state.streak;
+            if (state.streak > 0) {
+                document.getElementById('streak-badge').classList.remove('hidden');
+                document.getElementById('streak-badge').classList.add('flex');
+            } else {
+                document.getElementById('streak-badge').classList.add('hidden');
+                document.getElementById('streak-badge').classList.remove('flex');
+            }
+        }
+
+        function goMenu() {
+            document.getElementById('screen-lab').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+            document.getElementById('nav-back').classList.add('hidden');
+            document.getElementById('streak-badge').classList.add('hidden');
+        }
+
+        function printResults() {
+            const acc = state.attempts ? Math.round((state.corrects / state.attempts) * 100) : 0;
+            document.getElementById('print-student-name').innerText = state.studentName;
+            document.getElementById('print-score').innerText = state.score;
+            document.getElementById('print-attempts').innerText = state.attempts;
+            document.getElementById('print-accuracy').innerText = `${acc}%`;
+            window.print();
+        }
+    </script>
+</body>
+</html>
