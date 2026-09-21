@@ -55,4 +55,33 @@ assert.throws(() => model.calorimetry({ material: "water", solidMass: 100, energ
 assert.throws(() => model.calorimetry({ material: "iron", solidMass: 100, waterMass: 400, heatingChoice: "target-temperature", targetTemperature: 20 }), /above the starting temperature/);
 assert.throws(() => model.calorimetry({ material: "iron", solidMass: 100, waterMass: 400, heatingChoice: "unknown", energy: 2090 }), /Unknown calorimetry heating choice/);
 
-console.log("Energy model tests passed: 4.184 water constant, direct-heating checks, comparison patterns, equilibrium bounds, and energy conservation.");
+const targetChallenge = model.predictTargetChallenge({
+  material: "aluminum",
+  solidMass: 100,
+  solidTemperature: 90,
+  waterVolume: 100,
+  waterTemperature: 20,
+  targetDelta: 5
+});
+const expectedFinal = (100 * 0.90 * 90 + 100 * 4.184 * 20) / (100 * 0.90 + 100 * 4.184);
+assert.ok(Math.abs(targetChallenge.finalTemperature - expectedFinal) < 1e-12);
+assert.ok(Math.abs(targetChallenge.waterDelta - (expectedFinal - 20)) < 1e-12);
+assert.ok(Math.abs(targetChallenge.energyGainedByWater - targetChallenge.energyLostBySolid) < 1e-8);
+assert.equal(targetChallenge.waterMass, 100, "The target challenge treats 1.0 mL water as 1.0 g water.");
+
+const roundedFiveDegreeDesign = model.predictTargetChallenge({ material: "aluminum", solidMass: 36, solidTemperature: 90, waterVolume: 100, waterTemperature: 20 });
+assert.equal(roundedFiveDegreeDesign.roundedWaterDelta, 5.0, "The controls must allow a design that displays the +5.0 °C target.");
+assert.equal(roundedFiveDegreeDesign.roundedDistanceFromTarget, 0.0);
+
+const onePiece = model.predictTargetChallenge({ material: "iron", solidMass: 25, solidTemperature: 90, waterVolume: 100, waterTemperature: 20 });
+const severalPieces = model.predictTargetChallenge({ material: "iron", solidMass: 75, solidTemperature: 90, waterVolume: 100, waterTemperature: 20 });
+assert.ok(severalPieces.waterDelta > onePiece.waterDelta, "More total metal mass should produce a larger water temperature change when other variables remain constant.");
+
+const lessWaterTarget = model.predictTargetChallenge({ material: "copper", solidMass: 100, solidTemperature: 90, waterVolume: 50, waterTemperature: 20 });
+const moreWaterTarget = model.predictTargetChallenge({ material: "copper", solidMass: 100, solidTemperature: 90, waterVolume: 150, waterTemperature: 20 });
+assert.ok(lessWaterTarget.waterDelta > moreWaterTarget.waterDelta, "A smaller water volume should have a larger temperature change when other variables remain constant.");
+
+assert.throws(() => model.predictTargetChallenge({ material: "granite", solidMass: 100, solidTemperature: 90, waterVolume: 100, waterTemperature: 20 }), /aluminum, copper, or iron/);
+assert.throws(() => model.predictTargetChallenge({ material: "iron", solidMass: 100, solidTemperature: 20, waterVolume: 100, waterTemperature: 20 }), /warmer than the water/);
+
+console.log("Energy model tests passed: 4.184 water constant, direct heating, calorimetry, target-lab sliders, equilibrium bounds, and energy conservation.");

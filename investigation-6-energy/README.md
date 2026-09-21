@@ -37,6 +37,17 @@ The simulation has no external dependencies, login, account, analytics, cloud se
 - Separate solid and water temperature readings plus current-session trial history
 - Brief, skippable heating and transfer animations
 
+Calorimetry now contains two activity views. **Investigation 6** preserves the original packet-aligned controls above. **Target Challenge** is a lab-planning tool with:
+
+- Aluminum, copper, or iron
+- A total-metal-mass slider from 5–250 g in 1 g steps, supporting either one piece or several pieces
+- A water-volume slider from 25–250 mL in 5 mL steps; the model uses 1.00 g/mL for water
+- A metal starting-temperature slider from 40–100 °C in 1 °C steps
+- A water starting-temperature slider from 15–30 °C in 0.5 °C steps
+- Live ideal-model predictions for final temperature, water temperature change, distance from the +5.0 °C target, and energy gained by the water
+- A saved-trial table and closest-design feedback that remain only in the current browser session
+- An explicit reminder that a physical result will differ because the cup, thermometer, and air are outside the ideal model
+
 ## Model equations and assumptions
 
 All materials begin at 20.0 °C. Direct heating uses:
@@ -54,6 +65,8 @@ Or, in same-temperature mode:
 Then the insulated equilibrium temperature is:
 
 `T_final = (m_solid c_solid T_hot + m_water c_water × 20.0 °C) / (m_solid c_solid + m_water c_water)`
+
+For Target Challenge, the same equilibrium relationship uses the student-selected metal and water starting temperatures. Water volume in mL is converted to water mass in grams using 1.00 g/mL. The displayed water temperature change is `T_final − T_water,start`, and distance from the goal is `|ΔT_water − 5.0 °C|`.
 
 Specific heat capacities in J/(g·°C): water 4.184, aluminum 0.90, copper 0.385, iron 0.45, granite 0.79. These constants appear only in the collapsed “Model information — open when directed” section. The ideal model assumes no energy is lost to the container or surroundings and does not represent time, heating rate, thermal conductivity, or phase changes. Results display to one decimal place while calculations retain full precision.
 
@@ -104,4 +117,4 @@ node tests/calorimetry-packet.test.js
 node tests/static-check.js
 ```
 
-This is a local draft. Publishing or deployment is a separate step.
+The activity is deployed as a static GitHub Pages site. It does not send or store student data.

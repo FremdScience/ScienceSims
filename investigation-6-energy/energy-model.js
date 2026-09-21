@@ -145,6 +145,58 @@
     });
   }
 
+  function predictTargetChallenge({
+    material,
+    solidMass,
+    solidTemperature,
+    waterVolume,
+    waterTemperature,
+    targetDelta = 5
+  }) {
+    if (material === "water" || material === "granite") {
+      throw new RangeError("Target Challenge requires aluminum, copper, or iron.");
+    }
+    const safeSolidMass = requirePositive(solidMass, "Solid mass");
+    const safeSolidTemperature = requirePositive(solidTemperature, "Solid temperature");
+    const safeWaterVolume = requirePositive(waterVolume, "Water volume");
+    const safeWaterTemperature = requirePositive(waterTemperature, "Water temperature");
+    const safeTargetDelta = requirePositive(targetDelta, "Target temperature change");
+    if (safeSolidTemperature <= safeWaterTemperature) {
+      throw new RangeError("The solid must begin warmer than the water.");
+    }
+
+    const solidSpecificHeat = getSpecificHeat(material);
+    const waterMass = safeWaterVolume; // Uses 1.00 g/mL for liquid water.
+    const solidHeatCapacity = safeSolidMass * solidSpecificHeat;
+    const waterHeatCapacity = waterMass * WATER_SPECIFIC_HEAT;
+    const finalTemperature = (
+      solidHeatCapacity * safeSolidTemperature +
+      waterHeatCapacity * safeWaterTemperature
+    ) / (solidHeatCapacity + waterHeatCapacity);
+    const waterDelta = finalTemperature - safeWaterTemperature;
+    const distanceFromTarget = Math.abs(waterDelta - safeTargetDelta);
+    const energyGainedByWater = waterHeatCapacity * waterDelta;
+    const energyLostBySolid = solidHeatCapacity * (safeSolidTemperature - finalTemperature);
+
+    return Object.freeze({
+      material,
+      solidMass: safeSolidMass,
+      solidTemperature: safeSolidTemperature,
+      waterVolume: safeWaterVolume,
+      waterMass,
+      waterTemperature: safeWaterTemperature,
+      targetDelta: safeTargetDelta,
+      finalTemperature,
+      waterDelta,
+      distanceFromTarget,
+      energyGainedByWater,
+      energyLostBySolid,
+      roundedFinalTemperature: round1(finalTemperature),
+      roundedWaterDelta: round1(waterDelta),
+      roundedDistanceFromTarget: round1(distanceFromTarget)
+    });
+  }
+
   return Object.freeze({
     START_TEMPERATURE,
     WATER_SPECIFIC_HEAT,
@@ -155,6 +207,7 @@
     round1,
     heatSubstance,
     calorimetry,
-    createCalorimetryHistoryRecord
+    createCalorimetryHistoryRecord,
+    predictTargetChallenge
   });
 });

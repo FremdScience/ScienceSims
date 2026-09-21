@@ -6,7 +6,8 @@
   const MATERIAL_SYMBOLS = Object.freeze({ aluminum: "Al", copper: "Cu", iron: "Fe", granite: "Gr" });
   const state = {
     heating: { phase: "ready", trials: [], result: null, runId: 0, skipAnimation: false },
-    calorimetry: { phase: "ready", trials: [], result: null, runId: 0, skipAnimation: false }
+    calorimetry: { phase: "ready", trials: [], result: null, runId: 0, skipAnimation: false },
+    targetChallenge: { trials: [], result: null }
   };
   const els = {};
 
@@ -42,7 +43,19 @@
       clearCalorimetryHistory: byId("clear-calorimetry-history"),
       skipCalorimetryAnimation: byId("skip-calorimetry-animation"),
       sequenceSet: byId("sequence-set"), sequenceHeat: byId("sequence-heat"),
-      sequenceTransfer: byId("sequence-transfer"), sequenceObserve: byId("sequence-observe")
+      sequenceTransfer: byId("sequence-transfer"), sequenceObserve: byId("sequence-observe"),
+      exploreCalorimetryTab: byId("explore-calorimetry-tab"), targetChallengeTab: byId("target-challenge-tab"),
+      exploreCalorimetryView: byId("explore-calorimetry-view"), targetChallengeView: byId("target-challenge-view"),
+      targetMaterial: byId("target-material"), targetSolidMass: byId("target-solid-mass"),
+      targetSolidMassOutput: byId("target-solid-mass-output"), targetWaterVolume: byId("target-water-volume"),
+      targetWaterVolumeOutput: byId("target-water-volume-output"), targetSolidStart: byId("target-solid-start"),
+      targetSolidStartOutput: byId("target-solid-start-output"), targetWaterStart: byId("target-water-start"),
+      targetWaterStartOutput: byId("target-water-start-output"), targetFinalTemperature: byId("target-final-temperature"),
+      targetWaterDelta: byId("target-water-delta"), targetDistance: byId("target-distance"),
+      targetWaterEnergy: byId("target-water-energy"), targetMeterFill: byId("target-meter-fill"),
+      targetFeedback: byId("target-feedback"), targetStatus: byId("target-status"),
+      saveTargetTrial: byId("save-target-trial"), resetTargetTrial: byId("reset-target-trial"),
+      clearTargetHistory: byId("clear-target-history"), targetHistoryBody: byId("target-history-body")
     });
 
     bindEvents();
@@ -54,6 +67,7 @@
     updateCalorimetryHeatingChoice(false);
     resetHeating(false);
     resetCalorimetry(false);
+    resetTargetChallenge(false);
   }
 
   function bindEvents() {
@@ -80,6 +94,15 @@
     els.calorimetryResetButton.addEventListener("click", () => resetCalorimetry(true));
     els.clearCalorimetryHistory.addEventListener("click", clearCalorimetryHistory);
     els.skipCalorimetryAnimation.addEventListener("click", () => { state.calorimetry.skipAnimation = true; });
+
+    els.exploreCalorimetryTab.addEventListener("click", () => switchCalorimetryView("explore"));
+    els.targetChallengeTab.addEventListener("click", () => switchCalorimetryView("target"));
+    [els.exploreCalorimetryTab, els.targetChallengeTab].forEach((tab) => tab.addEventListener("keydown", handleCalorimetryModeKeys));
+    [els.targetMaterial, els.targetSolidMass, els.targetWaterVolume, els.targetSolidStart, els.targetWaterStart]
+      .forEach((control) => control.addEventListener("input", () => updateTargetChallenge(false)));
+    els.saveTargetTrial.addEventListener("click", saveTargetChallengeTrial);
+    els.resetTargetTrial.addEventListener("click", () => resetTargetChallenge(true));
+    els.clearTargetHistory.addEventListener("click", clearTargetChallengeHistory);
   }
 
   function handleTabKeys(event) {
@@ -100,6 +123,27 @@
     els.heatingPanel.hidden = !heatingActive;
     els.calorimetryPanel.hidden = heatingActive;
     if (moveFocus) (heatingActive ? els.heatingTab : els.calorimetryTab).focus();
+  }
+
+  function handleCalorimetryModeKeys(event) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const showExplore = event.key === "ArrowLeft" || event.key === "Home";
+    switchCalorimetryView(showExplore ? "explore" : "target", true);
+  }
+
+  function switchCalorimetryView(viewName, moveFocus = false) {
+    const exploreActive = viewName === "explore";
+    els.exploreCalorimetryTab.classList.toggle("active", exploreActive);
+    els.targetChallengeTab.classList.toggle("active", !exploreActive);
+    els.exploreCalorimetryTab.setAttribute("aria-selected", String(exploreActive));
+    els.targetChallengeTab.setAttribute("aria-selected", String(!exploreActive));
+    els.exploreCalorimetryTab.tabIndex = exploreActive ? 0 : -1;
+    els.targetChallengeTab.tabIndex = exploreActive ? -1 : 0;
+    els.exploreCalorimetryView.hidden = !exploreActive;
+    els.targetChallengeView.hidden = exploreActive;
+    if (moveFocus) (exploreActive ? els.exploreCalorimetryTab : els.targetChallengeTab).focus();
   }
 
   function setControlsDisabled(selector, disabled) {
@@ -375,6 +419,85 @@
     els.calorimetryStatus.textContent = "Calorimetry trial table cleared.";
   }
 
+  function targetChallengeInputs() {
+    return {
+      material: els.targetMaterial.value,
+      solidMass: Number(els.targetSolidMass.value),
+      solidTemperature: Number(els.targetSolidStart.value),
+      waterVolume: Number(els.targetWaterVolume.value),
+      waterTemperature: Number(els.targetWaterStart.value),
+      targetDelta: 5
+    };
+  }
+
+  function updateTargetChallenge(announce) {
+    const inputs = targetChallengeInputs();
+    const result = model.predictTargetChallenge(inputs);
+    state.targetChallenge.result = result;
+
+    els.targetSolidMassOutput.value = `${inputs.solidMass} g`;
+    els.targetWaterVolumeOutput.value = `${inputs.waterVolume} mL`;
+    els.targetSolidStartOutput.value = `${inputs.solidTemperature} °C`;
+    els.targetWaterStartOutput.value = `${inputs.waterTemperature.toFixed(1)} °C`;
+    els.targetFinalTemperature.textContent = formatTemperature(result.roundedFinalTemperature);
+    els.targetWaterDelta.textContent = `+${result.roundedWaterDelta.toFixed(1)} °C`;
+    els.targetDistance.textContent = `${result.roundedDistanceFromTarget.toFixed(1)} °C`;
+    els.targetWaterEnergy.textContent = formatEnergy(result.energyGainedByWater);
+    els.targetMeterFill.style.width = `${Math.min(100, Math.max(0, result.waterDelta / 10 * 100))}%`;
+
+    if (result.distanceFromTarget <= 0.05) {
+      els.targetFeedback.textContent = "This ideal prediction meets the +5.0 °C target.";
+      els.targetFeedback.dataset.level = "met";
+    } else if (result.distanceFromTarget <= 0.5) {
+      els.targetFeedback.textContent = "This design is very close to the +5.0 °C target.";
+      els.targetFeedback.dataset.level = "close";
+    } else if (result.waterDelta < 5) {
+      els.targetFeedback.textContent = "The predicted water temperature change is below the target. Revise one variable and compare.";
+      els.targetFeedback.dataset.level = "revise";
+    } else {
+      els.targetFeedback.textContent = "The predicted water temperature change is above the target. Revise one variable and compare.";
+      els.targetFeedback.dataset.level = "revise";
+    }
+
+    if (announce) els.targetStatus.textContent = "Settings reset. The ideal prediction has been updated.";
+  }
+
+  function resetTargetChallenge(announce) {
+    els.targetMaterial.value = "aluminum";
+    els.targetSolidMass.value = "100";
+    els.targetWaterVolume.value = "100";
+    els.targetSolidStart.value = "90";
+    els.targetWaterStart.value = "20";
+    updateTargetChallenge(announce);
+  }
+
+  function saveTargetChallengeTrial() {
+    const result = state.targetChallenge.result || model.predictTargetChallenge(targetChallengeInputs());
+    state.targetChallenge.trials.push(result);
+    renderTargetChallengeHistory();
+    const bestDistance = Math.min(...state.targetChallenge.trials.map((trial) => trial.distanceFromTarget));
+    const isClosest = Math.abs(result.distanceFromTarget - bestDistance) < 1e-9;
+    els.targetStatus.textContent = isClosest
+      ? `Trial saved. This is your closest saved design so far: ${result.roundedDistanceFromTarget.toFixed(1)} °C from the target.`
+      : `Trial saved. It is ${result.roundedDistanceFromTarget.toFixed(1)} °C from the target.`;
+  }
+
+  function renderTargetChallengeHistory() {
+    if (!state.targetChallenge.trials.length) {
+      els.targetHistoryBody.innerHTML = '<tr class="empty-row"><td colspan="9">No saved trials yet.</td></tr>';
+      return;
+    }
+    els.targetHistoryBody.innerHTML = state.targetChallenge.trials.map((trial, index) => `
+      <tr><th scope="row">${index + 1}</th><td>${model.LABELS[trial.material]}</td><td>${trial.solidMass}</td><td>${trial.solidTemperature.toFixed(1)}</td><td>${trial.waterVolume}</td><td>${trial.waterTemperature.toFixed(1)}</td><td>${trial.roundedFinalTemperature.toFixed(1)}</td><td>+${trial.roundedWaterDelta.toFixed(1)}</td><td>${trial.roundedDistanceFromTarget.toFixed(1)}</td></tr>
+    `).join("");
+  }
+
+  function clearTargetChallengeHistory() {
+    state.targetChallenge.trials = [];
+    renderTargetChallengeHistory();
+    els.targetStatus.textContent = "Saved target trials cleared. Your current settings are unchanged.";
+  }
+
   function waitForAnimation(milliseconds, key) {
     const targetDuration = duration(milliseconds);
     if (targetDuration === 0 || state[key].skipAnimation) return Promise.resolve();
@@ -397,11 +520,18 @@
         heatingChoice: checkedValue("calorimetry-heating-choice"),
         energyChoicesDisabled: [...document.querySelectorAll('input[name="solid-energy"]')].every((control) => control.disabled),
         targetTemperatureDisabled: els.targetSolidTemperature.disabled
+      },
+      targetChallenge: {
+        trialCount: state.targetChallenge.trials.length,
+        waterDelta: state.targetChallenge.result ? state.targetChallenge.result.waterDelta : null,
+        distanceFromTarget: state.targetChallenge.result ? state.targetChallenge.result.distanceFromTarget : null
       }
     }),
     switchTab,
+    switchCalorimetryView,
     resetHeating: () => resetHeating(false),
     resetCalorimetry: () => resetCalorimetry(false),
+    resetTargetChallenge: () => resetTargetChallenge(false),
     selectCalorimetryHeatingChoice: (choice) => {
       const control = document.querySelector(`input[name="calorimetry-heating-choice"][value="${choice}"]`);
       if (!control) throw new RangeError("Unknown calorimetry heating choice.");

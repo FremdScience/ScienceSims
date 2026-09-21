@@ -56,6 +56,9 @@ main { width: min(1420px, 100%); margin: 0 auto; padding: 0 clamp(.75rem, 2.5vw,
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin-bottom: 1rem; }
 .step-label, .stage-kicker { color: var(--green); }
 .section-help { max-width: 39rem; margin-bottom: .1rem; color: var(--muted); text-align: right; }
+.calorimetry-mode-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(620px, 100%); margin: 0 0 1rem; padding: .28rem; background: #dfe9e4; border-radius: .75rem; }
+.mode-tab { min-height: 48px; padding: .55rem .8rem; color: var(--muted); background: transparent; border: 0; border-radius: .55rem; font-weight: 850; }
+.mode-tab.active { color: var(--green-dark); background: #fff; box-shadow: 0 3px 10px rgba(27,61,52,.12); }
 
 .workbench-layout { display: grid; grid-template-columns: minmax(300px, 390px) minmax(0, 1fr); gap: 1rem; align-items: stretch; }
 .control-card, .lab-stage, .history-card, .teacher-reveal { background: var(--surface); border: 2px solid var(--line); border-radius: 1rem; box-shadow: var(--shadow); }
@@ -91,6 +94,37 @@ main { width: min(1420px, 100%); margin: 0 auto; padding: 0 clamp(.75rem, 2.5vw,
 .text-button { min-height: 44px; padding: .4rem .75rem; color: var(--green-dark); background: transparent; border: 2px solid transparent; text-decoration: underline; text-underline-offset: .2rem; }
 .skip-button { width: 100%; margin-top: .35rem; }
 .status { min-height: 3em; margin: .8rem 0 0; color: var(--muted); font-weight: 700; }
+
+.target-challenge-view { display: grid; gap: 1rem; }
+.target-banner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem; color: #fff; background: linear-gradient(120deg, var(--green-dark), var(--green)); border-radius: .9rem; box-shadow: var(--shadow); }
+.target-banner h3, .target-banner p { margin-bottom: 0; color: #fff; }
+.target-banner strong { padding: .55rem .8rem; color: #503a00; background: var(--gold); border-radius: .65rem; white-space: nowrap; }
+.challenge-help { margin: 0; padding: .8rem 1rem; background: var(--blue-soft); border-left: 5px solid var(--blue); border-radius: .4rem; }
+.target-layout { display: grid; grid-template-columns: minmax(320px, 430px) minmax(0, 1fr); gap: 1rem; align-items: stretch; }
+.target-controls { height: 100%; }
+.slider-field { margin-bottom: .9rem; }
+.slider-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+.slider-heading label { font-weight: 800; }
+.slider-heading output { min-width: 5.8rem; padding: .28rem .48rem; color: var(--green-dark); background: var(--green-soft); border: 1px solid #9eb2aa; border-radius: .45rem; text-align: center; font-weight: 850; font-variant-numeric: tabular-nums; }
+.slider-field input[type="range"] { width: 100%; min-height: 48px; margin: 0; accent-color: var(--green); }
+.range-labels { display: flex; justify-content: space-between; margin-top: -.35rem; color: var(--muted); font-size: .76rem; font-weight: 700; }
+.target-buttons { margin-top: .35rem; }
+.target-results { min-width: 0; padding: 0 1.1rem 1.1rem; background: var(--surface); border: 2px solid var(--line); border-radius: 1rem; box-shadow: var(--shadow); }
+.target-results .stage-topline { padding-inline: .1rem; }
+.target-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; margin-top: .8rem; }
+.result-card { min-height: 112px; padding: .85rem; background: #f4f8f6; border: 2px solid var(--line); border-radius: .7rem; }
+.result-card span { display: block; color: var(--muted); font-size: .86rem; font-weight: 750; }
+.result-card strong { display: block; margin-top: .3rem; color: var(--green-dark); font-size: clamp(1.55rem, 4vw, 2.35rem); font-variant-numeric: tabular-nums; }
+.result-card.primary-result { background: var(--gold-soft); border-color: #dcb747; }
+.target-meter { position: relative; height: 22px; margin: 1.1rem .2rem .45rem; overflow: hidden; background: linear-gradient(90deg, #dfeae5 0 49.3%, var(--gold) 49.3% 50.7%, #dfeae5 50.7% 100%); border: 2px solid #9eb2aa; border-radius: 999px; }
+.target-meter span { display: block; width: 0; height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); transition: width .2s ease; }
+.target-mark { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 3px; background: #6b5100; transform: translateX(-50%); }
+.target-feedback { min-height: 3rem; margin: .5rem 0 .9rem; padding: .7rem .8rem; color: var(--green-dark); background: var(--green-soft); border-radius: .55rem; font-weight: 800; }
+.target-feedback[data-level="met"] { background: #d6f3df; border: 2px solid var(--green); }
+.target-feedback[data-level="close"] { background: var(--gold-soft); border: 2px solid #dcb747; }
+.model-limit-note { padding: .8rem; color: #3d5350; background: #edf2f0; border-radius: .55rem; }
+.target-history-table { min-width: 1050px; }
+#target-history-body { white-space: nowrap; }
 
 .lab-stage { overflow: hidden; }
 .stage-topline { display: flex; align-items: start; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem .2rem; }
@@ -194,6 +228,7 @@ footer p { width: min(1350px,100%); margin: 0 auto; }
   .section-heading { align-items: start; flex-direction: column; gap: .9rem; }
   .section-help { text-align: left; }
   .workbench-layout { grid-template-columns: 1fr; }
+  .target-layout { grid-template-columns: 1fr; }
   .control-card { order: 1; }
   .lab-stage { order: 2; }
 }
@@ -215,6 +250,12 @@ footer p { width: min(1350px,100%); margin: 0 auto; }
   .reading-arrow { display: none; }
   .teacher-grid { grid-template-columns: 1fr; }
   .history-heading { align-items: start; }
+  .calorimetry-mode-tabs { grid-template-columns: 1fr; }
+  .target-banner { align-items: start; flex-direction: column; }
+  .target-banner strong { white-space: normal; }
+  .target-summary { grid-template-columns: 1fr; }
+  .slider-heading { align-items: start; flex-direction: column; gap: .3rem; }
+  .slider-heading output { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
