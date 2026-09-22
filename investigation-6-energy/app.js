@@ -7,7 +7,7 @@
   const state = {
     heating: { phase: "ready", trials: [], result: null, runId: 0, skipAnimation: false },
     calorimetry: { phase: "ready", trials: [], result: null, runId: 0, skipAnimation: false },
-    targetChallenge: { trials: [], result: null }
+    targetChallenge: { phase: "ready", trials: [], result: null, runId: 0, skipAnimation: false }
   };
   const els = {};
 
@@ -54,8 +54,17 @@
       targetWaterDelta: byId("target-water-delta"), targetDistance: byId("target-distance"),
       targetWaterEnergy: byId("target-water-energy"), targetMeterFill: byId("target-meter-fill"),
       targetFeedback: byId("target-feedback"), targetStatus: byId("target-status"),
-      saveTargetTrial: byId("save-target-trial"), resetTargetTrial: byId("reset-target-trial"),
-      clearTargetHistory: byId("clear-target-history"), targetHistoryBody: byId("target-history-body")
+      heatTargetMetal: byId("heat-target-metal"), transferTargetMetal: byId("transfer-target-metal"),
+      resetTargetTrial: byId("reset-target-trial"), skipTargetAnimation: byId("skip-target-animation"),
+      clearTargetHistory: byId("clear-target-history"), targetHistoryBody: byId("target-history-body"),
+      targetApparatus: byId("target-apparatus"), targetSolidSample: byId("target-solid-sample"),
+      targetSolidSymbol: byId("target-solid-symbol"), targetImmersedSolid: byId("target-immersed-solid"),
+      targetWaterFill: byId("target-water-fill"), targetSolidMercury: byId("target-solid-mercury"),
+      targetWaterMercury: byId("target-water-mercury"),
+      targetSolidTemperatureReading: byId("target-solid-temperature-reading"),
+      targetWaterTemperatureReading: byId("target-water-temperature-reading"),
+      targetSequenceSet: byId("target-sequence-set"), targetSequenceHeat: byId("target-sequence-heat"),
+      targetSequenceTransfer: byId("target-sequence-transfer"), targetSequenceObserve: byId("target-sequence-observe")
     });
 
     bindEvents();
@@ -99,9 +108,11 @@
     els.targetChallengeTab.addEventListener("click", () => switchCalorimetryView("target"));
     [els.exploreCalorimetryTab, els.targetChallengeTab].forEach((tab) => tab.addEventListener("keydown", handleCalorimetryModeKeys));
     [els.targetMaterial, els.targetSolidMass, els.targetWaterVolume, els.targetSolidStart, els.targetWaterStart]
-      .forEach((control) => control.addEventListener("input", () => updateTargetChallenge(false)));
-    els.saveTargetTrial.addEventListener("click", saveTargetChallengeTrial);
+      .forEach((control) => control.addEventListener("input", () => prepareTargetChallenge(false)));
+    els.heatTargetMetal.addEventListener("click", heatTargetChallengeMetal);
+    els.transferTargetMetal.addEventListener("click", transferTargetChallengeMetal);
     els.resetTargetTrial.addEventListener("click", () => resetTargetChallenge(true));
+    els.skipTargetAnimation.addEventListener("click", () => { state.targetChallenge.skipAnimation = true; });
     els.clearTargetHistory.addEventListener("click", clearTargetChallengeHistory);
   }
 
@@ -430,36 +441,72 @@
     };
   }
 
-  function updateTargetChallenge(announce) {
+  function updateTargetChallengeVisuals() {
     const inputs = targetChallengeInputs();
-    const result = model.predictTargetChallenge(inputs);
-    state.targetChallenge.result = result;
-
     els.targetSolidMassOutput.value = `${inputs.solidMass} g`;
     els.targetWaterVolumeOutput.value = `${inputs.waterVolume} mL`;
     els.targetSolidStartOutput.value = `${inputs.solidTemperature} °C`;
     els.targetWaterStartOutput.value = `${inputs.waterTemperature.toFixed(1)} °C`;
-    els.targetFinalTemperature.textContent = formatTemperature(result.roundedFinalTemperature);
-    els.targetWaterDelta.textContent = `+${result.roundedWaterDelta.toFixed(1)} °C`;
-    els.targetDistance.textContent = `${result.roundedDistanceFromTarget.toFixed(1)} °C`;
-    els.targetWaterEnergy.textContent = formatEnergy(result.energyGainedByWater);
-    els.targetMeterFill.style.width = `${Math.min(100, Math.max(0, result.waterDelta / 10 * 100))}%`;
+    const material = inputs.material;
+    const dimensions = {
+      width: Math.round(42 + (inputs.solidMass - 5) / 245 * 65),
+      height: Math.round(34 + (inputs.solidMass - 5) / 245 * 54)
+    };
+    const waterHeight = Math.round(74 + (inputs.waterVolume - 25) / 225 * 85);
+    [els.targetSolidSample, els.targetImmersedSolid].forEach((element) => {
+      element.className = `${element === els.targetSolidSample ? "solid-sample" : "immersed-solid"} ${material}`;
+      element.style.setProperty("--solid-width", `${dimensions.width}px`);
+      element.style.setProperty("--solid-height", `${dimensions.height}px`);
+    });
+    els.targetSolidSymbol.textContent = MATERIAL_SYMBOLS[material];
+    els.targetWaterFill.style.setProperty("--water-height", `${waterHeight}px`);
+  }
 
-    if (result.distanceFromTarget <= 0.05) {
-      els.targetFeedback.textContent = "This ideal prediction meets the +5.0 °C target.";
-      els.targetFeedback.dataset.level = "met";
-    } else if (result.distanceFromTarget <= 0.5) {
-      els.targetFeedback.textContent = "This design is very close to the +5.0 °C target.";
-      els.targetFeedback.dataset.level = "close";
-    } else if (result.waterDelta < 5) {
-      els.targetFeedback.textContent = "The predicted water temperature change is below the target. Revise one variable and compare.";
-      els.targetFeedback.dataset.level = "revise";
-    } else {
-      els.targetFeedback.textContent = "The predicted water temperature change is above the target. Revise one variable and compare.";
-      els.targetFeedback.dataset.level = "revise";
-    }
+  function clearTargetChallengeResult() {
+    els.targetFinalTemperature.textContent = "—";
+    els.targetWaterDelta.textContent = "—";
+    els.targetDistance.textContent = "—";
+    els.targetWaterEnergy.textContent = "—";
+    els.targetMeterFill.style.width = "0";
+    els.targetFeedback.textContent = "Complete the heating and transfer steps to reveal the result.";
+    delete els.targetFeedback.dataset.level;
+  }
 
-    if (announce) els.targetStatus.textContent = "Settings reset. The ideal prediction has been updated.";
+  function updateTargetSequence(current) {
+    const order = ["set", "heat", "transfer", "observe"];
+    const currentIndex = order.indexOf(current);
+    order.forEach((name, index) => {
+      const element = els[`targetSequence${name[0].toUpperCase()}${name.slice(1)}`];
+      element.classList.toggle("active", index === currentIndex);
+      element.classList.toggle("complete", index < currentIndex);
+    });
+  }
+
+  function showTargetTemperatures(solidTemperature, waterTemperature) {
+    els.targetSolidTemperatureReading.textContent = formatTemperature(solidTemperature);
+    els.targetWaterTemperatureReading.textContent = formatTemperature(waterTemperature);
+    els.targetSolidMercury.style.height = thermometerHeight(solidTemperature);
+    els.targetWaterMercury.style.height = thermometerHeight(waterTemperature);
+  }
+
+  function prepareTargetChallenge(announce) {
+    const inputs = targetChallengeInputs();
+    state.targetChallenge.runId += 1;
+    state.targetChallenge.skipAnimation = false;
+    state.targetChallenge.phase = "ready";
+    state.targetChallenge.result = null;
+    els.targetApparatus.classList.remove("heating", "transferring", "mixed");
+    updateTargetChallengeVisuals();
+    showTargetTemperatures(model.START_TEMPERATURE, inputs.waterTemperature);
+    clearTargetChallengeResult();
+    els.heatTargetMetal.disabled = false;
+    els.transferTargetMetal.disabled = true;
+    els.skipTargetAnimation.hidden = true;
+    setControlsDisabled("#target-challenge-view select, #target-challenge-view input", false);
+    updateTargetSequence("set");
+    els.targetStatus.textContent = announce
+      ? "New trial ready. Set the variables, then heat the metal."
+      : "Set the variables, then heat the metal.";
   }
 
   function resetTargetChallenge(announce) {
@@ -468,18 +515,103 @@
     els.targetWaterVolume.value = "100";
     els.targetSolidStart.value = "90";
     els.targetWaterStart.value = "20";
-    updateTargetChallenge(announce);
+    prepareTargetChallenge(announce);
   }
 
-  function saveTargetChallengeTrial() {
-    const result = state.targetChallenge.result || model.predictTargetChallenge(targetChallengeInputs());
+  async function heatTargetChallengeMetal() {
+    if (state.targetChallenge.phase !== "ready") return;
+    const result = model.predictTargetChallenge(targetChallengeInputs());
+    const runId = ++state.targetChallenge.runId;
+    state.targetChallenge.skipAnimation = false;
+    state.targetChallenge.phase = "heating";
+    state.targetChallenge.result = result;
+    setControlsDisabled("#target-challenge-view select, #target-challenge-view input", true);
+    els.heatTargetMetal.disabled = true;
+    updateTargetSequence("heat");
+    els.targetApparatus.classList.add("heating");
+    els.skipTargetAnimation.hidden = false;
+    els.targetStatus.textContent = `Heating the ${model.LABELS[result.material].toLowerCase()} to ${formatTemperature(result.solidTemperature)}.`;
+    await waitForAnimation(850, "targetChallenge");
+    if (runId !== state.targetChallenge.runId) return;
+    els.targetSolidMercury.style.height = thermometerHeight(result.solidTemperature);
+    await waitForAnimation(650, "targetChallenge");
+    if (runId !== state.targetChallenge.runId) return;
+    els.targetApparatus.classList.remove("heating");
+    els.targetSolidTemperatureReading.textContent = formatTemperature(result.solidTemperature);
+    state.targetChallenge.phase = "hot";
+    els.skipTargetAnimation.hidden = true;
+    els.transferTargetMetal.disabled = false;
+    updateTargetSequence("transfer");
+    els.targetStatus.textContent = "The metal is warmer than the water. Transfer it into the calorimeter.";
+  }
+
+  function animateTargetTemperatures(fromSolid, fromWater, toTemperature, milliseconds, runId) {
+    if (milliseconds === 0 || state.targetChallenge.skipAnimation) {
+      showTargetTemperatures(toTemperature, toTemperature);
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const start = performance.now();
+      function frame(now) {
+        if (runId !== state.targetChallenge.runId) { resolve(); return; }
+        if (state.targetChallenge.skipAnimation) { showTargetTemperatures(toTemperature, toTemperature); resolve(); return; }
+        const progress = Math.min(1, (now - start) / milliseconds);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        showTargetTemperatures(
+          fromSolid + (toTemperature - fromSolid) * eased,
+          fromWater + (toTemperature - fromWater) * eased
+        );
+        if (progress < 1) window.requestAnimationFrame(frame); else resolve();
+      }
+      window.requestAnimationFrame(frame);
+    });
+  }
+
+  function showTargetChallengeResult(result) {
+    els.targetFinalTemperature.textContent = formatTemperature(result.roundedFinalTemperature);
+    els.targetWaterDelta.textContent = `+${result.roundedWaterDelta.toFixed(1)} °C`;
+    els.targetDistance.textContent = `${result.roundedDistanceFromTarget.toFixed(1)} °C`;
+    els.targetWaterEnergy.textContent = formatEnergy(result.energyGainedByWater);
+    els.targetMeterFill.style.width = `${Math.min(100, Math.max(0, result.waterDelta / 10 * 100))}%`;
+    if (result.distanceFromTarget <= 0.05) {
+      els.targetFeedback.textContent = "This ideal trial meets the +5.0 °C target.";
+      els.targetFeedback.dataset.level = "met";
+    } else if (result.distanceFromTarget <= 0.5) {
+      els.targetFeedback.textContent = "This trial is very close to the +5.0 °C target.";
+      els.targetFeedback.dataset.level = "close";
+    } else if (result.waterDelta < 5) {
+      els.targetFeedback.textContent = "The water temperature change is below the target. Change one variable and run another trial.";
+      els.targetFeedback.dataset.level = "revise";
+    } else {
+      els.targetFeedback.textContent = "The water temperature change is above the target. Change one variable and run another trial.";
+      els.targetFeedback.dataset.level = "revise";
+    }
+  }
+
+  async function transferTargetChallengeMetal() {
+    if (state.targetChallenge.phase !== "hot") return;
+    const result = state.targetChallenge.result;
+    const runId = state.targetChallenge.runId;
+    state.targetChallenge.skipAnimation = false;
+    state.targetChallenge.phase = "transferring";
+    els.transferTargetMetal.disabled = true;
+    updateTargetSequence("observe");
+    els.targetApparatus.classList.add("transferring");
+    els.skipTargetAnimation.hidden = false;
+    els.targetStatus.textContent = "Energy transfers from the warmer metal to the cooler water in the calorimeter.";
+    await waitForAnimation(850, "targetChallenge");
+    if (runId !== state.targetChallenge.runId) return;
+    els.targetApparatus.classList.remove("transferring");
+    els.targetApparatus.classList.add("mixed");
+    await animateTargetTemperatures(result.solidTemperature, result.waterTemperature, result.finalTemperature, duration(1100), runId);
+    if (runId !== state.targetChallenge.runId) return;
+    showTargetTemperatures(result.roundedFinalTemperature, result.roundedFinalTemperature);
+    state.targetChallenge.phase = "complete";
     state.targetChallenge.trials.push(result);
+    els.skipTargetAnimation.hidden = true;
     renderTargetChallengeHistory();
-    const bestDistance = Math.min(...state.targetChallenge.trials.map((trial) => trial.distanceFromTarget));
-    const isClosest = Math.abs(result.distanceFromTarget - bestDistance) < 1e-9;
-    els.targetStatus.textContent = isClosest
-      ? `Trial saved. This is your closest saved design so far: ${result.roundedDistanceFromTarget.toFixed(1)} °C from the target.`
-      : `Trial saved. It is ${result.roundedDistanceFromTarget.toFixed(1)} °C from the target.`;
+    showTargetChallengeResult(result);
+    els.targetStatus.textContent = "Trial complete. The metal and water reached the same final temperature. Choose New Trial to test another design.";
   }
 
   function renderTargetChallengeHistory() {
@@ -522,6 +654,7 @@
         targetTemperatureDisabled: els.targetSolidTemperature.disabled
       },
       targetChallenge: {
+        phase: state.targetChallenge.phase,
         trialCount: state.targetChallenge.trials.length,
         waterDelta: state.targetChallenge.result ? state.targetChallenge.result.waterDelta : null,
         distanceFromTarget: state.targetChallenge.result ? state.targetChallenge.result.distanceFromTarget : null

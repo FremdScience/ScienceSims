@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A two-part high-school chemistry investigation of energy added by heating, mass, material, and temperature change.">
   <title>Energy and Temperature Change Simulation</title>
-  <link rel="stylesheet" href="styles.css?v=20260921-target2">
+  <link rel="stylesheet" href="styles.css?v=20260921-target3">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to investigation</a>
@@ -268,7 +268,14 @@
           <strong>Goal: ΔT<sub>water</sub> = +5.0 °C</strong>
         </div>
 
-        <p class="challenge-help">Build a trial that matches the materials you could use in the lab. The solid mass is the <strong>total mass</strong> of all metal pieces. For this model, 1.0 mL of water is treated as 1.0 g of water.</p>
+        <p class="challenge-help">Build a trial that matches the materials you could use in the lab. The metal mass is the <strong>total mass</strong> of all pieces. Heat the metal, transfer it to the calorimeter, and then observe the result. For this model, 1.0 mL of water is treated as 1.0 g of water.</p>
+
+        <div class="sequence" aria-label="Required Target Challenge sequence">
+          <span id="target-sequence-set" class="sequence-step active"><b>1</b> Set variables</span>
+          <span id="target-sequence-heat" class="sequence-step"><b>2</b> Heat metal</span>
+          <span id="target-sequence-transfer" class="sequence-step"><b>3</b> Transfer</span>
+          <span id="target-sequence-observe" class="sequence-step"><b>4</b> Observe</span>
+        </div>
 
         <div class="target-layout">
           <section class="control-card target-controls" aria-labelledby="target-controls-title">
@@ -289,13 +296,13 @@
             </div>
 
             <div class="slider-field">
-              <div class="slider-heading"><label for="target-water-volume">Volume of water</label><output id="target-water-volume-output" for="target-water-volume">100 mL</output></div>
+              <div class="slider-heading"><label for="target-water-volume">Volume of water in calorimeter</label><output id="target-water-volume-output" for="target-water-volume">100 mL</output></div>
               <input id="target-water-volume" type="range" min="25" max="250" step="5" value="100">
               <div class="range-labels" aria-hidden="true"><span>25 mL</span><span>250 mL</span></div>
             </div>
 
             <div class="slider-field">
-              <div class="slider-heading"><label for="target-solid-start">Starting temperature of metal</label><output id="target-solid-start-output" for="target-solid-start">90 °C</output></div>
+              <div class="slider-heading"><label for="target-solid-start">Temperature to heat metal to</label><output id="target-solid-start-output" for="target-solid-start">90 °C</output></div>
               <input id="target-solid-start" type="range" min="40" max="100" step="1" value="90">
               <div class="range-labels" aria-hidden="true"><span>40 °C</span><span>100 °C</span></div>
             </div>
@@ -306,31 +313,60 @@
               <div class="range-labels" aria-hidden="true"><span>15 °C</span><span>30 °C</span></div>
             </div>
 
-            <div class="button-row target-buttons">
-              <button id="save-target-trial" class="primary-button" type="button">Save This Trial</button>
-              <button id="reset-target-trial" class="secondary-button" type="button"><span aria-hidden="true">↺</span> Reset</button>
+            <div class="stacked-actions target-buttons">
+              <button id="heat-target-metal" class="primary-button" type="button"><span aria-hidden="true">🔥</span> Heat Metal</button>
+              <button id="transfer-target-metal" class="transfer-button" type="button" disabled><span aria-hidden="true">↘</span> Transfer Metal to Calorimeter</button>
+              <button id="reset-target-trial" class="secondary-button" type="button"><span aria-hidden="true">↺</span> New Trial</button>
             </div>
-            <p id="target-status" class="status" aria-live="polite">Adjust the sliders. The ideal prediction updates automatically.</p>
+            <button id="skip-target-animation" class="text-button skip-button" type="button" hidden>Skip animation</button>
+            <p id="target-status" class="status" aria-live="polite">Set the variables, then heat the metal.</p>
           </section>
 
-          <section class="target-results" aria-labelledby="target-results-title">
+          <section class="lab-stage target-lab-stage" aria-labelledby="target-stage-title">
             <div class="stage-topline">
-              <div><p class="stage-kicker">Ideal calorimetry prediction</p><h3 id="target-results-title">What will happen to the water?</h3></div>
+              <div><p class="stage-kicker">Target calorimetry trial</p><h3 id="target-stage-title">Heat and transfer the metal</h3></div>
               <span class="ideal-badge">No energy lost</span>
             </div>
+            <div class="apparatus calorimetry-apparatus" id="target-apparatus">
+              <div class="solid-station">
+                <div id="target-solid-sample" class="solid-sample aluminum" aria-hidden="true">
+                  <span id="target-solid-symbol" class="solid-symbol">Al</span>
+                  <span class="mini-thermometer"><span id="target-solid-mercury" class="mini-mercury"></span></span>
+                </div>
+                <div class="burner mini-burner" aria-hidden="true"><span class="flame"></span><span class="burner-tube"></span><span class="burner-base"></span></div>
+              </div>
+              <div class="transfer-path" aria-hidden="true">→</div>
+              <div class="calorimeter" aria-hidden="true">
+                <div id="target-water-fill" class="water-fill">
+                  <span id="target-immersed-solid" class="immersed-solid aluminum"></span>
+                </div>
+                <span class="cup-label">Water in calorimeter</span>
+                <div class="water-thermometer"><span id="target-water-mercury" class="water-mercury"></span></div>
+              </div>
+            </div>
+            <div class="dual-readings" aria-label="Metal and water temperatures">
+              <div class="reading-card solid-reading"><span>Metal temperature</span><strong id="target-solid-temperature-reading" class="tabular">20.0 °C</strong></div>
+              <div class="reading-card water-reading"><span>Water temperature</span><strong id="target-water-temperature-reading" class="tabular">20.0 °C</strong></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="target-results" aria-labelledby="target-results-title">
+            <div class="stage-topline">
+              <div><p class="stage-kicker">Trial result</p><h3 id="target-results-title">What happened to the water?</h3></div>
+            </div>
             <div class="target-summary" aria-live="polite">
-              <div class="result-card"><span>Predicted final temperature</span><strong id="target-final-temperature">—</strong></div>
+              <div class="result-card"><span>Final temperature</span><strong id="target-final-temperature">—</strong></div>
               <div class="result-card primary-result"><span>Water temperature change</span><strong id="target-water-delta">—</strong></div>
               <div class="result-card"><span>Distance from +5.0 °C</span><strong id="target-distance">—</strong></div>
               <div class="result-card"><span>Energy gained by water</span><strong id="target-water-energy">—</strong></div>
             </div>
             <div class="target-meter" aria-hidden="true"><span id="target-meter-fill"></span><i class="target-mark"></i></div>
-            <p id="target-feedback" class="target-feedback">Adjust the design to move the water temperature change toward +5.0 °C.</p>
+            <p id="target-feedback" class="target-feedback">Complete the heating and transfer steps to reveal the result.</p>
             <div class="model-limit-note">
               <strong>Model limit:</strong> A physical result will usually be different because energy also transfers to the cup, thermometer, and air. The simulation predicts equilibrium; it does not model transfer rate.
             </div>
-          </section>
-        </div>
+        </section>
 
         <section class="history-card" aria-labelledby="target-history-title">
           <div class="history-heading">
@@ -339,7 +375,7 @@
           </div>
           <div class="table-wrap">
             <table class="target-history-table">
-              <thead><tr><th scope="col">Trial</th><th scope="col">Metal</th><th scope="col">Total metal mass (g)</th><th scope="col">Metal start (°C)</th><th scope="col">Water volume (mL)</th><th scope="col">Water start (°C)</th><th scope="col">Final temp. (°C)</th><th scope="col">Water ΔT (°C)</th><th scope="col">Distance from 5.0 °C</th></tr></thead>
+              <thead><tr><th scope="col">Trial</th><th scope="col">Metal</th><th scope="col">Total metal mass (g)</th><th scope="col">Metal heating temp. (°C)</th><th scope="col">Water volume in calorimeter (mL)</th><th scope="col">Water start (°C)</th><th scope="col">Final temp. (°C)</th><th scope="col">Water ΔT (°C)</th><th scope="col">Distance from 5.0 °C</th></tr></thead>
               <tbody id="target-history-body"><tr class="empty-row"><td colspan="9">No saved trials yet.</td></tr></tbody>
             </table>
           </div>
@@ -368,7 +404,7 @@
     <p><strong>Model note:</strong> This simplified investigation shows relationships among energy, mass, material, and temperature change. It does not model time, heating rate, or thermal conductivity.</p>
   </footer>
 
-  <script src="energy-model.js?v=20260921-target2"></script>
-  <script src="app.js?v=20260921-target2"></script>
+  <script src="energy-model.js?v=20260921-target3"></script>
+  <script src="app.js?v=20260921-target3"></script>
 </body>
 </html>
