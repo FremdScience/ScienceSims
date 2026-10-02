@@ -129,7 +129,7 @@ footer{color:var(--muted);font-size:.8rem;text-align:center;padding:10px 0 28px}
   body{background:#fff}
   section.panel{break-inside:avoid;border:none}
 }
-@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}*,*::before,*::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important}}
 
 /* three views in one row */
 .views3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
@@ -147,6 +147,160 @@ footer{color:var(--muted);font-size:.8rem;text-align:center;padding:10px 0 28px}
 .view h3{min-height:2.4em}
 .graph-tip{font-size:.8rem;color:var(--muted);margin:6px 0 0}
 #graph:focus-visible{outline:3px solid #9fd0dc;outline-offset:2px}
+
+/* tabs */
+.tabs{display:flex;gap:6px;padding-top:14px;flex-wrap:wrap}
+.tab{border:1.5px solid var(--teal);background:#fff;color:var(--teal);font-weight:600;border-radius:12px 12px 0 0;padding:10px 16px;min-height:44px;font-size:.95rem}
+.tab.on{background:var(--teal);color:#fff}
+.tabpane[hidden]{display:none}
+@media (max-width:560px){.tabs{gap:8px}.tab{flex:1 1 100%;border-radius:10px}}
+/* label activity */
+.lab-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.seg-toggle{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.chip{border:none;background:transparent;border-radius:9px;padding:8px 14px;font-weight:600;color:var(--muted);min-height:40px}
+.chip.on{background:#fff;color:var(--teal);box-shadow:0 1px 3px rgba(21,51,60,.18)}
+.problem{font-weight:600;font-size:1.02rem;margin:12px 0}
+.lab-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px}
+@media (max-width:820px){.lab-grid{grid-template-columns:1fr}}
+.lg-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.lg-status{font-size:.88rem;color:var(--ink);font-weight:500}
+table.mini{border-collapse:collapse;width:100%;font-size:.88rem}
+table.mini td{padding:7px 4px;border-bottom:1px solid var(--line);white-space:normal}
+table.mini td:last-child{text-align:right;font-weight:600;white-space:nowrap}
+.consts .note{margin-top:10px}
+.steps{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.step{border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff;transition:border-color .2s, box-shadow .2s}
+.step.sel{border-color:var(--orange);box-shadow:0 0 0 3px rgba(200,86,30,.15)}
+.step.done{border-color:#2e8b57}
+.step.total{margin-top:12px;background:var(--soft)}
+.step-head{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;margin-bottom:10px}
+.badge{background:var(--teal);color:#fff;border-radius:8px;padding:2px 9px;font-size:.8rem;font-weight:600}
+.step-head .range{color:var(--muted);font-size:.9rem}
+.mark{margin-left:auto;font-weight:700}
+.mark.ok{color:#2e8b57}.mark.bad{color:#b23a1e}
+.fields{display:grid;grid-template-columns:1.4fr .8fr 1.3fr 1.2fr 1fr;gap:10px}
+.fields.one{grid-template-columns:minmax(0,260px)}
+@media (max-width:1000px){.fields{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.fields{grid-template-columns:1fr}}
+.fields label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:600;color:var(--muted)}
+.fields select,.fields input{font:inherit;font-size:.95rem;color:var(--ink);padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;background:#fff;min-height:44px;width:100%}
+.fields select:focus,.fields input:focus{outline:none;border-color:var(--teal)}
+.fields .ok{border-color:#2e8b57;background:#effaf3}
+.fields .bad{border-color:#b23a1e;background:#fdf1ee}
+.numwrap{display:flex;gap:6px}
+.pm{flex:none;width:44px;min-height:44px;border:1.5px solid var(--line);border-radius:10px;background:var(--soft);font-weight:700;color:var(--teal);font-size:1.05rem}
+.fb{font-size:.88rem;margin-top:8px;color:#7a3510}
+.fb:empty{display:none}
+.fb ul{margin:4px 0 0;padding-left:18px}
+.setup-btn{margin-top:8px}
+.setup{margin-top:8px;background:var(--teal-soft);border-radius:10px;padding:10px 12px;font-size:.92rem;font-variant-numeric:tabular-nums}
+.check-row{margin-top:14px;align-items:center}
+.score{font-weight:700;color:var(--teal)}
+
+.lab-top .problem{margin:6px 0 12px;flex:1 1 300px}
+.lab-grid{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)!important}
+@media (max-width:900px){.lab-grid{grid-template-columns:1fr!important}}
+.consts{margin-top:14px}
+.const-strip{display:flex;flex-wrap:wrap;gap:8px}
+.const-strip span{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.86rem}
+.const-strip b{color:var(--teal);margin-left:4px;white-space:nowrap}
+.part-h{color:var(--teal);font-size:1.05rem;margin:22px 0 0}
+.step .dirtag{font-size:.78rem;font-weight:700;border-radius:6px;padding:1px 7px}
+.dirtag.h{background:#fde9e3;color:#a7381c}.dirtag.c{background:#e3edfb;color:#24589c}
+.right-col{display:flex;flex-direction:column}
+.consts{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.progress{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0 8px}
+.pchip{min-width:30px;height:30px;padding:0 6px;border-radius:15px;border:1.5px solid var(--line);background:#fff;font:600 .78rem Poppins,system-ui,sans-serif;color:var(--muted);cursor:pointer}
+.pchip.h{border-color:#f0c2b4}.pchip.c{border-color:#bcd0ee}
+.pchip.ok{background:#2e8b57;border-color:#2e8b57;color:#fff}
+.pchip.bad{background:#fdf1ee;border-color:#b23a1e;color:#b23a1e}
+.pchip.cur{outline:3px solid rgba(200,86,30,.35);outline-offset:1px;color:var(--ink)}
+.step-panel{border:1.5px solid var(--teal);border-radius:14px;padding:12px 14px;background:#fff}
+.sp-head{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;margin-bottom:10px}
+.sp-head .range{color:var(--muted);font-size:.88rem}
+.fields.stack{grid-template-columns:1fr 1fr}
+.fields.stack label{grid-column:1 / -1}
+.fields.stack label.half{grid-column:auto}
+@media (max-width:420px){.fields.stack{grid-template-columns:1fr}}
+.sp-fb{margin-top:10px;border-radius:10px;font-size:.9rem}
+.sp-fb:empty{display:none}
+.sp-fb .good{background:#effaf3;border:1.5px solid #2e8b57;color:#1d6b40;border-radius:10px;padding:10px 12px}
+.sp-fb .bad{background:#fdf1ee;border:1.5px solid #b23a1e;color:#8a2c15;border-radius:10px;padding:10px 12px}
+.sp-fb ul{margin:6px 0 0;padding-left:18px}
+.sp-actions{margin-top:12px;justify-content:space-between}
+.sp-actions .grp{display:flex;gap:8px;flex-wrap:wrap}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+.qbox{margin-top:12px;background:var(--teal-soft);border:1.5px solid #b9d6de;border-radius:10px;padding:10px 12px;font-size:.92rem;font-variant-numeric:tabular-nums}
+.qbox b{font-size:1.05rem;color:var(--teal)}
+.qbox.empty{background:var(--soft);border-style:dashed;color:var(--muted)}
+.qbox .ql{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:2px}
+table.qsum{font-size:.88rem}
+table.qsum td,table.qsum th{padding:6px 10px}
+table.qsum tr.h td:first-child{color:#a7381c;font-weight:700}
+table.qsum tr.c td:first-child{color:#24589c;font-weight:700}
+table.qsum tfoot td{font-weight:700;background:var(--soft)}
+.muted{color:var(--muted)}
+#sim .lede{max-width:none}
+#tab2 .panel{padding-top:14px}
+#tab2 .panel > h2{margin-bottom:2px}
+#tab2 .lede{max-width:none;margin-bottom:8px}
+#tab2 .problem{margin:8px 0}
+
+/* ---- Label the Processes: fit on one screen ---- */
+body.on-t2 header.top{padding:8px 0 8px}
+body.on-t2 header.top h1{font-size:1.2rem}
+body.on-t2 header.top p{font-size:.8rem;margin-top:2px;max-width:none}
+body.on-t2 .tabs{padding-top:8px}
+body.on-t2 .tab{min-height:38px;padding:6px 14px;font-size:.88rem}
+section.t2{margin-top:0;padding:10px 14px 12px}
+.t2-top{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;justify-content:space-between}
+.t2-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;flex:1 1 420px}
+.t2-title h2{font-size:1.1rem;color:var(--teal)}
+.t2-title .lede{margin:0;font-size:.85rem}
+.t2-ctrls{display:flex;gap:8px;align-items:center}
+.t2-ctrls .chip{min-height:34px;padding:5px 12px;font-size:.85rem}
+section.t2 .problem{margin:6px 0 8px;font-size:.92rem}
+.t2-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,0.95fr) minmax(0,1fr);gap:10px;align-items:start}
+@media (max-width:1000px){.t2-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.t2-grid .g-graph{grid-column:1 / -1}}
+@media (max-width:640px){.t2-grid{grid-template-columns:1fr}}
+.t2-grid .view{padding:8px}
+.t2-grid .view h3{min-height:0;font-size:.88rem;margin-bottom:4px}
+.t2-grid .lg-bar{margin-top:4px}
+.t2-grid .lg-status{font-size:.8rem}
+.t2-grid .states-line{margin-top:4px;font-size:.8rem}
+.g-part .consts{margin-top:8px;padding-top:8px}
+.g-part .consts h3{font-size:.82rem}
+.g-part .const-strip{gap:4px}
+.g-part .const-strip span{font-size:.74rem;padding:3px 7px;border-radius:7px}
+.g-part .note{font-size:.74rem;margin:4px 0 0}
+.g-q .progress{margin:0 0 6px;gap:4px}
+.g-q .pchip{min-width:28px;height:28px}
+.g-q .step-panel{border:none;padding:0}
+.g-q .sp-head{margin-bottom:6px;gap:4px 8px}
+.g-q .sp-head .range{font-size:.8rem}
+.g-q .fields{gap:6px}
+.g-q .fields label{gap:2px;font-size:.75rem}
+.g-q .fields select,.g-q .fields input{min-height:38px;padding:6px 8px;font-size:.88rem}
+.g-q .pm{width:38px;min-height:38px}
+.g-q .qbox{margin-top:8px;padding:7px 10px;font-size:.82rem}
+.g-q .qbox b{font-size:.95rem}
+.g-q .sp-fb{margin-top:8px;font-size:.82rem}
+.g-q .sp-fb .good,.g-q .sp-fb .bad{padding:7px 10px}
+.g-q .sp-actions{margin-top:8px;gap:6px}
+.g-q .btn{min-height:38px;padding:6px 12px;font-size:.86rem}
+.g-q .btn.small{min-height:34px;padding:4px 10px;font-size:.8rem}
+.g-q table.qsum td,.g-q table.qsum th{padding:4px 8px}
+.t2-title .lede{font-size:.9rem;color:var(--ink)}
+.t2-grid{grid-template-columns:minmax(0,1.5fr) minmax(0,0.85fr) minmax(0,1fr)}
+@media (max-width:1000px){.t2-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media (max-width:640px){.t2-grid{grid-template-columns:1fr}}
+.g-q .sp-fb ul{margin-top:3px}
+.g-q .sp-actions{flex-wrap:nowrap}
+.g-q .sp-actions .grp{flex-wrap:nowrap}
+.shq{animation:shIn .25s ease}
+@keyframes shIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.shq[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -157,8 +311,13 @@ footer{color:var(--muted);font-size:.8rem;text-align:center;padding:10px 0 28px}
     <p><strong>Learning target:</strong> I can use a heating curve and particle models to explain what happens to water and energy as ice becomes liquid water and then water vapor.</p>
   </div>
 </header>
+<nav class="tabs wrap" role="tablist" aria-label="Activities">
+  <button class="tab on" role="tab" id="tabBtn1" aria-selected="true" aria-controls="tab1">1 · Heating Curve Simulation</button>
+  <button class="tab" role="tab" id="tabBtn2" aria-selected="false" aria-controls="tab2">2 · Label the Processes</button>
+</nav>
 
 <main class="wrap">
+<div id="tab1" class="tabpane" role="tabpanel" aria-labelledby="tabBtn1">
 
 <!-- SIMULATION -->
 <section class="panel" id="sim">
@@ -190,7 +349,7 @@ footer{color:var(--muted);font-size:.8rem;text-align:center;padding:10px 0 28px}
     </div>
     <div class="view graph-view">
       <h3>Heating curve <em>· drag the orange dot to fast-forward or rewind</em></h3>
-      <canvas id="graph" tabindex="0" role="slider" aria-label="Live heating curve. Drag the dot, or use the left and right arrow keys, to move forward or backward along the curve." aria-valuemin="0" aria-valuemax="308940" aria-valuenow="0" aria-valuetext="0 J; −20.0 °C; solid"></canvas>
+      <canvas id="graph" tabindex="0" aria-label="Live heating curve. Drag the dot, or use the left and right arrow keys, to move forward or backward along the curve." role="slider" aria-valuemin="0" aria-valuemax="308940" aria-valuenow="0" aria-valuetext="0 J; −20.0 °C; solid"></canvas>
       <p class="graph-tip">Drag the dot right to fast-forward or left to rewind. The heat bar moves to show heat being added or removed while you drag, then returns to Off when you let go. You can also tap anywhere on the graph to jump there. Dashed line = full curve for 100 g.</p>
     </div>
   </div>
@@ -233,7 +392,53 @@ footer{color:var(--muted);font-size:.8rem;text-align:center;padding:10px 0 28px}
     </table>
   </div>
 </section>
+</div><!-- /tab1 -->
 
+<div id="tab2" class="tabpane" role="tabpanel" aria-labelledby="tabBtn2" hidden="">
+<section class="panel t2">
+  <div class="t2-top">
+    <div class="t2-title">
+      <p class="lede">Pick a mode. For each segment, fill in the blanks, tap <b>Check</b>, then <b>Next ▸</b> once it’s correct.</p>
+    </div>
+    <div class="t2-ctrls">
+      <div class="seg-toggle" role="group" aria-label="Mode">
+        <button class="chip on" id="modeHeat" aria-pressed="true">🔥 Heating mode</button>
+        <button class="chip" id="modeCool" aria-pressed="false">❄ Cooling mode</button>
+      </div>
+      <button class="btn small" id="resetSim">↺ Reset simulation</button>
+    </div>
+  </div>
+  <p class="problem" id="problemText">Heating mode: A 50.0 g sample of ice at −20.0 °C is heated until it is gas at 120.0 °C.</p>
+
+  <div class="t2-grid">
+    <div class="view g-graph">
+      <h3>Heating curve <em>· ▸ heating, ◂ cooling · not to scale</em></h3>
+      <canvas id="lgraph" tabindex="0" aria-label="Heating curve. Drag the dot right to heat or left to cool, or use the arrow keys." title="Drag the dot right to heat or left to cool" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Heating; Segment A; −20.0 °C"></canvas>
+      <div class="lg-bar"><span class="lg-status" id="lgStatus" aria-live="polite"></span></div>
+    </div>
+    <div class="view g-part">
+      <h3>Particle view <em>· water molecules</em></h3>
+      <canvas id="lparticles" aria-label="Water molecules at the dot's position"></canvas>
+      <div class="states-line">State(s): <b id="lStates">solid</b></div>
+      <div class="consts">
+        <h3>Values to use</h3>
+        <div class="const-strip">
+          <span>SH of ice <b>2.1 J/(g·°C)</b></span>
+          <span>SH of liquid water <b>4.184 J/(g·°C)</b></span>
+          <span>SH of gaseous water <b>1.7 J/(g·°C)</b></span>
+          <span>Hf <b>335 J/g</b></span>
+          <span>Hv <b>2260 J/g</b></span>
+        </div>
+        <p class="note">ΔT = final temperature − starting temperature</p>
+      </div>
+    </div>
+    <div class="view g-q">
+      <div class="progress" id="progress" aria-label="Steps"><button class="pchip h cur" data-go="0" aria-label="Step 1">1</button><button class="pchip h" data-go="1" disabled="" title="Finish the earlier steps first" aria-label="Step 2">🔒</button><button class="pchip h" data-go="2" disabled="" title="Finish the earlier steps first" aria-label="Step 3">🔒</button><button class="pchip h" data-go="3" disabled="" title="Finish the earlier steps first" aria-label="Step 4">🔒</button><button class="pchip h" data-go="4" disabled="" title="Finish the earlier steps first" aria-label="Step 5">🔒</button><button class="pchip" data-go="5" disabled="" title="Finish all 5 steps first">🔒 Totals</button></div>
+      <div class="step-panel" id="stepPanel" aria-live="polite"><div class="sp-head"><span class="badge">Step 1 of 5</span><span class="dirtag h">Heating ▸</span><b>Segment A</b><span class="range">−20.0 °C → 0.0 °C</span></div><div class="fields stack"><label>Process<select data-f="proc"><option value="">Choose…</option><option value="boil">Boiling (vaporization)</option><option value="cond">Condensation</option><option value="freeze">Freezing</option><option value="cool-g">Gas cools</option><option value="warm-g">Gas warms</option><option value="cool-l">Liquid cools</option><option value="warm-l">Liquid warms</option><option value="melt">Melting</option><option value="cool-s">Solid cools</option><option value="warm-s">Solid warms</option></select></label><label class="half">ΔT (°C)<span class="numwrap"><button type="button" class="pm" aria-label="Toggle negative sign">±</button><input data-f="dT" autocomplete="off" placeholder="e.g. 20.0" value=""></span></label><label class="half">Energy is…<select data-f="sign"><option value="">Choose…</option><option value="abs">Absorbed (+Q)</option><option value="rel">Released (−Q)</option></select></label><label class="wide">Equation<select data-f="eq"><option value="">Choose…</option><option value="sh">Q = SH × M × ΔT</option><option value="hf">Q = M × Hf</option><option value="nhf">Q = M × (−Hf)</option><option value="hv">Q = M × Hv</option><option value="nhv">Q = M × (−Hv)</option></select></label><label class="wide shq" id="shWrap" hidden="">Which specific heat should you use?<select data-f="shc"><option value="">Choose…</option><option value="ice">SH of ice = 2.1 J/(g·°C)</option><option value="liq">SH of liquid water = 4.184 J/(g·°C)</option><option value="gas">SH of gaseous water = 1.7 J/(g·°C)</option></select></label></div><div class="qbox empty" id="qBox"><span class="ql">Q (J)</span>Fill in every blank above and Q will load here.</div><div class="sp-fb" id="spFb"></div><div class="btn-row sp-actions"><div class="grp"><button class="btn small" id="spBack" disabled="">◂ Back</button><button class="btn small" id="spReplay" title="Replay this segment" aria-label="Replay this segment">↺</button></div><div class="grp"><button class="btn primary" id="spCheck">Check</button><button class="btn primary" id="spNext" disabled="" title="Get this segment correct to move on">Next ▸</button></div></div></div>
+    </div>
+  </div>
+</section>
+</div><!-- /tab2 -->
 </main>
 <script>
 (function(){
@@ -306,7 +511,9 @@ if (window.ResizeObserver) new ResizeObserver(sizeCanvases).observe(document.que
 function rr(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
 function mix(a,b,t){ const pa=a.match(/\w\w/g).map(v=>parseInt(v,16)), pb=b.match(/\w\w/g).map(v=>parseInt(v,16)); return 'rgb('+pa.map((v,i)=>Math.round(v+(pb[i]-v)*t)).join(',')+')'; }
 
-/* ============ particles (24 molecules) ============ */
+/* ============ particles (24 molecules) — reusable for both tabs ============ */
+function createParticles(pctx){
+  let rate=0, playing=true, dragging=false;
 const BOX={x:44,y:14,w:342,h:294}, D0=38, N=24;
 const mols=[];
 (function(){
@@ -348,9 +555,9 @@ function assign(st, withFx){
   }
   mols.forEach(m=>m.prev=m.ph);
 }
-function resetParticles(){
+function resetParticles(st){
   fx.length=0; mols.forEach(m=>m.prev=null);
-  assign(stateAt(H,mass), false);
+  assign(st, false);
   mols.forEach(m=>{
     m.vx=m.vy=0; m.av=0; m.ang=m.base;
     if(m.ph==='g'){ m.x=BOX.x+20+Math.random()*(BOX.w-40); m.y=BOX.y+20+Math.random()*(BOX.h-40); const a=Math.random()*6.28; m.vx=Math.cos(a)*3; m.vy=Math.sin(a)*3; }
@@ -506,6 +713,12 @@ function drawParticles(st){
   rr(c,mx,my,mw,9,4.5); c.fillStyle='#dde7ea'; c.fill();
   if(sp>0.01){ rr(c,mx,my,Math.max(9,mw*sp),9,4.5); c.fillStyle=mix('6fb3e0','d2452b',sp); c.fill(); }
 }
+
+  return {assign, physics, draw:drawParticles, reset:resetParticles, mols,
+    setEnv(r,p,d){ rate=r; playing=p; dragging=d; }};
+}
+window.createParticles=createParticles;
+const P1=createParticles(pctx);
 
 /* ============ apparatus ============ */
 const bubbles=[];
@@ -664,7 +877,7 @@ function step(dt){
 function resetTrial(){
   if(trialHasRows){ trial++; trialHasRows=false; }
   Hstart=Hfrom(tStart,mass); H=Hstart; simTime=0; nextLog=0;
-  trace=[{h:H,T:stateAt(H,mass).T}]; bubbles.length=0; resetParticles(); hideMsg();
+  trace=[{h:H,T:stateAt(H,mass).T}]; bubbles.length=0; P1.reset(stateAt(H,mass)); hideMsg();
 }
 
 /* ============ data table ============ */
@@ -754,12 +967,396 @@ function frame(now){
   const dt=Math.min(0.05,(now-last)/1000); last=now;
   if(dragging && now-dragLastMove>90){ dragRate*=0.8; if(Math.abs(dragRate)<25) dragRate=0; showDragRate(); }
   step(dt);
-  const st=stateAt(H,mass); assign(st, true);
-  if(playing||dragging) physics(st);
-  drawMacro(st); drawParticles(st); drawGraph(); updateReadouts(st);
+  const st=stateAt(H,mass); P1.setEnv(rate,playing,dragging); P1.assign(st, true);
+  if(playing||dragging) P1.physics(st);
+  drawMacro(st); P1.draw(st); drawGraph(); updateReadouts(st);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+})();
+</script>
+<script>
+/* ================= Tab switching ================= */
+(function(){
+  const b1=document.getElementById('tabBtn1'), b2=document.getElementById('tabBtn2');
+  const t1=document.getElementById('tab1'), t2=document.getElementById('tab2');
+  function show(n){
+    const one=n===1; t1.hidden=!one; t2.hidden=one; document.body.classList.toggle('on-t2',!one);
+    b1.classList.toggle('on',one); b2.classList.toggle('on',!one);
+    b1.setAttribute('aria-selected',one); b2.setAttribute('aria-selected',!one);
+    requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
+  }
+  b1.addEventListener('click',()=>show(1)); b2.addEventListener('click',()=>show(2));
+  [b1,b2].forEach((b,i,a)=>b.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft') return;
+    e.preventDefault(); const n=(i+(e.key==='ArrowRight'?1:-1)+a.length)%a.length; show(n+1); a[n].focus();
+  }));
+})();
+
+/* ================= Tab 2: Label the Processes ================= */
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const K={SH_ICE:2.1, SH_W:4.184, SH_G:1.7, HF:335, HV:2260};
+let mass=50, sel=-1, playing=false, u=0, lastU=0, lastT=0, dragging=false, dragMoved=false, mode='heat', playPhase='heat';
+
+const PROCS=[['boil','Boiling (vaporization)'],['cond','Condensation'],['freeze','Freezing'],['cool-g','Gas cools'],['warm-g','Gas warms'],['cool-l','Liquid cools'],['warm-l','Liquid warms'],['melt','Melting'],['cool-s','Solid cools'],['warm-s','Solid warms']];
+const EQS=[['sh','Q = SH × M × ΔT'],['hf','Q = M × Hf'],['nhf','Q = M × (−Hf)'],['hv','Q = M × Hv'],['nhv','Q = M × (−Hv)']];
+const SIGNS=[['abs','Absorbed (+Q)'],['rel','Released (−Q)']];
+const SHS=[['ice','SH of ice = 2.1 J/(g·°C)'],['liq','SH of liquid water = 4.184 J/(g·°C)'],['gas','SH of gaseous water = 1.7 J/(g·°C)']];
+const SHV={ice:2.1, liq:4.184, gas:1.7}, SHSTATE={ice:'solid ice', liq:'liquid water', gas:'gaseous water'};
+const SEGSH={A:'ice', C:'liq', E:'gas'};
+const NAME=o=>Object.fromEntries(o);
+const PNAME=NAME(PROCS), ENAME=NAME(EQS);
+const GNAME={sh:'Q = SH × M × ΔT', hf:'Q = M × Hf', nhf:'Q = M × (−Hf)', hv:'Q = M × Hv', nhv:'Q = M × (−Hv)'};   // short form for graph labels
+const WGT={A:1.2,B:2,C:1.8,D:2.4,E:1.2};   // schematic widths (not to scale)
+
+const steps=[
+  {seg:'A',dir:'heat',from:-20,to:0,kind:'dT',sh:K.SH_ICE,shName:'ice',proc:'warm-s'},
+  {seg:'B',dir:'heat',from:0,to:0,kind:'fus',proc:'melt'},
+  {seg:'C',dir:'heat',from:0,to:100,kind:'dT',sh:K.SH_W,shName:'liquid water',proc:'warm-l'},
+  {seg:'D',dir:'heat',from:100,to:100,kind:'vap',proc:'boil'},
+  {seg:'E',dir:'heat',from:100,to:120,kind:'dT',sh:K.SH_G,shName:'gaseous water',proc:'warm-g'},
+  {seg:'E',dir:'cool',from:120,to:100,kind:'dT',sh:K.SH_G,shName:'gaseous water',proc:'cool-g'},
+  {seg:'D',dir:'cool',from:100,to:100,kind:'vap',proc:'cond'},
+  {seg:'C',dir:'cool',from:100,to:0,kind:'dT',sh:K.SH_W,shName:'liquid water',proc:'cool-l'},
+  {seg:'B',dir:'cool',from:0,to:0,kind:'fus',proc:'freeze'},
+  {seg:'A',dir:'cool',from:0,to:-20,kind:'dT',sh:K.SH_ICE,shName:'ice',proc:'cool-s'}];
+const SEGS=['A','B','C','D','E'], SW=SEGS.map(k=>WGT[k]), STOT=SW.reduce((a,b)=>a+b,0);
+const SFROM={A:-20,B:0,C:0,D:100,E:100}, STO={A:0,B:0,C:100,D:100,E:120};
+const stepOf=(k,mode)=>mode==='heat'?k:9-k;   // segment index -> step index
+
+function answer(st){
+  const heat=st.dir==='heat', dT=st.to-st.from; let eq,q;
+  if(st.kind==='dT'){ eq='sh'; q=st.sh*mass*dT; }
+  else if(st.kind==='fus'){ eq=heat?'hf':'nhf'; q=(heat?1:-1)*mass*K.HF; }
+  else { eq=heat?'hv':'nhv'; q=(heat?1:-1)*mass*K.HV; }
+  return {proc:st.proc,dT,eq,sign:heat?'abs':'rel',q};
+}
+const minus=v=>String(v).replace(/-/g,'−');
+const f1=x=>minus((Math.abs(x)<0.05?0:x).toFixed(1));
+const s3=x=>minus(Number(x.toPrecision(3)).toLocaleString('en-US',{maximumFractionDigits:3}));
+const full=x=>minus(Number(x.toFixed(2)).toLocaleString('en-US',{maximumFractionDigits:2}));
+function parseNum(v){ v=String(v||'').trim().replace(/[−–—]/g,'-').replace(/[,\s]/g,''); if(!/^[-+]?\d*\.?\d+(e[-+]?\d+)?$/i.test(v)) return NaN; return parseFloat(v); }
+
+/* ---------- one step at a time, under the particle picture ---------- */
+const tab2=$('tab2');
+let cur=0, anim=null, totals, lmode='heat';
+const IDX={heat:[0,1,2,3,4], cool:[5,6,7,8,9]};
+const idx=()=>IDX[lmode];
+const gi=()=>idx()[Math.min(cur,4)];                 // global index of the current step
+const frontier=()=>{ const L=idx(); for(let p=0;p<5;p++) if(!steps[L[p]].ok) return p; return 5; };
+function opts(list,v){ return '<option value="">Choose…</option>'+list.map(o=>'<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>').join(''); }
+function numInput(attr,ph,v){ return '<span class="numwrap"><button type="button" class="pm" aria-label="Toggle negative sign">±</button><input '+attr+' autocomplete="off" placeholder="'+ph+'" value="'+String(v||'').replace(/"/g,'')+'"></span>'; }
+function stepRange(st){ return st.kind==='dT' ? f1(st.from)+' °C → '+f1(st.to)+' °C' : 'at '+f1(st.from)+' °C'; }
+function resetAll(){
+  steps.forEach(st=>{ st.vals={proc:'',dT:'',eq:'',sign:'',shc:''}; st.choice={}; st.res={}; st.tries=0; st.ok=false; st.checked=false; });
+  totals={};
+}
+function setProblem(){
+  $('problemText').textContent = lmode==='heat'
+    ? 'Heating mode: A '+mass.toFixed(1)+' g sample of ice at −20.0 °C is heated until it is gas at 120.0 °C.'
+    : 'Cooling mode: A '+mass.toFixed(1)+' g sample of gaseous water at 120.0 °C is cooled until it is ice at −20.0 °C.';
+}
+function renderProgress(){
+  const L=idx(), fr=frontier();
+  $('progress').innerHTML = L.map((g,p)=>{ const st=steps[g], locked=p>fr;
+      return '<button class="pchip '+(st.dir==='heat'?'h':'c')+(st.ok?' ok':st.checked?' bad':'')+(p===cur?' cur':'')+'" data-go="'+p+'"'+(locked?' disabled title="Finish the earlier steps first"':'')+' aria-label="Step '+(p+1)+'">'+(locked?'🔒':(p+1))+'</button>'; }).join('')
+    + '<button class="pchip'+(fr===5?' ok':'')+(cur===5?' cur':'')+'" data-go="5"'+(fr<5?' disabled title="Finish all 5 steps first"':'')+'>'+(fr<5?'🔒 ':'')+'Totals</button>';
+}
+function renderPanel(){
+  const P=$('stepPanel');
+  if(cur<5){
+    const g=gi(), st=steps[g], v=st.vals, heat=st.dir==='heat'; sel=g;
+    P.innerHTML='<div class="sp-head"><span class="badge">Step '+(cur+1)+' of 5</span><span class="dirtag '+(heat?'h':'c')+'">'+(heat?'Heating ▸':'◂ Cooling')+'</span><b>Segment '+st.seg+'</b><span class="range">'+stepRange(st)+'</span></div>'
+     +'<div class="fields stack">'
+     +'<label>Process<select data-f="proc">'+opts(PROCS,v.proc)+'</select></label>'
+     +'<label class="half">ΔT (°C)'+numInput('data-f="dT"','e.g. 20.0',v.dT)+'</label>'
+     +'<label class="half">Energy is…<select data-f="sign">'+opts(SIGNS,v.sign)+'</select></label>'
+     +'<label class="wide">Equation<select data-f="eq">'+opts(EQS,v.eq)+'</select></label>'
+     +'<label class="wide shq" id="shWrap"'+(v.eq==='sh'?'':' hidden')+'>Which specific heat should you use?<select data-f="shc">'+opts(SHS,v.shc)+'</select></label>'
+     +'</div><div class="qbox" id="qBox"></div>'
+     +'<div class="sp-fb" id="spFb"></div>'
+     +'<div class="btn-row sp-actions"><div class="grp"><button class="btn small" id="spBack"'+(cur===0?' disabled':'')+'>◂ Back</button><button class="btn small" id="spReplay" title="Replay this segment" aria-label="Replay this segment">↺</button></div>'
+     +'<div class="grp"><button class="btn primary" id="spCheck">Check</button><button class="btn primary" id="spNext"'+(st.ok?'':' disabled title="Get this segment correct to move on"')+'>'+(cur===4?'Totals ▸':'Next ▸')+'</button></div></div>';
+    updateQ();
+    if(st.checked) showResult(st,false);
+  } else {
+    sel=-1;
+    const L=idx(), heat=lmode==='heat';
+    const rows=L.map((g,p)=>{ const st=steps[g]; return '<tr class="'+(heat?'h':'c')+'"><td>'+(p+1)+'</td><td>'+PNAME[st.proc]+'</td><td class="num">'+s3(answer(st).q)+'</td></tr>'; }).join('');
+    const sum=L.reduce((t,g)=>t+Number(answer(steps[g]).q.toPrecision(3)),0);
+    P.innerHTML='<div class="sp-head"><span class="badge">Totals</span><b>'+(heat?'Heating':'Cooling')+': energy for every step</b></div>'
+     +'<div class="table-wrap"><table class="qsum"><thead><tr><th scope="col">Step</th><th scope="col">Process</th><th scope="col">Q (J)</th></tr></thead><tbody>'+rows+'</tbody>'
+     +'<tfoot><tr><td colspan="2">Total Q</td><td class="num">'+s3(sum)+'</td></tr></tfoot></table></div>'
+     +'<div class="sp-fb"><div class="good"><b>🎉 All 5 steps correct!</b> '+(heat
+        ? 'Every heating step absorbs energy, so every Q is positive. Now try <b>Cooling mode</b> and compare the total.'
+        : 'Every cooling step releases energy, so every Q is negative. Compare this total with the heating total: same size, opposite sign.')+'</div></div>'
+     +'<div class="btn-row sp-actions"><div class="grp"><button class="btn small" id="spBack">◂ Back</button></div><div class="grp">'
+     +(heat?'<button class="btn primary" id="spSwitch">Go to Cooling mode ▸</button>':'<button class="btn" id="spSwitch">◂ Back to Heating mode</button>')+'</div></div>';
+  }
+  renderProgress();
+}
+function evaluate(st){
+  const a=answer(st), v=st.vals, res={}, hints=[];
+  res.proc=v.proc===a.proc; if(!res.proc) hints.push(v.proc?hintProc(st,v.proc):'Choose a process.');
+  const dv=parseNum(v.dT); res.dT=Math.abs(dv-a.dT)<0.05; if(!res.dT) hints.push(isNaN(dv)?'Enter ΔT in °C.':hintDT(st,dv));
+  res.sign=v.sign===a.sign; if(!res.sign) hints.push(v.sign?hintSign(st):'Choose absorbed or released.');
+  res.eq=v.eq===a.eq; if(!res.eq) hints.push(v.eq?hintEq(st,v.eq):'Choose an equation.');
+  if(res.eq && v.eq==='sh'){ const want=SEGSH[st.seg]; res.shc=v.shc===want; if(!res.shc) hints.push(v.shc?'Check the state of the water: during this step it is '+SHSTATE[want]+'. Use the specific heat that matches.':'Choose which specific heat to use.'); }
+  return {a,res,hints};
+}
+const PRAISE={'warm-s':'The ice warms, so its molecules vibrate faster.','melt':'Melting absorbs energy while the temperature stays at 0 °C.','warm-l':'The liquid warms, so its molecules move faster.','boil':'Boiling absorbs a lot of energy while the temperature stays at 100 °C.','warm-g':'The gas warms, so its molecules move faster.',
+  'cool-g':'The gas cools, so its molecules slow down.','cond':'Condensing releases energy while the temperature stays at 100 °C.','cool-l':'The liquid cools, so its molecules slow down.','freeze':'Freezing releases energy while the temperature stays at 0 °C.','cool-s':'The ice cools, so its molecules vibrate more slowly.'};
+function showResult(st,count){
+  const {res,hints}=evaluate(st), P=$('stepPanel');
+  for(const f in res){ const el=P.querySelector('[data-f="'+f+'"]'); if(!el) continue; el.classList.remove('ok','bad'); el.classList.add(res[f]?'ok':'bad'); }
+  const all=Object.values(res).every(Boolean);
+  if(count){ st.res=res; st.ok=all; st.checked=true; if(!all) st.tries++; st.choice={proc:st.vals.proc,eq:st.vals.eq}; }
+  $('spFb').innerHTML = all ? '<div class="good"><b>✓ Correct!</b> '+PRAISE[st.proc]+'</div>'
+    : '<div class="bad"><b>Not quite.</b> Fix the red boxes and check again.<ul>'+hints.map(h=>'<li>'+h+'</li>').join('')+'</ul></div>';
+  const nx=$('spNext'); nx.disabled=!all; nx.title = all ? '' : 'Get this segment correct to move on';
+  renderProgress();
+}
+function studentQ(st){
+  const v=st.vals, dv=parseNum(v.dT);
+  if(!v.proc||!v.sign||!v.eq||isNaN(dv)) return null;
+  const m=mass.toFixed(1)+' g';
+  if(v.eq==='sh'){ if(!v.shc) return null; const sh=SHV[v.shc]; const q=sh*mass*dv;
+    return {q, text:'Q = SH × M × ΔT = '+sh+' J/(g·°C) × '+m+' × '+(dv<0?'('+f1(dv)+' °C)':f1(dv)+' °C')}; }
+  const fus=v.eq==='hf'||v.eq==='nhf', neg=v.eq[0]==='n', Hv=fus?K.HF:K.HV, q=(neg?-1:1)*mass*Hv;
+  return {q, text:'Q = M × '+(neg?'(−'+(fus?'Hf':'Hv')+')':(fus?'Hf':'Hv'))+' = '+m+' × '+(neg?'(−'+Hv+' J/g)':Hv+' J/g')};
+}
+function updateQ(){
+  const box=$('qBox'); if(!box||cur>=5) return;
+  const r=studentQ(steps[gi()]);
+  if(!r){ box.className='qbox empty'; box.innerHTML='<span class="ql">Q (J)</span>Fill in every blank above and Q will load here.'; return; }
+  const full3=s3(r.q), exact=full(r.q);
+  box.className='qbox';
+  box.innerHTML='<span class="ql">Q (J), loaded from your choices</span>'+r.text+(full3!==exact?' = '+exact+' J → <b>'+full3+' J</b> (3 significant figures)':' = <b>'+full3+' J</b>');
+}
+function segOfStep(i){ return i<5?i:9-i; }
+function goTo(p,animate){
+  p=Math.max(0,Math.min(5,p)); if(p>frontier()) p=frontier();
+  cur=p; renderPanel(); if(cur<5 && animate!==false) startAnim(gi());
+}
+function startAnim(i,fromStart){
+  const st=steps[i], k=segOfStep(i); let acc=0; for(let j=0;j<k;j++) acc+=SW[j];
+  const a0=acc/STOT, a1=(acc+SW[k])/STOT, heat=st.dir==='heat', u0=heat?a0:a1, u1=heat?a1:a0;
+  if(fromStart || Math.abs(u-u0)>1e-3){ u=u0; lastU=u; P2.reset(sampleState(u0)); }
+  mode=heat?'heat':'cool';
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){ setU(u1); anim=null; return; }
+  anim={u0,u1,t:0,dur:st.kind==='dT'?3:4};
+}
+function setMode(m){
+  if(m===lmode) return; lmode=m;
+  $('modeHeat').classList.toggle('on',m==='heat'); $('modeCool').classList.toggle('on',m==='cool');
+  $('modeHeat').setAttribute('aria-pressed',m==='heat'); $('modeCool').setAttribute('aria-pressed',m==='cool');
+  setProblem(); anim=null; goTo(Math.min(frontier(),4));
+}
+$('modeHeat').addEventListener('click',()=>setMode('heat'));
+$('modeCool').addEventListener('click',()=>setMode('cool'));
+tab2.addEventListener('click',e=>{
+  const pm=e.target.closest('.pm'); if(pm){ const inp=pm.parentElement.querySelector('input'); const v=inp.value.trim().replace(/^[−–]/,'-'); inp.value=v.startsWith('-')?v.slice(1):'-'+v; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.focus(); return; }
+  const go=e.target.closest('[data-go]'); if(go){ if(!go.disabled) goTo(+go.dataset.go); return; }
+  const id=e.target.id;
+  if(id==='spCheck') showResult(steps[gi()],true);
+  else if(id==='spNext'){ if(steps[gi()].ok) goTo(cur+1); }
+  else if(id==='spBack') goTo(cur-1);
+  else if(id==='spReplay') startAnim(gi(),true);
+  else if(id==='spSwitch') setMode(lmode==='heat'?'cool':'heat');
+});
+function onField(e){
+  const el=e.target, f=el.dataset.f; if(!f || cur>=5) return;
+  const st=steps[gi()]; st.vals[f]=el.value; if(f==='proc'||f==='eq') st.choice[f]=el.value;
+  delete st.res[f]; st.ok=false; el.classList.remove('ok','bad');
+  if(f==='eq'){ const w=$('shWrap'); if(w){ w.hidden = el.value!=='sh'; if(el.value!=='sh'){ delete st.res.shc; const sel=w.querySelector('select'); sel.classList.remove('ok','bad'); } } }
+  const nx=$('spNext'); if(nx) nx.disabled=true;
+  updateQ(); renderProgress();
+}
+$('stepPanel').addEventListener('input',onField); $('stepPanel').addEventListener('change',onField);
+$('resetSim').addEventListener('click',()=>{
+  if(steps.some(st=>st.checked||st.vals.proc||st.vals.eq) && !confirm('Reset the simulation? This clears your answers in both modes.')) return;
+  resetAll(); anim=null; if(lmode!=='heat'){ lmode='cool'; setMode('heat'); } setProblem();
+  u=0; lastU=0; mode='heat'; P2.reset(sampleState(0)); goTo(0);
+});
+
+/* ---------- hints ---------- */
+const PHASE=new Set(['melt','freeze','boil','cond']), HEATP=new Set(['warm-s','melt','warm-l','boil','warm-g']);
+function hintProc(st,v){
+  const heat=st.dir==='heat';
+  if(HEATP.has(v)!==heat) return heat ? 'This step is heating. Energy is being added, so the sample is warming or changing to a state with more energy.' : 'This step is cooling. Energy is being removed, so the sample is cooling or changing to a state with less energy.';
+  if(st.kind==='dT' && PHASE.has(v)) return 'The temperature changes on this step, so no change of state is happening.';
+  if(st.kind!=='dT' && !PHASE.has(v)) return 'The temperature stays the same on this step, so a change of state is happening.';
+  if(st.kind!=='dT') return 'At 0 °C water changes between solid and liquid. At 100 °C it changes between liquid and gas.';
+  return 'Which state is the water in on this segment: solid, liquid, or gas?';
+}
+function hintDT(st,v){
+  const want=st.to-st.from;
+  if(want===0) return 'The temperature does not change during a change of state, so ΔT = 0.';
+  if(Math.abs(Math.abs(v)-Math.abs(want))<0.05) return 'Check the sign. ΔT = final temperature − starting temperature. When the sample cools, the final temperature is lower, so ΔT is negative.';
+  return 'ΔT = final temperature − starting temperature ('+f1(st.to)+' °C − ('+f1(st.from)+' °C)).';
+}
+function hintEq(st,v){
+  if(st.kind!=='dT' && v==='sh') return 'Q = SH × M × ΔT only works when the temperature changes. Here ΔT = 0, so it would give 0 J. A change of state needs Hf or Hv.';
+  if(st.kind==='dT' && v!=='sh') return 'Hf and Hv are only for changes of state. This step changes temperature, so use the specific heat equation. The sign comes from ΔT.';
+  const isF=v==='hf'||v==='nhf';
+  if((st.kind==='fus')!==isF) return 'Fusion (Hf) is melting or freezing at 0 °C. Vaporization (Hv) is boiling or condensing at 100 °C.';
+  return st.dir==='heat' ? 'Melting and boiling absorb energy, so Q is positive. Use Q = M × Hf or Q = M × Hv with no negative sign.' : 'Freezing and condensing release energy, so Q is negative. Use Q = M × (−Hf) for freezing or Q = M × (−Hv) for condensing.';
+}
+function hintSign(st){ return st.dir==='heat' ? 'When the sample is heated, energy is added, so it is absorbed (Q is +).' : 'When the sample is cooled, energy leaves it, so it is released (Q is −).'; }
+function hintQ(st,v,a){
+  if(Math.abs(Math.abs(v)-Math.abs(a.q))<=Math.abs(a.q)*0.006+0.5) return 'Your number is right, but the sign is not. '+(a.q<0?'Released energy has a negative Q.':'Absorbed energy has a positive Q.');
+  if(st.kind==='dT') return 'Use Q = SH × M × ΔT with the specific heat of '+st.shName+' and M = '+mass.toFixed(1)+' g. Keep the sign of ΔT.';
+  return 'Use M = '+mass.toFixed(1)+' g and '+(st.kind==='fus'?'Hf = 335 J/g':'Hv = 2260 J/g')+'.';
+}
+function setupText(st,a){
+  const m=mass.toFixed(1)+' g'; let t;
+  if(st.kind==='dT') t='Q = SH × M × ΔT = '+st.sh+' J/(g·°C) × '+m+' × ('+f1(st.to)+' °C − ('+f1(st.from)+' °C)) = '+st.sh+' × '+m+' × '+f1(a.dT)+' °C = <b>'+full(a.q)+' J</b>';
+  else { const Hn=st.kind==='fus'?'Hf':'Hv', val=st.kind==='fus'?'335 J/g':'2260 J/g', neg=st.dir!=='heat';
+    t='Q = M × '+(neg?'(−'+Hn+')':Hn)+' = '+m+' × '+(neg?'(−'+val+')':val)+' = <b>'+full(a.q)+' J</b>'; }
+  if(s3(a.q)!==full(a.q)) t+=' → '+s3(a.q)+' J (3 significant figures)';
+  return t;
+}
+
+/* ---------- position along the heating curve (u = 0 at A start, 1 at E end) ---------- */
+function where(uu){
+  const e=Math.max(0,Math.min(1,uu))*STOT; let acc=0;
+  for(let k=0;k<5;k++){ const len=SW[k];
+    if(e<=acc+len||k===4){ const f=Math.max(0,Math.min(1,(e-acc)/len)), sg=SEGS[k]; return {k,f,seg:sg,T:SFROM[sg]+(STO[sg]-SFROM[sg])*f}; }
+    acc+=len; }
+}
+function sampleState(uu){
+  const w=where(uu); let fs=0,fl=0,fg=0;
+  if(w.seg==='A') fs=1; else if(w.seg==='C') fl=1; else if(w.seg==='E') fg=1;
+  else if(w.seg==='B'){ fl=w.f; fs=1-w.f; } else { fg=w.f; fl=1-w.f; }
+  return {T:w.T, seg:w.seg, fs, fl, fg, k:w.k};
+}
+function stateName(x){ const p=[]; if(x.fs>1e-9)p.push('solid'); if(x.fl>1e-9)p.push('liquid'); if(x.fg>1e-9)p.push('gas'); return p.join(' + ')||'solid'; }
+
+/* ---------- canvases ---------- */
+const gcv=$('lgraph'), g=gcv.getContext('2d'), pcv=$('lparticles'), pc=pcv.getContext('2d');
+let W=700, Hh=420;
+const P2=window.createParticles(pc);
+function sizeAll(){
+  const dpr=Math.min(3,window.devicePixelRatio||1);
+  const w=gcv.clientWidth||700, h=Math.max(250,Math.min(360,w*0.66));
+  W=w; Hh=h; gcv.style.height=h+'px'; gcv.width=Math.round(w*dpr); gcv.height=Math.round(h*dpr); g.setTransform(dpr,0,0,dpr,0,0);
+  const pw=pcv.clientWidth||320, ph=pw*320/400; pcv.style.height=ph+'px'; pcv.width=Math.round(pw*dpr); pcv.height=Math.round(ph*dpr); pc.setTransform(pcv.width/400,0,0,pcv.height/320,0,0);
+}
+window.addEventListener('resize',sizeAll);
+function geom(){
+  const L=58,R=16,T=14,B=40, TMAX=165, TMIN=-65, X=v=>L+v/STOT*(W-L-R), Y=t=>T+(TMAX-t)/(TMAX-TMIN)*(Hh-T-B);
+  const pts=[[0,-20]]; let acc=0; SEGS.forEach((k,i)=>{ acc+=SW[i]; pts.push([acc,STO[k]]); });
+  return {L,R,T,B,X,Y,pts};
+}
+// where each label block goes: heating (▸) and cooling (◂) for every segment
+function spots(k,G){
+  const a=G.pts[k], b=G.pts[k+1], x1=G.X(a[0]), x2=G.X(b[0]), y1=G.Y(a[1]), y2=G.Y(b[1]), mx=(x1+x2)/2, my=(y1+y2)/2;
+  let sp;
+  switch(SEGS[k]){
+    case 'A': sp={x:x1+4,y:G.Y(-20)+26,al:'left'}; break;
+    case 'B': sp={x:mx,y:my-32,al:'center'}; break;
+    case 'C': sp={x:mx+18,y:my+14,al:'left'}; break;
+    case 'D': sp={x:mx,y:my-32,al:'center'}; break;
+    case 'E': sp={x:x2,y:G.Y(158),al:'right'}; break;
+  }
+  return {heat:sp, cool:sp};
+}
+const OK='#2e8b57', BAD='#b23a1e', HEATC='#c0441f', COOLC='#2a62b0';
+function drawLabel(c,sp,i,dirHeat,narrow){
+  const st=steps[i], pr=st.choice.proc, eq=st.choice.eq, tag=dirHeat?(i+1)+' ▸ ':'◂ '+(i-4)+' ';
+  c.textAlign=sp.al;
+  const fs=narrow?11:12;
+  // line 1: step tag + process
+  c.font='700 '+fs+'px Poppins, system-ui, sans-serif';
+  const procTxt = pr ? PNAME[pr]+(st.res.proc===false?' ✗':'') : '?';
+  const procCol = !pr ? '#9fb3ba' : st.res.proc===true?OK : st.res.proc===false?BAD : '#15333c';
+  const tw=c.measureText(tag).width, pw=c.measureText(procTxt).width, total=tw+pw;
+  let x0 = sp.al==='left'?sp.x : sp.al==='right'?sp.x-total : sp.x-total/2;
+  c.textAlign='left'; c.fillStyle=dirHeat?HEATC:COOLC; c.fillText(tag,x0,sp.y); c.fillStyle=procCol; c.fillText(procTxt,x0+tw,sp.y);
+  // line 2: equation
+  if(eq){ c.font='600 '+(fs-0.5)+'px Poppins, system-ui, sans-serif'; c.fillStyle= st.res.eq===true?OK : st.res.eq===false?BAD : '#3d5a63';
+    const et=GNAME[eq]+(st.res.eq===false?' ✗':''), ew=c.measureText(et).width;
+    const ex = sp.al==='left'?x0+tw : sp.al==='right'?sp.x-ew : sp.x-ew/2+tw/2;
+    c.fillText(et,ex,sp.y+14); }
+}
+function draw(){
+  const G=geom(), c=g; c.clearRect(0,0,W,Hh); c.fillStyle='#fff'; c.fillRect(0,0,W,Hh);
+  c.font='12px Poppins, system-ui, sans-serif'; c.lineWidth=1;
+  for(const t of [-20,0,50,100,120]){ c.strokeStyle='#e3eaed'; c.beginPath(); c.moveTo(G.L,G.Y(t)); c.lineTo(W-G.R,G.Y(t)); c.stroke(); c.fillStyle='#5a6f77'; c.textAlign='right'; c.fillText(minus(t)+'°C',G.L-6,G.Y(t)+4); }
+  c.strokeStyle='#15333c'; c.lineWidth=1.5; c.beginPath(); c.moveTo(G.L,G.T); c.lineTo(G.L,Hh-G.B); c.lineTo(W-G.R,Hh-G.B); c.stroke();
+  c.fillStyle='#1f5b6b'; c.font='600 12px Poppins, system-ui, sans-serif'; c.textAlign='center';
+  c.fillText('Energy added → (not to scale)', G.L+(W-G.L-G.R)/2, Hh-14);
+  c.save(); c.translate(14,G.T+(Hh-G.T-G.B)/2); c.rotate(-Math.PI/2); c.fillText('Temperature of the sample',0,0); c.restore();
+  const selK = sel<0 ? -1 : (sel<5 ? sel : 9-sel);
+  // the heating curve
+  for(let k=0;k<5;k++){
+    const a=G.pts[k], b=G.pts[k+1], both=lmode==='heat'?steps[k].ok:steps[9-k].ok;
+    c.strokeStyle=both?OK:k===selK?'#c8561e':'#1f5b6b'; c.lineWidth=k===selK?6:4; c.lineCap='round';
+    c.beginPath(); c.moveTo(G.X(a[0]),G.Y(a[1])); c.lineTo(G.X(b[0]),G.Y(b[1])); c.stroke();
+  }
+  // labels: heating step (▸) and cooling step (◂) for each segment
+  const narrow=W<380;
+  for(let k=0;k<5;k++){
+    const sp=spots(k,G), hi=k, ci=9-k;
+    if(lmode==='heat' && (!narrow || sel===hi)) drawLabel(c,sp.heat,hi,true,narrow);
+    if(lmode==='cool' && (!narrow || sel===ci)) drawLabel(c,sp.cool,ci,false,narrow);
+  }
+  // segment letters on the line
+  for(let k=0;k<5;k++){
+    const a=G.pts[k], b=G.pts[k+1], x=(G.X(a[0])+G.X(b[0]))/2, y=(G.Y(a[1])+G.Y(b[1]))/2;
+    c.beginPath(); c.arc(x,y,10,0,6.28); c.fillStyle='#fff'; c.fill(); c.lineWidth=2; c.strokeStyle=k===selK?'#c8561e':'#1f5b6b'; c.stroke();
+    c.fillStyle='#c8561e'; c.font='700 11.5px Poppins, system-ui, sans-serif'; c.textAlign='center'; c.fillText(SEGS[k],x,y+4);
+  }
+  // the dot, with an arrow showing which way it is moving
+  const s=sampleState(u), heat=mode==='heat', dx=G.X(u*STOT), dy=G.Y(s.T);
+  c.beginPath(); c.arc(dx,dy,dragging?17:14,0,6.28); c.fillStyle='rgba(200,86,30,0.2)'; c.fill();
+  c.beginPath(); c.arc(dx,dy,8,0,6.28); c.fillStyle='#c8561e'; c.fill(); c.lineWidth=2.5; c.strokeStyle='#fff'; c.stroke();
+  const ax=dx+(heat?22:-22), col=heat?HEATC:COOLC; c.fillStyle=col; c.beginPath();
+  if(heat){ c.moveTo(ax-6,dy-8); c.lineTo(ax+6,dy); c.lineTo(ax-6,dy+8); } else { c.moveTo(ax+6,dy-8); c.lineTo(ax-6,dy); c.lineTo(ax+6,dy+8); }
+  c.fill();
+  return {s,heat};
+}
+
+/* ---------- interaction ---------- */
+function pos(e){ const r=gcv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
+function uAtX(x){ const G=geom(); return Math.max(0,Math.min(1,(x-G.L)/(W-G.L-G.R))); }
+function setU(nu){ const du=nu-u; if(du>1e-4) mode='heat'; else if(du<-1e-4) mode='cool'; u=nu; }
+gcv.style.touchAction='pan-y';
+let downU=0, downK=-1;
+gcv.addEventListener('pointerdown',e=>{ const p=pos(e), G=geom(); if(p.x<G.L-10||p.x>W-G.R+10||p.y<G.T||p.y>Hh-G.B+10) return;
+  dragging=true; dragMoved=false; anim=null; try{gcv.setPointerCapture(e.pointerId);}catch(_){}
+  downU=uAtX(p.x); downK=where(downU).k; e.preventDefault(); });
+gcv.addEventListener('pointermove',e=>{ const p=pos(e); if(!dragging){ gcv.style.cursor='grab'; return; }
+  const nu=uAtX(p.x); if(!dragMoved && Math.abs(nu-downU)<0.01) return;
+  if(!dragMoved){ dragMoved=true; }
+  setU(nu); });
+function endDrag(){ if(!dragging) return; dragging=false; if(!dragMoved){ setU(downU); } }
+gcv.addEventListener('pointerup',endDrag); gcv.addEventListener('pointercancel',endDrag);
+gcv.addEventListener('keydown',e=>{ if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft') return; e.preventDefault();
+  anim=null; setU(Math.max(0,Math.min(1,u+(e.key==='ArrowRight'?1:-1)*(e.shiftKey?0.05:0.01)))); });
+/* ---------- loop ---------- */
+let sized=false;
+function loop(now){
+  const dt=Math.min(0.05,(now-(lastT||now))/1000); lastT=now;
+  if(!tab2.hidden){
+    if(!sized){ sizeAll(); P2.reset(sampleState(u)); sized=true; }
+    if(anim){ anim.t+=dt; const f=Math.min(1,anim.t/anim.dur), e2=f<0.5?2*f*f:1-Math.pow(-2*f+2,2)/2; setU(anim.u0+(anim.u1-anim.u0)*e2); if(f>=1) anim=null; }
+    const du=u-lastU; lastU=u;
+    const {s,heat}=draw();
+    const r = Math.abs(du)>1e-6 ? (du>0?1500:-1500) : 0;
+    P2.setEnv(r,true,false); P2.assign(s,true); P2.physics(s); P2.draw(s);
+    const name=stateName(s), el=$('lStates'); if(el.textContent!==name) el.textContent=name;
+    const status=(heat?'Heating ▸':'Cooling ◂')+' · Segment '+s.seg+' · '+f1(s.T)+' °C';
+    if($('lgStatus').textContent!==status) $('lgStatus').textContent=status;
+    gcv.setAttribute('aria-valuenow', String(Math.round(u*100)));
+    gcv.setAttribute('aria-valuetext', status);
+  } else sized=false;
+  requestAnimationFrame(loop);
+}
+setProblem(); resetAll(); goTo(0,false); requestAnimationFrame(loop);
+document.getElementById('tabBtn2').addEventListener('click',()=>{ if(cur===0 && !steps[gi()].checked && !anim) setTimeout(()=>startAnim(gi(),true),250); });
 })();
 </script>
 
