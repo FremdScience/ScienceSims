@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atom & Ion Chart Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --line: #d1d5db;
+    --head: #1f2937;
+    --blue: #2563eb;
+    --ok-bg: #dcfce7;   --ok-bd: #22c55e;
+    --bad-bg: #fee2e2;  --bad-bd: #ef4444;
+    --amb-bg: #fef3c7;  --amb-bd: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 16px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding-bottom: 90px; }
+
+  header { text-align: center; margin-bottom: 20px; }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; margin: 8px 0 4px; }
+  .subtitle { color: var(--muted); margin: 4px 0 0; font-size: 1.05rem; }
+
+  #student-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    max-width: 720px;
+    margin: 18px auto 0;
+    text-align: left;
+  }
+  #student-info label { font-size: .85rem; font-weight: 600; color: #374151; }
+  #student-info input {
+    display: block; width: 100%; margin-top: 4px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 8px; font: inherit; font-weight: 400;
+  }
+
+  /* Formula reference */
+  .formulas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 0 0 18px;
+  }
+  .formula {
+    background: var(--card); border-radius: 10px; padding: 10px 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); font-size: .92rem;
+  }
+  .formula b { font-size: 1.05rem; }
+  .formula span { color: var(--muted); display: block; font-size: .8rem; margin-top: 2px; }
+
+  /* Controls */
+  .modes {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 12px;
+  }
+  .seg { display: inline-flex; background: #e5e7eb; border-radius: 10px; padding: 4px; }
+  .seg button {
+    border: 0; background: transparent; padding: 8px 14px; border-radius: 8px;
+    font: inherit; font-weight: 600; color: #4b5563; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; }
+  .toggle input { width: 18px; height: 18px; accent-color: var(--blue); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+  .toolbar button {
+    flex: 1 1 160px; border: 0; border-radius: 10px; padding: 12px 16px;
+    font: inherit; font-weight: 600; color: #fff; cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,.12); transition: filter .15s;
+  }
+  .toolbar button:hover { filter: brightness(.92); }
+  .b-check { background: var(--blue); }
+  .b-new   { background: #7c3aed; }
+  .b-reset { background: #6b7280; }
+  .b-print { background: #16a34a; }
+  .b-new[hidden] { display: none; }
+
+  /* Progress */
+  #status {
+    background: var(--card); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  #statusText { font-weight: 600; }
+  .bar { height: 10px; border-radius: 99px; background: #e5e7eb; margin-top: 8px; overflow: hidden; display: flex; }
+  .bar i { display: block; height: 100%; transition: width .3s; }
+  .bar .g { background: var(--ok-bd); }
+  .bar .r { background: var(--bad-bd); }
+
+  /* Table */
+  .table-card { background: var(--card); border-radius: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.08); overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; }
+  thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--head); color: #fff; font-size: .72rem; letter-spacing: .05em;
+    text-transform: uppercase; padding: 12px 8px; text-align: center; font-weight: 700;
+  }
+  thead th:first-child { text-align: left; padding-left: 14px; width: 44px; }
+  tbody tr:nth-child(odd) { background: #f9fafb; }
+  tbody tr:hover { background: #f3f4f6; }
+  td { padding: 6px; text-align: center; border-top: 1px solid #e5e7eb; }
+  td.idx { text-align: left; padding-left: 14px; font-weight: 600; color: var(--muted); }
+  td.given { font-weight: 600; font-size: 1rem; }
+
+  .cell {
+    width: 100%; min-width: 64px; padding: 8px 4px; text-align: center;
+    border: 1.5px solid var(--line); border-radius: 8px; background: #fff;
+    font: inherit; font-size: .95rem; transition: background .2s, border-color .2s;
+  }
+  .cell:focus { outline: 3px solid rgba(37,99,235,.35); outline-offset: 1px; border-color: var(--blue); }
+  .cell.ok     { background: var(--ok-bg);  border-color: var(--ok-bd); }
+  .cell.bad    { background: var(--bad-bg); border-color: var(--bad-bd); }
+  .cell.almost { background: var(--amb-bg); border-color: var(--amb-bd); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .82rem; color: var(--muted); margin-top: 10px; }
+  .legend span::before {
+    content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+    margin-right: 6px; vertical-align: -1px; border: 1.5px solid;
+  }
+  .legend .l-ok::before  { background: var(--ok-bg);  border-color: var(--ok-bd); }
+  .legend .l-bad::before { background: var(--bad-bg); border-color: var(--bad-bd); }
+  .legend .l-amb::before { background: var(--amb-bg); border-color: var(--amb-bd); }
+
+  /* Hint bar */
+  #hint {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    background: #111827; color: #f9fafb; padding: 12px 16px; font-size: .95rem;
+    box-shadow: 0 -4px 16px rgba(0,0,0,.2);
+    transform: translateY(100%); transition: transform .2s;
+  }
+  #hint.on { transform: translateY(0); }
+  #hint .inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 10px; align-items: baseline; }
+  #hint b { color: #93c5fd; white-space: nowrap; }
+  #hint.bad b { color: #fca5a5; }
+  #hint.almost b { color: #fcd34d; }
+  #hint.ok b { color: #86efac; }
+
+  .print-only { display: none; }
+
+  /* --- PRINT STYLES (for PDF Export) --- */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .print-hide, #hint { display: none !important; }
+    .print-only { display: block; }
+    .wrap { padding-bottom: 0; }
+    h1 { font-size: 1.5rem; margin: 0; }
+    .subtitle { display: none; }
+    #student-info { display: flex; gap: 20px; max-width: none; margin: 10px 0 12px; }
+    #student-info label { flex: 1; }
+    #student-info input { border: 0; border-bottom: 1px solid #000; border-radius: 0; padding: 2px 0; }
+    .formulas { display: flex; gap: 8px; margin-bottom: 10px; }
+    .formula { box-shadow: none; border: 1px solid #999; padding: 4px 8px; font-size: .75rem; flex: 1; }
+    .formula span { display: none; }
+    .table-card { box-shadow: none; overflow: visible; }
+    table { min-width: 0; font-size: .85rem; }
+    thead th { position: static; background: #eee !important; color: #000; border: 1px solid #444; padding: 6px 4px; }
+    td { border: 1px solid #444; padding: 3px; }
+    tbody tr:nth-child(odd), tbody tr:hover { background: transparent; }
+    .cell, .cell.ok, .cell.bad, .cell.almost {
+      border: 0; background: transparent; padding: 2px; color: #000; font-weight: 500;
+    }
+    tr { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Atom &amp; Ion Chart Challenge</h1>
+    <p class="subtitle">Fill in the missing values. Write ions like <b>S2-</b>, <b>S-2</b>, or <b>sulfide</b>; charges like <b>2+</b>, <b>1-</b>, or <b>0</b>.</p>
+    <p class="print-only" id="printSetName"></p>
+
+    <div id="student-info">
+      <label>Name <input type="text" id="studentName" placeholder="Enter your name" autocomplete="off"></label>
+      <label>Date <input type="date" id="studentDate"></label>
+      <label>Period <input type="text" id="studentPeriod" placeholder="e.g., 3" autocomplete="off"></label>
+    </div>
+  </header>
+
+  <section class="formulas" aria-label="Formulas">
+    <div class="formula"><b>Z = p</b><span>Atomic number = protons (identifies the element)</span></div>
+    <div class="formula"><b>A = p + n</b><span>Mass number = protons + neutrons</span></div>
+    <div class="formula"><b>n = A − Z</b><span>Neutrons = mass number − atomic number</span></div>
+    <div class="formula"><b>C = p − e</b><span>Charge = protons − electrons</span></div>
+  </section>
+
+  <div class="modes print-hide">
+    <div class="seg" role="group" aria-label="Which chart">
+      <button type="button" id="modeClass" aria-pressed="true">Class worksheet</button>
+      <button type="button" id="modePractice" aria-pressed="false">Practice set</button>
+    </div>
+  </div>
+
+  <div class="toolbar print-hide">
+    <button type="button" class="b-check" id="checkButton">Check Answers</button>
+    <button type="button" class="b-new" id="newButton" hidden>New Practice Set</button>
+    <button type="button" class="b-reset" id="resetButton">Reset</button>
+    <button type="button" class="b-print" id="printButton">Print / Save PDF</button>
+  </div>
+
+  <div id="status" class="print-hide" aria-live="polite">
+    <div id="statusText"></div>
+    <div class="bar"><i class="g" id="barOk" style="width:0"></i><i class="r" id="barBad" style="width:0"></i></div>
+  </div>
+
+  <div class="table-card">
+    <table id="quizTable"></table>
+  </div>
+
+  <div class="legend print-hide">
+    <span class="l-ok">Correct</span>
+    <span class="l-bad">Try again (click the box for a hint)</span>
+    <span class="l-amb">Almost — check capitalization</span>
+  </div>
+</div>
+
+<div id="hint" role="status" aria-live="polite"><div class="inner"><b id="hintTitle"></b><span id="hintText"></span></div></div>
+
+<script>
+// ---------- Element data (symbol, name, common mass number), indexed by Z ----------
+const ELEMENT_DATA = "H Hydrogen 1|He Helium 4|Li Lithium 7|Be Beryllium 9|B Boron 11|C Carbon 12|N Nitrogen 14|O Oxygen 16|F Fluorine 19|Ne Neon 20|Na Sodium 23|Mg Magnesium 24|Al Aluminum 27|Si Silicon 28|P Phosphorus 31|S Sulfur 32|Cl Chlorine 35|Ar Argon 40|K Potassium 39|Ca Calcium 40|Sc Scandium 45|Ti Titanium 48|V Vanadium 51|Cr Chromium 52|Mn Manganese 55|Fe Iron 56|Co Cobalt 59|Ni Nickel 58|Cu Copper 63|Zn Zinc 64|Ga Gallium 69|Ge Germanium 74|As Arsenic 75|Se Selenium 80|Br Bromine 79|Kr Krypton 84|Rb Rubidium 85|Sr Strontium 88|Y Yttrium 89|Zr Zirconium 90|Nb Niobium 93|Mo Molybdenum 98|Tc Technetium 98|Ru Ruthenium 102|Rh Rhodium 103|Pd Palladium 106|Ag Silver 107|Cd Cadmium 114|In Indium 115|Sn Tin 120|Sb Antimony 121|Te Tellurium 130|I Iodine 127|Xe Xenon 132|Cs Cesium 133|Ba Barium 138|La Lanthanum 139|Ce Cerium 140|Pr Praseodymium 141|Nd Neodymium 142|Pm Promethium 145|Sm Samarium 152|Eu Europium 153|Gd Gadolinium 158|Tb Terbium 159|Dy Dysprosium 164|Ho Holmium 165|Er Erbium 166|Tm Thulium 169|Yb Ytterbium 174|Lu Lutetium 175|Hf Hafnium 180|Ta Tantalum 181|W Tungsten 184|Re Rhenium 187|Os Osmium 192|Ir Iridium 193|Pt Platinum 195|Au Gold 197|Hg Mercury 202|Tl Thallium 205|Pb Lead 208|Bi Bismuth 209|Po Polonium 209|At Astatine 210|Rn Radon 222";
+
+const ELEMENTS = [null];               // ELEMENTS[z] = {sym, name, A}
+const BY_SYMBOL = {};                  // exact-case symbol -> z
+const BY_SYMBOL_LOWER = {};            // lowercase symbol -> z
+const BY_NAME = { aluminium: 13, sulphur: 16, caesium: 55 };  // lowercase name -> z
+ELEMENT_DATA.split('|').forEach((entry, i) => {
+  const [sym, name, A] = entry.split(' ');
+  const z = i + 1;
+  ELEMENTS[z] = { sym, name, A: +A };
+  BY_SYMBOL[sym] = z;
+  BY_SYMBOL_LOWER[sym.toLowerCase()] = z;
+  BY_NAME[name.toLowerCase()] = z;
+});
+
+// Anion names students may use instead of a symbol: name -> [z, charge]
+const IDE_NAMES = {
+  hydride: [1, -1], nitride: [7, -3], oxide: [8, -2], fluoride: [9, -1],
+  phosphide: [15, -3], sulfide: [16, -2], sulphide: [16, -2], chloride: [17, -1],
+  arsenide: [33, -3], selenide: [34, -2], bromide: [35, -1], telluride: [52, -2], iodide: [53, -1],
+};
+const ROMAN = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7 };
+
+// ---------- Class worksheet ----------
+// Class worksheet rows are encoded so the answers are not readable in "View Source".
+// To edit them, decode with: JSON.parse(atob(CLASS_DATA).split("").reverse().join(""))
+// Each row is [symbol, mass number, charge, which columns are GIVEN];
+// columns: X = symbol, A = mass #, Z = atomic #, p = protons, n = neutrons, e = electrons, C = charge
+const CLASS_DATA = "XV0iQ2VaQSIsMCw2NSwiZUYiWyxdImVucFpBIiwyLDQ2LCJ1QyJbLF0iQ2VaQSIsMCw1NiwibloiWyxdIkFYIiwzLSw0MSwiTiJbLF0iQ2VBIiwwLDIxLCJDIlssXSJDZW5YIiwzLDcyLCJsQSJbLF0iZW5wWiIsMCwwMiwiZU4iWyxdIkNwWkEiLDMtLDU3LCJzQSJbLF0iQVgiLDEsMzIsImFOIlssXSJDZVpBIiwwLDgwMSwiZ0EiWyxdIkNlbnAiLDEsOTMsIksiWyxdImVuQVgiLDItLDQzLCJTIlssXSJDcFpBIiwwLDQyLCJnTSJbLF0iQ2VucCIsMS0sNzIxLCJJIlssXSJDZW5wWiIsMCwxMSwiQiJbLF0iQ2VwWkEiLDAsNzkxLCJ1QSJbLF0iQ25YIiwxLDcsImlMIlssXSJDZVpBIiwwLDk1LCJpTiJbLF0iQVgiLDAsNTMsImxDIlssXSJlcFpBIiwyLSw2MSwiTyJbLF0iQ2VBIiwyLSwyMywiUyJbLF0iQ25YIiwzLDY1LCJlRiJbLF0iQ2VucFoiLDAsMDUsInJDIlssXSJDZUFYIiwwLDQ4LCJySyJbWw==";
+const CLASS_SET = JSON.parse(atob(CLASS_DATA).split("").reverse().join(""));
+
+const COLUMNS = [
+  { key: "X", label: "Symbol / Name" },
+  { key: "A", label: "Mass Number (A)" },
+  { key: "Z", label: "Atomic Number (Z)" },
+  { key: "p", label: "Protons (p)" },
+  { key: "n", label: "Neutrons (n)" },
+  { key: "e", label: "Electrons (e)" },
+  { key: "C", label: "Charge (C)" },
+];
+
+const HINTS = {
+  X: "Use the atomic number (Z or p) to find the element on the periodic table. If electrons ≠ protons, include the charge (e.g., Fe3+ or S2-).",
+  A: "Mass number = protons + neutrons (A = p + n).",
+  Z: "Atomic number = number of protons. It never changes when an atom becomes an ion.",
+  p: "Protons = atomic number (p = Z). Look up the element if you only have its symbol.",
+  n: "Neutrons = mass number − atomic number (n = A − Z).",
+  e: "Electrons = protons − charge (e = p − C). Negative ions gained electrons; positive ions lost them.",
+  C: "Charge = protons − electrons (C = p − e). Write it like 2+, 1-, or 0.",
+};
+
+// ---------- Formatting helpers ----------
+const SUP_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+function chargeText(c) { return c === 0 ? "0" : Math.abs(c) + (c > 0 ? "+" : "-"); }
+function symbolWithCharge(z, c) {
+  if (c === 0) return ELEMENTS[z].sym;
+  const mag = Math.abs(c) === 1 ? "" : String(Math.abs(c)).split("").map(d => SUP_DIGITS[d]).join("");
+  return ELEMENTS[z].sym + mag + (c > 0 ? "⁺" : "⁻");
+}
+
+function answerFor(row, key) {
+  switch (key) {
+    case "X": return symbolWithCharge(row.z, row.charge);
+    case "A": return String(row.A);
+    case "Z":
+    case "p": return String(row.z);
+    case "n": return String(row.A - row.z);
+    case "e": return String(row.z - row.charge);
+    case "C": return chargeText(row.charge);
+  }
+}
+
+// ---------- Parsing student input ----------
+// Turn superscripts and typographic minus signs into plain characters.
+function plain(s) {
+  return s
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, ch => String(SUP_DIGITS.indexOf(ch)))
+    .replace(/⁺/g, "+").replace(/[⁻−–—]/g, "-");
+}
+
+// "2+", "+2", "+", "-", "++", "0" -> number; anything else -> null
+function parseCharge(s) {
+  s = s.replace(/\s+/g, "");
+  if (s === "" || /^[+-]?0[+-]?$/.test(s)) return 0;
+  let m = s.match(/^([+-])(\d*)$/);
+  if (m) return (m[1] === "+" ? 1 : -1) * (m[2] ? +m[2] : 1);
+  m = s.match(/^(\d+)([+-])$/);
+  if (m) return (m[2] === "+" ? 1 : -1) * +m[1];
+  if (/^\++$/.test(s)) return s.length;
+  if (/^-+$/.test(s)) return -s.length;
+  return null;
+}
+
+// Parse a symbol or name, with optional charge. Returns {z, charge, caseOk} or null.
+function parseSpecies(raw) {
+  let s = plain(raw).trim().replace(/\b(ion|atom)\b/gi, "").trim();
+  if (!s) return null;
+
+  const ide = IDE_NAMES[s.toLowerCase()];
+  if (ide) return { z: ide[0], charge: ide[1], caseOk: true };
+
+  let charge = null;
+  const roman = s.match(/^(.*?)\s*\(\s*([ivx]+)\s*\)$/i);   // iron(III)
+  if (roman && ROMAN[roman[2].toLowerCase()]) {
+    s = roman[1].trim();
+    charge = ROMAN[roman[2].toLowerCase()];
+  }
+
+  const m = s.match(/^([A-Za-z]+)\s*(.*)$/);
+  if (!m) return null;
+  const base = m[1];
+  if (charge === null) {
+    charge = parseCharge(m[2]);
+    if (charge === null) return null;
+  } else if (m[2].trim()) {
+    return null;
+  }
+
+  if (BY_SYMBOL[base]) return { z: BY_SYMBOL[base], charge, caseOk: true };
+  if (BY_SYMBOL_LOWER[base.toLowerCase()]) return { z: BY_SYMBOL_LOWER[base.toLowerCase()], charge, caseOk: false };
+  if (BY_NAME[base.toLowerCase()]) return { z: BY_NAME[base.toLowerCase()], charge, caseOk: true };
+  return null;
+}
+
+// ---------- Grading ----------
+// Returns {state: "" | "ok" | "bad" | "almost", msg}
+function evaluate(row, key, raw) {
+  const v = plain(raw || "").trim();
+  if (!v) return { state: "", msg: HINTS[key] };
+  const ok = { state: "ok", msg: "Correct!" };
+  const bad = msg => ({ state: "bad", msg });
+
+  if (key === "X") {
+    const s = parseSpecies(v);
+    if (!s) return bad("I don't recognize that symbol or name. " + HINTS.X);
+    if (s.z !== row.z) return bad("That's a different element. " + HINTS.X);
+    if (s.charge !== row.charge) {
+      return row.charge === 0
+        ? bad("Right element! But protons = electrons here, so it's a neutral atom — no charge.")
+        : bad("Right element! Now check the charge: C = p − e.");
+    }
+    if (!s.caseOk) {
+      return { state: "almost", msg: `So close — check capitalization. Symbols start with a capital letter and any second letter is lowercase (e.g., ${ELEMENTS[row.z].sym}).` };
+    }
+    return ok;
+  }
+
+  if (key === "C") {
+    const c = /^neutral$/i.test(v) ? 0 : parseCharge(v);
+    if (c === null) return bad("Write the charge like 2+, 1-, or 0.");
+    if (c === row.charge) return ok;
+    if (c === -row.charge) return bad("Check the sign: more electrons than protons means a negative charge; fewer means positive.");
+    return bad(HINTS.C);
+  }
+
+  if (!/^\d+$/.test(v)) return bad("Enter a whole number.");
+  const num = +v;
+  if (num === +answerFor(row, key)) return ok;
+
+  const n = row.A - row.z, e = row.z - row.charge;
+  if (key === "n" && num === row.A + row.z) return bad("Subtract, don't add: n = A − Z.");
+  if (key === "n" && num === row.z) return bad("That's the number of protons. Neutrons = A − Z.");
+  if (key === "A" && num === n) return bad("That's the number of neutrons. A = p + n.");
+  if ((key === "Z" || key === "p") && num === e && row.charge !== 0) {
+    return bad("That's the electron count. Protons = atomic number, which doesn't change when an atom becomes an ion.");
+  }
+  if (key === "e" && num === row.z && row.charge !== 0) return bad("This is an ion, so electrons ≠ protons. e = p − C.");
+  if (key === "e" && num === row.z + row.charge && row.charge !== 0) {
+    return bad("Flip it: a positive ion LOST electrons, a negative ion GAINED them. e = p − C.");
+  }
+  return bad(HINTS[key]);
+}
+
+// ---------- Practice set generator ----------
+const ATOM_POOL = [];
+for (let z = 1; z <= 56; z++) if (z !== 43) ATOM_POOL.push(z);
+ATOM_POOL.push(74, 78, 79, 80, 82, 86);
+const ION_POOL = [
+  [3, 1], [11, 1], [19, 1], [37, 1], [55, 1], [4, 2], [12, 2], [20, 2], [38, 2], [56, 2],
+  [13, 3], [30, 2], [47, 1], [26, 2], [26, 3], [29, 1], [29, 2], [50, 2], [82, 2],
+  [9, -1], [17, -1], [35, -1], [53, -1], [8, -2], [16, -2], [34, -2], [7, -3], [15, -3], [33, -3],
+];
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+function makePracticeSet(count = 12) {
+  const rows = [], used = new Set();
+  while (rows.length < count) {
+    const [z, charge] = Math.random() < 0.5 ? pick(ION_POOL) : [pick(ATOM_POOL), 0];
+    if (used.has(z + ":" + charge)) continue;
+    used.add(z + ":" + charge);
+
+    // Always give enough to solve: identity (X, Z, or p) + mass (A or n) + charge (e or C, implied by X)
+    const given = new Set();
+    const identity = pick(["X", "Z", "p"]);
+    given.add(identity);
+    given.add(pick(["A", "n"]));
+    if (identity !== "X") given.add(pick(["e", "C"]));
+    // Sometimes give one extra value so the rows vary
+    if (Math.random() < 0.35) given.add(pick(["Z", "p", "e", "C"]));
+
+    rows.push([ELEMENTS[z].sym, ELEMENTS[z].A, charge, [...given].join("")]);
+  }
+  return rows;
+}
+
+// ---------- State & storage ----------
+const STORE_KEY = "atomIonChart.v2";
+let state = {
+  mode: "class",
+  practiceRows: null,
+  answers: { class: {}, practice: {} },
+  student: { name: "", date: "", period: "" },
+};
+let rows = [];                 // current rows as {z, A, charge, given:Set}
+let lastCheck = null;          // {correct, wrong, total} from the most recent "Check Answers"
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (saved) state = Object.assign(state, saved);
+  } catch (err) { /* storage unavailable — start fresh */ }
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (err) { /* ignore */ }
+}
+
+function toRows(data) {
+  return data.map(([sym, A, charge, given]) => ({ z: BY_SYMBOL[sym], A, charge, given: new Set(given.split("")) }));
+}
+
+// ---------- Rendering ----------
+const table = document.getElementById("quizTable");
+
+function render() {
+  if (state.mode === "practice" && !state.practiceRows) state.practiceRows = makePracticeSet();
+  rows = toRows(state.mode === "class" ? CLASS_SET : state.practiceRows);
+  const answers = state.answers[state.mode];
+  lastCheck = null;
+
+  document.getElementById("modeClass").setAttribute("aria-pressed", state.mode === "class");
+  document.getElementById("modePractice").setAttribute("aria-pressed", state.mode === "practice");
+  document.getElementById("newButton").hidden = state.mode !== "practice";
+  document.getElementById("printSetName").textContent = state.mode === "class" ? "" : "Practice set";
+
+  let html = "<thead><tr><th>#</th>" + COLUMNS.map(c => `<th scope="col">${c.label}</th>`).join("") + "</tr></thead><tbody>";
+  rows.forEach((row, r) => {
+    html += `<tr><td class="idx">${r + 1}</td>`;
+    COLUMNS.forEach(({ key, label }) => {
+      if (row.given.has(key)) {
+        html += `<td class="given">${answerFor(row, key)}</td>`;
+      } else {
+        const id = `${r}_${key}`;
+        const val = (answers[id] || "").replace(/"/g, "&quot;");
+        html += `<td><input class="cell" type="text" inputmode="${key === "X" || key === "C" ? "text" : "numeric"}"
+          autocomplete="off" spellcheck="false" data-row="${r}" data-key="${key}" data-id="${id}"
+          aria-label="Row ${r + 1}, ${label}" value="${val}"></td>`;
+      }
+    });
+    html += "</tr>";
+  });
+  table.innerHTML = html + "</tbody>";
+  updateStatus();
+}
+
+function inputs() { return [...table.querySelectorAll(".cell")]; }
+
+// Colors and feedback only come from "Check Answers"; editing a box clears its color.
+function gradeCell(input) {
+  const result = evaluate(rows[+input.dataset.row], input.dataset.key, input.value);
+  clearCell(input);
+  if (result.state) input.classList.add(result.state);
+  input.dataset.state = result.state;
+  input.dataset.msg = result.msg;
+  return result;
+}
+function clearCell(input) {
+  input.classList.remove("ok", "bad", "almost");
+  delete input.dataset.state;
+  delete input.dataset.msg;
+}
+
+function updateStatus() {
+  const all = inputs();
+  const total = all.length;
+  const filled = all.filter(i => i.value.trim()).length;
+  const text = document.getElementById("statusText");
+  const barOk = document.getElementById("barOk"), barBad = document.getElementById("barBad");
+  const pct = n => (total ? (n / total) * 100 : 0) + "%";
+
+  if (!lastCheck) {
+    text.textContent = filled === 0
+      ? `Fill in the ${total} blanks, then click "Check Answers."`
+      : `${filled} of ${total} blanks filled in. Click "Check Answers" when you're ready.`;
+    barOk.style.background = "#93c5fd";
+    barOk.style.width = pct(filled);
+    barBad.style.width = "0";
+    return;
+  }
+  const { correct, wrong } = lastCheck;
+  barOk.style.background = "";
+  barOk.style.width = pct(correct);
+  barBad.style.width = pct(wrong);
+  if (correct === total) text.textContent = `🎉 Fantastic! All ${total} answers are correct!`;
+  else {
+    text.textContent = `Last check: ${correct} of ${total} correct (${Math.round((correct / total) * 100)}%)` +
+      (wrong ? ` · ${wrong} need${wrong === 1 ? "s" : ""} another look — click a red box for a hint` : "") +
+      (filled < total ? ` · ${total - filled} still blank` : "");
+  }
+}
+
+// ---------- Hint bar ----------
+const hintBox = document.getElementById("hint");
+function showHint(input) {
+  const key = input.dataset.key;
+  const col = COLUMNS.find(c => c.key === key).label;
+  const stateName = input.dataset.state || "";
+  const msg = stateName ? input.dataset.msg : HINTS[key];
+  hintBox.className = "on " + stateName;
+  document.getElementById("hintTitle").textContent = `Row ${+input.dataset.row + 1} · ${col}:`;
+  document.getElementById("hintText").textContent = msg;
+}
+function hideHint() { hintBox.className = ""; }
+
+// ---------- Events ----------
+table.addEventListener("input", e => {
+  const input = e.target;
+  if (!input.classList.contains("cell")) return;
+  state.answers[state.mode][input.dataset.id] = input.value;
+  save();
+  clearCell(input);
+  updateStatus();
+  showHint(input);
+});
+
+table.addEventListener("focusin", e => { if (e.target.classList.contains("cell")) showHint(e.target); });
+table.addEventListener("focusout", e => {
+  if (!e.relatedTarget || !e.relatedTarget.classList.contains("cell")) hideHint();
+});
+
+// Enter / Shift+Enter moves to the next / previous blank
+table.addEventListener("keydown", e => {
+  if (e.key !== "Enter" || !e.target.classList.contains("cell")) return;
+  e.preventDefault();
+  const list = inputs();
+  const next = list[list.indexOf(e.target) + (e.shiftKey ? -1 : 1)];
+  if (next) next.focus();
+});
+
+document.getElementById("checkButton").onclick = () => {
+  const all = inputs();
+  let correct = 0, wrong = 0;
+  all.forEach(i => {
+    const s = gradeCell(i).state;
+    if (s === "ok") correct++;
+    else if (s) wrong++;
+  });
+  lastCheck = { correct, wrong };
+  updateStatus();
+  const firstWrong = all.find(i => i.dataset.state === "bad" || i.dataset.state === "almost");
+  if (firstWrong) { firstWrong.focus(); showHint(firstWrong); }
+};
+
+document.getElementById("resetButton").onclick = () => {
+  const anyFilled = inputs().some(i => i.value.trim());
+  if (anyFilled && !confirm("Clear all of your answers on this chart?")) return;
+  state.answers[state.mode] = {};
+  save();
+  render();
+};
+
+document.getElementById("newButton").onclick = () => {
+  const anyFilled = inputs().some(i => i.value.trim());
+  if (anyFilled && !confirm("Start a new practice set? Your current practice answers will be cleared.")) return;
+  state.practiceRows = makePracticeSet();
+  state.answers.practice = {};
+  save();
+  render();
+};
+
+document.getElementById("modeClass").onclick = () => { state.mode = "class"; save(); render(); };
+document.getElementById("modePractice").onclick = () => { state.mode = "practice"; save(); render(); };
+
+document.getElementById("printButton").onclick = () => window.print();
+
+// Student info persists too
+[["studentName", "name"], ["studentDate", "date"], ["studentPeriod", "period"]].forEach(([id, field]) => {
+  const el = document.getElementById(id);
+  el.addEventListener("input", () => { state.student[field] = el.value; save(); });
+});
+
+// ---------- Start ----------
+load();
+document.getElementById("studentName").value = state.student.name || "";
+const today = new Date();
+document.getElementById("studentDate").value = state.student.date ||
+  `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+document.getElementById("studentPeriod").value = state.student.period || "";
+render();
+</script>
+</body>
+</html>
