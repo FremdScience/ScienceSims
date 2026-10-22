@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Electron Configuration Practice</title>
+  <style>
+    :root {
+      --ink: #0f1b2d;
+      --muted: #5b6474;
+      --line: #d6dbe3;
+      --bg: #f4f6fa;
+      --card: #ffffff;
+      --accent: #0b7fc1;
+      --accent-dark: #08679c;
+      --accent-soft: #e3f1fa;
+      --ok: #1f7a35;
+      --ok-bg: #d9f2df;
+      --bad: #b42318;
+      --bad-bg: #fde3e1;
+      --warn: #8a5300;
+      --warn-bg: #fff0d1;
+      --electron: #2563eb;
+      --valence: #e8590c;
+      --core: #94a3b8;
+      --tap: 44px; /* minimum touch target for iPad */
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+    }
+    button { font: inherit; color: inherit; touch-action: manipulation; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; }
+
+    /* ----- Header ----- */
+    .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 10px; }
+    h1 { margin: 0; font-size: 1.4rem; }
+    .sub { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
+    .top-right { display: flex; gap: 8px; align-items: center; }
+    .tabs { display: flex; gap: 4px; background: #e6e9ef; padding: 4px; border-radius: 10px; }
+    .tab { border: 0; background: transparent; padding: 8px 14px; min-height: 40px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .tab.active { background: var(--card); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .tab[disabled] { color: var(--muted); cursor: default; }
+    .tab small { font-weight: 400; font-size: .75em; }
+
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    h2.step { font-size: 1.05rem; margin: 0 0 10px; }
+    .muted { color: var(--muted); font-weight: 400; }
+
+    /* ----- How to use ----- */
+    .howto ol { margin: 0; padding-left: 22px; line-height: 1.5; }
+    .howto li { margin: 4px 0; }
+
+    /* ----- Buttons ----- */
+    .btn {
+      min-height: var(--tap); padding: 8px 14px; border-radius: 10px;
+      border: 1px solid #c3cad6; background: #fff; font-weight: 600; cursor: pointer;
+    }
+    .btn:hover:not([disabled]) { background: #f1f4f8; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.primary:hover:not([disabled]) { background: var(--accent-dark); }
+    .btn.success { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .btn.big { font-size: 1.05rem; padding: 10px 20px; }
+    .btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+    /* ----- Element picker (main-group periodic table) ----- */
+    .choose-grid { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+    .ptable {
+      display: grid; gap: 3px;
+      grid-template-columns: repeat(2, 40px) 12px repeat(6, 40px);
+      grid-auto-rows: 34px;
+      grid-template-rows: 14px;
+    }
+    .ptable .grp { font-size: .65rem; color: var(--muted); text-align: center; align-self: end; line-height: 1; }
+    .ptable .dgap { background: repeating-linear-gradient(45deg, #eef0f4, #eef0f4 4px, #e2e6ec 4px, #e2e6ec 8px); border-radius: 4px; }
+    .el {
+      border: 1px solid #c3cad6; border-radius: 6px; background: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+    }
+    .el .ez { font-size: .55rem; color: var(--muted); line-height: 1; }
+    .el .es { font-weight: 800; font-size: .95rem; line-height: 1.05; }
+    .el:hover:not([disabled]) { background: var(--accent-soft); }
+    .el.current { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .el.current .ez { color: #e3f1fa; }
+    .el[disabled] { cursor: default; opacity: .5; }
+    .el.current[disabled] { opacity: 1; }
+    .side { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .tile {
+      width: 96px; height: 96px; margin: 0 auto; border-radius: 12px; border: 2px solid #c3cad6; background: #fffbe6;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;
+    }
+    .tile .tz { position: absolute; top: 5px; left: 8px; font-weight: 700; font-size: .9rem; }
+    .tile .ts { font-size: 2.1rem; font-weight: 800; line-height: 1; }
+    .tile .tn { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+    .tile-meta { text-align: center; font-size: .85rem; color: var(--muted); min-height: 1.2em; }
+    .quiz-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: center; }
+    .quiz-label { font-weight: 700; margin-bottom: 8px; }
+    .dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
+    .dot {
+      width: 28px; height: 28px; border-radius: 50%; border: 2px solid #c3cad6; background: #fff;
+      display: grid; place-items: center; font-size: .8rem; font-weight: 800;
+    }
+    .dot.current { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .dot.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .dot.shown { background: var(--bad); border-color: var(--bad); color: #fff; }
+
+    /* ----- Builder ----- */
+    .builder { display: grid; grid-template-columns: auto auto; gap: 12px 24px; align-items: start; justify-content: start; }
+    .pad-label { display: block; font-size: .85rem; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+    .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+    .seg .btn { min-width: var(--tap); padding: 8px 10px; }
+    .seg .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .seg .placeholder { color: var(--muted); font-size: .9rem; min-height: var(--tap); display: flex; align-items: center; }
+    .rule-note { font-size: .75rem; font-weight: 400; }
+
+    .chips {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 64px; margin-top: 14px;
+      padding: 10px; border: 2px dashed #c3cad6; border-radius: 12px; background: #fafbfc;
+    }
+    .chips .empty { color: var(--muted); }
+    .chip {
+      min-height: var(--tap); padding: 6px 14px; border-radius: 999px; border: 2px solid #c3cad6; background: #fff;
+      font-size: 1.2rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .chip .mark { font-size: .9rem; }
+    .chip.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .chip.ok { background: var(--ok-bg); border-color: var(--ok); color: #0b3d16; }
+    .chip.bad { background: var(--bad-bg); border-color: var(--bad); color: #5a1009; }
+    .chip.order { background: var(--warn-bg); border-color: var(--warn); color: #4d2e00; }
+    .chip[disabled] { cursor: default; }
+
+    .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+    .tools .spacer { flex: 1; }
+
+    /* ----- Feedback ----- */
+    .feedback { margin-top: 12px; }
+    .feedback:empty { display: none; }
+    .fb { border-radius: 10px; padding: 10px 14px; border: 2px solid; }
+    .fb.ok { background: var(--ok-bg); border-color: var(--ok); }
+    .fb.bad { background: var(--bad-bg); border-color: var(--bad); }
+    .fb.info { background: var(--accent-soft); border-color: var(--accent); }
+    .fb .fb-title { font-weight: 800; font-size: 1.05rem; }
+    .fb ul { margin: 6px 0 0; padding-left: 20px; line-height: 1.45; }
+    .feedback.stale { opacity: .55; }
+    .answer { margin-top: 10px; padding: 10px 14px; border-left: 4px solid var(--ok); background: #f0faf2; border-radius: 8px; }
+    .answer .row { margin: 2px 0; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.05rem; }
+    .next-row { margin-top: 12px; text-align: right; }
+
+    /* ----- Diagrams ----- */
+    .diagrams { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .diagrams .panel { margin-bottom: 0; }
+    .empty-diagram { color: var(--muted); }
+    .orbitals { display: flex; flex-wrap: wrap; gap: 14px 12px; align-items: flex-end; }
+    .orb-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .orb-boxes { display: flex; }
+    .orb-box {
+      width: 30px; height: 34px; border: 1.5px solid #64748b; margin-left: -1.5px; background: #fff;
+      display: flex; align-items: center; justify-content: center; gap: 1px; font-size: 18px; font-weight: 700; line-height: 1;
+    }
+    .orb-box:first-child { margin-left: 0; }
+    .orb-box .up { color: var(--electron); }
+    .orb-box .down { color: var(--electron); }
+    .orb-label { font-weight: 700; font-size: .95rem; }
+    .orb-group.core .orb-box { border-color: var(--core); background: #f6f7f9; }
+    .orb-group.core .up, .orb-group.core .down { color: var(--core); }
+    .orb-group.core .orb-label { color: var(--muted); }
+    .orb-group.over .orb-label { color: var(--bad); }
+    .legend { font-size: .8rem; color: var(--muted); margin-top: 12px; }
+
+    .bohr-wrap { display: flex; justify-content: center; }
+    .bohr-svg { width: 100%; max-width: 360px; height: auto; }
+    .bohr-svg .ring { fill: none; stroke: #94a3b8; stroke-width: 1.5; }
+    .bohr-svg .ring.valence { stroke: var(--valence); stroke-dasharray: 4 3; }
+    .bohr-svg .nucleus { fill: #fff7e0; stroke: #b08900; stroke-width: 1.5; }
+    .bohr-svg .e { fill: var(--electron); }
+    .bohr-svg .e.valence { fill: var(--valence); }
+    .bohr-caption { text-align: center; margin: 6px 0 0; }
+    .bohr-caption b { color: var(--valence); }
+
+    /* ----- Results card ----- */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(15,27,45,.55); z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px;
+      padding: 24px 16px; overflow-y: auto;
+    }
+    .overlay[hidden] { display: none; }
+    .results-card { background: #fff; border-radius: 16px; padding: 20px 22px; width: 100%; max-width: 640px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .results-card h2 { margin: 0 0 4px; font-size: 1.35rem; }
+    .res-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); font-size: .9rem; margin-bottom: 12px; }
+    .res-name { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .res-name label { font-weight: 700; }
+    .res-name input {
+      flex: 1; font: inherit; font-size: 1.1rem; padding: 8px 10px; min-height: var(--tap);
+      border: 0; border-bottom: 2px solid var(--ink); border-radius: 0; background: #fbfcfe;
+    }
+    .res-score { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .res-score .big { font-size: 2.2rem; font-weight: 900; }
+    .badge { padding: 6px 12px; border-radius: 999px; font-weight: 800; }
+    .badge.pass { background: var(--ok-bg); color: var(--ok); border: 2px solid var(--ok); }
+    .badge.fail { background: var(--warn-bg); color: var(--warn); border: 2px solid var(--warn); }
+    .res-table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+    .res-table th, .res-table td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .res-table th { font-size: .8rem; color: var(--muted); }
+    .res-table .r-ok { color: var(--ok); font-weight: 700; white-space: nowrap; }
+    .res-table .r-shown { color: var(--bad); font-weight: 700; white-space: nowrap; }
+    .res-foot { margin-top: 12px; font-size: .9rem; color: var(--muted); }
+    .overlay-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+    /* ----- Responsive ----- */
+    @media (max-width: 860px) {
+      .diagrams { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .builder { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 1.3rem; }
+      .ptable { grid-template-columns: repeat(2, 1fr) 8px repeat(6, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="top">
+      <div>
+        <h1>Electron Configuration Practice</h1>
+        <p class="sub">Neutral atoms · main-group elements (s- and p-block) through xenon</p>
+      </div>
+      <div class="top-right">
+        <button id="btnHowto" class="btn" aria-expanded="false" aria-controls="howto">How to use</button>
+        <nav class="tabs" aria-label="Simulator screens">
+          <button class="tab active" aria-current="page">Atoms</button>
+          <button class="tab" disabled title="Coming soon">Ions <small>(coming soon)</small></button>
+        </nav>
+      </div>
+    </header>
+
+    <div id="howto" class="panel howto" hidden>
+      <ol>
+        <li><b>Pick an element</b> from the table to practice, or tap <b>Start practice set</b> for 5 questions.</li>
+        <li><b>Build the configuration:</b> tap an energy level, then a subshell, then the number of electrons. Pieces appear in the order you add them. Tap a piece to move or remove it.</li>
+        <li><b>Shortcut (optional):</b> you may start with the noble gas <em>right before</em> your element, like [Ne] for chlorine. It must come first.</li>
+        <li><b>Check:</b> <span style="color:var(--ok);font-weight:700">✓ green</span> = correct, <span style="color:var(--bad);font-weight:700">✗ red</span> = wrong, <span style="color:var(--warn);font-weight:700">↔ amber</span> = right subshell, wrong place. After 2 tries the answer is shown, and you enter it to move on.</li>
+        <li><b>Finish the set:</b> get at least <b>4 of 5</b> correct. Type your name on the results card, take a screenshot (top button + volume up), and upload it to Schoology.</li>
+      </ol>
+    </div>
+
+    <section class="panel">
+      <div class="choose-grid">
+        <div>
+          <h2 class="step">Pick an element <span class="muted" style="font-size:.75rem">(striped = transition metals, not included)</span></h2>
+          <div id="picker" class="ptable" role="group" aria-label="Main-group elements"></div>
+        </div>
+        <div class="side">
+          <div>
+            <div id="tile" class="tile"></div>
+            <div id="tileMeta" class="tile-meta"></div>
+          </div>
+          <div id="practiceBox" style="display:flex;flex-direction:column;gap:8px;">
+            <button id="btnQuiz" class="btn primary big">Start practice set (5)</button>
+            <button id="btnRandom" class="btn">Random element</button>
+          </div>
+          <div id="quizBox" class="quiz-box" hidden>
+            <div id="quizLabel" class="quiz-label"></div>
+            <div id="dots" class="dots"></div>
+            <button id="btnShowResults" class="btn primary" hidden>View results</button>
+            <button id="btnExitQuiz" class="btn">Exit practice set</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="step">Build the configuration</h2>
+      <div class="builder">
+        <div><span class="pad-label">1 · Energy level</span><div id="padN" class="seg"></div></div>
+        <div><span class="pad-label">2 · Subshell <span class="rule-note">(level 1: s · level 2: s, p · level 3+: s, p, d)</span></span><div id="padL" class="seg"></div></div>
+        <div><span class="pad-label">3 · Electrons (tap to add)</span><div id="padE" class="seg"></div></div>
+        <div><span class="pad-label">Optional · Noble-gas shortcut</span><div id="padCore" class="seg"></div></div>
+      </div>
+
+      <div id="chips" class="chips" role="list" aria-label="Your electron configuration"></div>
+
+      <div class="tools">
+        <button id="btnLeft" class="btn" aria-label="Move selected piece left">◀ Move</button>
+        <button id="btnRight" class="btn" aria-label="Move selected piece right">Move ▶</button>
+        <button id="btnRemove" class="btn">Remove</button>
+        <span class="spacer"></span>
+        <button id="btnUndo" class="btn">Undo</button>
+        <button id="btnClear" class="btn">Clear</button>
+        <button id="btnCheck" class="btn primary big">Check</button>
+      </div>
+
+      <div id="feedback" class="feedback" aria-live="polite"></div>
+      <div id="answer" class="answer" hidden></div>
+      <div class="next-row"><button id="btnNext" class="btn success big" hidden>Next question ▶</button></div>
+    </section>
+
+    <section class="diagrams">
+      <div class="panel">
+        <h2 class="step">Orbital diagram</h2>
+        <div id="orbitals"></div>
+      </div>
+      <div class="panel">
+        <h2 class="step">Bohr model</h2>
+        <div id="bohr" class="bohr-wrap"></div>
+        <p id="bohrCaption" class="bohr-caption"></p>
+      </div>
+    </section>
+  </div>
+
+  <div id="results" class="overlay" hidden>
+    <div id="resultsCard" class="results-card" role="dialog" aria-modal="true" aria-labelledby="resTitle"></div>
+    <div class="overlay-actions">
+      <button id="btnNewSet" class="btn primary big">New practice set</button>
+      <button id="btnCloseResults" class="btn big">Close</button>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // ===== Teacher settings =====
+    const SETTINGS = {
+      questions: 5,
+      passScore: 4,     // correct answers needed to meet the goal
+      revealAfter: 2,   // wrong tries before the answer is shown
+      // One tier per question, easiest first
+      mix: ['easy', 'medium', 'medium', 'hard', 'hard'],
+    };
+    const TIERS = {
+      easy: z => z >= 3 && z <= 10,     // period 2
+      medium: z => z >= 11 && z <= 20,  // period 3, K, Ca
+      hard: z => z >= 31,               // periods 4–5 p-block, Rb, Sr (uses d subshells)
+    };
+
+    // ===== Chemistry data =====
+    const AUFBAU = ['1s', '2s', '2p', '3s', '3p', '4s', '3d', '4p', '5s', '4d', '5p'];
+    const CAPACITY = { s: 2, p: 6, d: 10 };
+    const ORBITALS = { s: 1, p: 3, d: 5 };
+    const NOBLE = [
+      { z: 2, tag: '[He]' },
+      { z: 10, tag: '[Ne]' },
+      { z: 18, tag: '[Ar]' },
+      { z: 36, tag: '[Kr]' },
+    ];
+
+    // [Z, symbol, name, period, group]
+    const ELEMENT_LIST = [
+      [1, 'H', 'Hydrogen', 1, 1], [2, 'He', 'Helium', 1, 18],
+      [3, 'Li', 'Lithium', 2, 1], [4, 'Be', 'Beryllium', 2, 2], [5, 'B', 'Boron', 2, 13], [6, 'C', 'Carbon', 2, 14],
+      [7, 'N', 'Nitrogen', 2, 15], [8, 'O', 'Oxygen', 2, 16], [9, 'F', 'Fluorine', 2, 17], [10, 'Ne', 'Neon', 2, 18],
+      [11, 'Na', 'Sodium', 3, 1], [12, 'Mg', 'Magnesium', 3, 2], [13, 'Al', 'Aluminum', 3, 13], [14, 'Si', 'Silicon', 3, 14],
+      [15, 'P', 'Phosphorus', 3, 15], [16, 'S', 'Sulfur', 3, 16], [17, 'Cl', 'Chlorine', 3, 17], [18, 'Ar', 'Argon', 3, 18],
+      [19, 'K', 'Potassium', 4, 1], [20, 'Ca', 'Calcium', 4, 2], [31, 'Ga', 'Gallium', 4, 13], [32, 'Ge', 'Germanium', 4, 14],
+      [33, 'As', 'Arsenic', 4, 15], [34, 'Se', 'Selenium', 4, 16], [35, 'Br', 'Bromine', 4, 17], [36, 'Kr', 'Krypton', 4, 18],
+      [37, 'Rb', 'Rubidium', 5, 1], [38, 'Sr', 'Strontium', 5, 2], [49, 'In', 'Indium', 5, 13], [50, 'Sn', 'Tin', 5, 14],
+      [51, 'Sb', 'Antimony', 5, 15], [52, 'Te', 'Tellurium', 5, 16], [53, 'I', 'Iodine', 5, 17], [54, 'Xe', 'Xenon', 5, 18],
+    ];
+    const ELEMENTS = new Map(ELEMENT_LIST.map(([z, sym, name, period, group]) => [z, { z, sym, name, period, group }]));
+
+    // ===== Helpers =====
+    const $ = id => document.getElementById(id);
+    const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+    const sup = n => String(n).split('').map(d => SUP[d]).join('');
+    const subKey = e => `${e.n}${e.l}`;
+    const entryText = e => (e.kind === 'core' ? e.tag : `${e.n}${e.l}${sup(e.e)}`);
+    const aufbauIndex = key => AUFBAU.indexOf(key);
+
+    // Ground-state configuration by Aufbau order: [{key:'1s', e:2}, ...]
+    function buildConfig(z) {
+      const out = [];
+      let left = z;
+      for (const key of AUFBAU) {
+        if (left <= 0) break;
+        const e = Math.min(left, CAPACITY[key.slice(-1)]);
+        out.push({ key, e });
+        left -= e;
+      }
+      return out;
+    }
+    // Closest noble gas with fewer electrons than z (the only shortcut allowed)
+    function priorNoble(z) {
+      let prior = null;
+      for (const g of NOBLE) if (g.z < z) prior = g;
+      return prior;
+    }
+    const formatList = list => list.map(o => o.key + sup(o.e)).join(' ');
+    function formatShortcut(z) {
+      const core = priorNoble(z);
+      if (!core) return null;
+      return `${core.tag} ${formatList(buildConfig(z).slice(buildConfig(core.z).length))}`;
+    }
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text != null) node.textContent = text;
+      return node;
+    }
+    function formatDuration(ms) {
+      const s = Math.round(ms / 1000);
+      return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
+    }
+
+    // ===== State =====
+    const state = {
+      z: null,
+      entries: [],     // {kind:'sub', n, l, e} or {kind:'core', z, tag}
+      marks: [],       // per entry after Check: 'ok' | 'bad' | 'order'
+      selected: null,  // index of the tapped chip
+      pickN: null,
+      pickL: null,
+      attempts: 0,
+      lastSig: null,   // same config checked twice doesn't count as another try
+      solved: false,
+      revealed: false,
+      quiz: null,      // {questions:[{z, attempts, revealed, done}], index, start, end, finished}
+    };
+
+    // ===== Checking =====
+    function evaluate(z, entries) {
+      const elem = ELEMENTS.get(z);
+      const sym = elem.sym;
+      const marks = entries.map(() => null);
+      const msgs = [];
+      const add = m => { if (!msgs.includes(m)) msgs.push(m); };
+      const prior = priorNoble(z);
+
+      const coreIdx = [];
+      entries.forEach((e, i) => { if (e.kind === 'core') coreIdx.push(i); });
+      const subs = entries.map((e, i) => ({ e, i })).filter(x => x.e.kind === 'sub');
+
+      // Compare the rest against whatever usable core the student wrote, so other feedback stays fair
+      const usable = coreIdx.map(i => entries[i]).filter(c => c.z < z);
+      const coreZ = usable.length ? Math.max(...usable.map(c => c.z)) : 0;
+      const coreTag = coreZ ? NOBLE.find(g => g.z === coreZ).tag : null;
+      const coreKeys = new Set(buildConfig(coreZ).map(o => o.key));
+      const expected = buildConfig(z).filter(o => !coreKeys.has(o.key));
+      const expMap = new Map(expected.map(o => [o.key, o.e]));
+      const lastExpected = expected.length ? expected[expected.length - 1].key : null;
+
+      const total = coreIdx.reduce((s, i) => s + entries[i].z, 0) + subs.reduce((s, x) => s + x.e.e, 0);
+      if (total !== z) {
+        add(`Your configuration has ${total} electron${total === 1 ? '' : 's'}, but a neutral ${elem.name.toLowerCase()} atom has ${z} (one for each proton).`);
+      }
+
+      // Noble-gas shortcut rules
+      if (coreIdx.length > 1) {
+        coreIdx.forEach(i => { marks[i] = 'bad'; });
+        add('Use only one noble-gas shortcut.');
+      } else if (coreIdx.length === 1) {
+        const i = coreIdx[0];
+        const c = entries[i];
+        let ok = true;
+        if (c.z === z) {
+          ok = false;
+          add(`You can't use ${c.tag} for ${sym} itself. ${prior ? `Use the noble gas before it, ${prior.tag}, or write it out in full.` : 'Write it out in full.'}`);
+        } else if (c.z > z) {
+          ok = false;
+          add(`${c.tag} stands for ${c.z} electrons, which is more than ${sym} has. ${prior ? `Use ${prior.tag}, the noble gas right before ${sym}.` : `${sym} is too small for a shortcut, so write it out in full.`}`);
+        } else if (c.z !== prior.z) {
+          ok = false;
+          add(`Use the closest noble gas before ${sym}: ${prior.tag}, not ${c.tag}.`);
+        }
+        if (i !== 0) {
+          ok = false;
+          add(`The shortcut ${c.tag} goes first, followed by the subshells after it.`);
+        }
+        marks[i] = ok ? 'ok' : 'bad';
+      }
+
+      // Each subshell entry
+      const keyCount = {};
+      subs.forEach(({ e }) => { const k = subKey(e); keyCount[k] = (keyCount[k] || 0) + 1; });
+      for (const { e, i } of subs) {
+        const k = subKey(e);
+        if (keyCount[k] > 1) {
+          marks[i] = 'bad';
+          add(`You wrote ${k} more than once. Each subshell appears only once, so combine its electrons into one ${k}.`);
+        } else if (coreKeys.has(k)) {
+          marks[i] = 'bad';
+          add(`${k} is already included in ${coreTag}. After a shortcut, write only the subshells that come after it.`);
+        } else if (!expMap.has(k)) {
+          marks[i] = 'bad';
+          add(`${sym} doesn't use ${k}. All ${z} of its electrons are placed before ${k} in the filling order.`);
+        } else if (e.e === expMap.get(k)) {
+          marks[i] = 'ok';
+        } else {
+          marks[i] = 'bad';
+          if (k !== lastExpected) add(`${k} should be completely full (${CAPACITY[e.l]} electrons) before electrons go into the next subshell.`);
+          else add(`Recount the electrons in ${k}, the last subshell. How many are left after the others are full?`);
+        }
+      }
+
+      // Missing subshells
+      const present = new Set(subs.map(x => subKey(x.e)));
+      const missing = expected.map(o => o.key).filter(k => !present.has(k));
+      const missingD = missing.filter(k => k.endsWith('d'));
+      const missingOther = missing.filter(k => !k.endsWith('d'));
+      if (missingOther.length) add(`You skipped ${missingOther.join(', ')}.`);
+      missingD.forEach(k => add(`Don't forget ${k}. It fills after ${+k[0] + 1}s and before ${+k[0] + 1}p.`));
+
+      // Order of the (unique, non-core) subshells
+      const seq = subs.filter(x => keyCount[subKey(x.e)] === 1 && !coreKeys.has(subKey(x.e)));
+      const sorted = [...seq].sort((a, b) => aufbauIndex(subKey(a.e)) - aufbauIndex(subKey(b.e)));
+      let outOfOrder = false;
+      seq.forEach((x, j) => {
+        if (x !== sorted[j]) {
+          outOfOrder = true;
+          if (marks[x.i] === 'ok') marks[x.i] = 'order';
+        }
+      });
+      if (outOfOrder) {
+        const pos = k => seq.findIndex(x => subKey(x.e) === k);
+        if (pos('3d') >= 0 && pos('4s') > pos('3d')) add('Remember: 4s fills before 3d.');
+        if (pos('4d') >= 0 && pos('5s') > pos('4d')) add('Remember: 5s fills before 4d.');
+        add(`Some subshells are out of order. Write them in filling order: ${AUFBAU.join(' → ')}.`);
+      }
+
+      const correct = msgs.length === 0 && marks.every(m => m === 'ok');
+      if (!correct && msgs.length === 0) add('Not quite. Compare each piece to the filling order.');
+      return { correct, marks, msgs };
+    }
+
+    function check() {
+      if (state.solved) return;
+      if (!state.z) return showFeedback('info', 'Pick an element first.');
+      if (!state.entries.length) return showFeedback('info', 'Add at least one subshell, then check.');
+
+      const sig = JSON.stringify(state.entries);
+      if (sig !== state.lastSig) { state.attempts++; state.lastSig = sig; }
+
+      const result = evaluate(state.z, state.entries);
+      state.marks = result.marks;
+      state.selected = null;
+      const elem = ELEMENTS.get(state.z);
+
+      if (result.correct) {
+        state.solved = true;
+        const q = currentQuestion();
+        let note;
+        if (state.revealed) note = q ? 'This one used the shown answer, so it won\'t count toward your score.' : 'Now try another element on your own.';
+        else note = state.attempts === 1 ? 'First try!' : `Got it in ${state.attempts} tries.`;
+        if (q) { q.attempts = state.attempts; q.revealed = state.revealed; q.done = true; }
+        showFeedback('ok', `✓ Correct! That's ${elem.name}.`, [note]);
+      } else {
+        if (state.attempts >= SETTINGS.revealAfter) state.revealed = true;
+        const tail = state.revealed
+          ? 'The answer is shown below. Enter it yourself to continue.'
+          : `Fix the marked pieces and check again (try ${state.attempts} of ${SETTINGS.revealAfter} before the answer is shown).`;
+        showFeedback('bad', '✗ Not quite yet', [...result.msgs, tail]);
+      }
+      renderAnswer();
+      render();
+    }
+
+    function showFeedback(kind, title, lines = []) {
+      const host = $('feedback');
+      host.classList.remove('stale');
+      host.innerHTML = '';
+      const box = el('div', `fb ${kind}`);
+      box.appendChild(el('div', 'fb-title', title));
+      if (lines.length) {
+        const ul = el('ul');
+        lines.forEach(t => ul.appendChild(el('li', null, t)));
+        box.appendChild(ul);
+      }
+      host.appendChild(box);
+    }
+
+    function renderAnswer() {
+      const host = $('answer');
+      if (!(state.solved || state.revealed) || !state.z) { host.hidden = true; return; }
+      host.hidden = false;
+      host.innerHTML = '';
+      const full = el('div', 'row');
+      full.append(el('b', null, 'Full: '), el('span', 'mono', formatList(buildConfig(state.z))));
+      host.appendChild(full);
+      const short = formatShortcut(state.z);
+      if (short) {
+        const row = el('div', 'row');
+        row.append(el('b', null, 'Shortcut: '), el('span', 'mono', short));
+        host.appendChild(row);
+      }
+    }
+
+    // ===== Editing =====
+    function edited() {
+      state.marks = [];
+      $('feedback').classList.add('stale');
+      render();
+    }
+    function addSub(e) {
+      state.entries.push({ kind: 'sub', n: state.pickN, l: state.pickL, e });
+      state.pickL = null;
+      state.selected = null;
+      edited();
+    }
+    function addCore(g) {
+      state.entries.push({ kind: 'core', z: g.z, tag: g.tag });
+      state.selected = null;
+      edited();
+    }
+    function move(delta) {
+      const i = state.selected;
+      const j = i + delta;
+      if (i == null || j < 0 || j >= state.entries.length) return;
+      [state.entries[i], state.entries[j]] = [state.entries[j], state.entries[i]];
+      state.selected = j;
+      edited();
+    }
+    function removeSelected() {
+      if (state.selected == null) return;
+      state.entries.splice(state.selected, 1);
+      state.selected = null;
+      edited();
+    }
+
+    // ===== Element / quiz flow =====
+    function loadElement(z) {
+      Object.assign(state, {
+        z, entries: [], marks: [], selected: null, pickN: null, pickL: null,
+        attempts: 0, lastSig: null, solved: false, revealed: false,
+      });
+      $('feedback').innerHTML = '';
+      renderAnswer();
+      render();
+    }
+    const currentQuestion = () => (state.quiz && !state.quiz.finished ? state.quiz.questions[state.quiz.index] : null);
+
+    function pickQuestions() {
+      const used = new Set();
+      return SETTINGS.mix.map(tier => {
+        const pool = ELEMENT_LIST.map(r => r[0]).filter(z => TIERS[tier](z) && !used.has(z));
+        const z = pool[Math.floor(Math.random() * pool.length)];
+        used.add(z);
+        return { z, attempts: 0, revealed: false, done: false };
+      });
+    }
+    function startQuiz() {
+      state.quiz = { questions: pickQuestions(), index: 0, start: Date.now(), end: null, finished: false };
+      $('results').hidden = true;
+      loadElement(state.quiz.questions[0].z);
+    }
+    function nextQuestion() {
+      const quiz = state.quiz;
+      if (!quiz || !state.solved) return;
+      if (quiz.index < quiz.questions.length - 1) {
+        quiz.index++;
+        loadElement(quiz.questions[quiz.index].z);
+      } else {
+        quiz.finished = true;
+        quiz.end = Date.now();
+        render();
+        showResults();
+      }
+    }
+    function exitQuiz() {
+      if (state.quiz && !state.quiz.finished && !confirm('Exit this practice set? Your progress on it will be lost.')) return;
+      state.quiz = null;
+      $('results').hidden = true;
+      loadElement(null);
+    }
+
+    function quizScore(quiz) {
+      return quiz.questions.filter(q => q.done && !q.revealed).length;
+    }
+
+    function showResults() {
+      const quiz = state.quiz;
+      const score = quizScore(quiz);
+      const pass = score >= SETTINGS.passScore;
+      const card = $('resultsCard');
+      card.innerHTML = '';
+
+      card.appendChild(el('h2', null, 'Electron Configuration Practice: Results')).id = 'resTitle';
+      const meta = el('div', 'res-meta');
+      meta.append(
+        el('span', null, new Date(quiz.end).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })),
+        el('span', null, `Time: ${formatDuration(quiz.end - quiz.start)}`),
+      );
+      card.appendChild(meta);
+
+      const nameRow = el('div', 'res-name');
+      const label = el('label', null, 'Name:');
+      label.htmlFor = 'studentName';
+      const input = el('input');
+      input.id = 'studentName';
+      input.autocomplete = 'name';
+      input.placeholder = 'Type your name';
+      try { input.value = localStorage.getItem('ecp-name') || ''; } catch (e) { /* storage unavailable */ }
+      input.addEventListener('input', () => { try { localStorage.setItem('ecp-name', input.value); } catch (e) { /* ignore */ } });
+      nameRow.append(label, input);
+      card.appendChild(nameRow);
+
+      const scoreRow = el('div', 'res-score');
+      scoreRow.append(
+        el('span', 'big', `${score} / ${quiz.questions.length}`),
+        el('span', `badge ${pass ? 'pass' : 'fail'}`, pass ? '✓ Goal met' : `Goal not met: need ${SETTINGS.passScore} of ${quiz.questions.length}`),
+      );
+      card.appendChild(scoreRow);
+
+      const table = el('table', 'res-table');
+      const head = el('tr');
+      ['#', 'Element', 'Configuration', 'Result'].forEach(t => head.appendChild(el('th', null, t)));
+      table.appendChild(head);
+      quiz.questions.forEach((q, i) => {
+        const e = ELEMENTS.get(q.z);
+        const row = el('tr');
+        row.append(
+          el('td', null, String(i + 1)),
+          el('td', null, `${e.sym} (${q.z})`),
+          el('td', 'mono', formatShortcut(q.z) || formatList(buildConfig(q.z))),
+        );
+        const result = q.revealed ? '✗ answer shown' : q.attempts === 1 ? '✓ 1st try' : `✓ try ${q.attempts}`;
+        row.appendChild(el('td', q.revealed ? 'r-shown' : 'r-ok', result));
+        table.appendChild(row);
+      });
+      card.appendChild(table);
+
+      card.appendChild(el('p', 'res-foot', pass
+        ? 'Type your name, then take a screenshot (top button + volume up) and upload it to Schoology.'
+        : `Start a new practice set. You need ${SETTINGS.passScore} of ${quiz.questions.length} correct without the answer being shown.`));
+
+      $('results').hidden = false;
+      $('btnNewSet').focus();
+    }
+
+    // ===== Rendering =====
+    function buildPicker() {
+      const host = $('picker');
+      const col = g => (g <= 2 ? g : g - 9); // groups 1,2 → cols 1,2; gap col 3; groups 13–18 → cols 4–9
+      [1, 2, 13, 14, 15, 16, 17, 18].forEach(g => {
+        const h = el('div', 'grp', String(g));
+        h.style.gridColumn = col(g);
+        h.style.gridRow = 1;
+        host.appendChild(h);
+      });
+      [4, 5].forEach(p => {
+        const gap = el('div', 'dgap');
+        gap.title = 'Transition metals (not included)';
+        gap.style.gridColumn = 3;
+        gap.style.gridRow = p + 1;
+        host.appendChild(gap);
+      });
+      for (const e of ELEMENTS.values()) {
+        const b = el('button', 'el');
+        b.dataset.z = e.z;
+        b.setAttribute('aria-label', `${e.name}, atomic number ${e.z}`);
+        b.style.gridColumn = col(e.group);
+        b.style.gridRow = e.period + 1;
+        b.append(el('span', 'ez', String(e.z)), el('span', 'es', e.sym));
+        b.addEventListener('click', () => loadElement(e.z));
+        host.appendChild(b);
+      }
+    }
+
+    function render() {
+      const inQuiz = !!state.quiz;
+
+      // Picker: locked while a practice set is running
+      document.querySelectorAll('#picker .el').forEach(b => {
+        const z = +b.dataset.z;
+        b.classList.toggle('current', z === state.z);
+        b.disabled = inQuiz;
+        b.setAttribute('aria-pressed', String(z === state.z));
+      });
+
+      // Element tile
+      const tile = $('tile');
+      tile.innerHTML = '';
+      const elem = ELEMENTS.get(state.z);
+      tile.append(el('span', 'tz', elem ? String(elem.z) : ''), el('span', 'ts', elem ? elem.sym : '?'), el('span', 'tn', elem ? elem.name : 'Pick an element'));
+      $('tileMeta').textContent = elem ? `Group ${elem.group} · Period ${elem.period}` : '';
+
+      // Practice vs. quiz controls
+      $('practiceBox').hidden = inQuiz;
+      $('practiceBox').style.display = inQuiz ? 'none' : 'flex';
+      $('quizBox').hidden = !inQuiz;
+      if (inQuiz) {
+        const quiz = state.quiz;
+        $('quizLabel').textContent = quiz.finished
+          ? `Set complete: ${quizScore(quiz)} / ${quiz.questions.length}`
+          : `Question ${quiz.index + 1} of ${quiz.questions.length}`;
+        const dots = $('dots');
+        dots.innerHTML = '';
+        quiz.questions.forEach((q, i) => {
+          let cls = 'dot';
+          let mark = String(i + 1);
+          if (q.done) { cls += q.revealed ? ' shown' : ' ok'; mark = q.revealed ? '✗' : '✓'; }
+          else if (i === quiz.index && !quiz.finished) cls += ' current';
+          dots.appendChild(el('span', cls, mark));
+        });
+        $('btnShowResults').hidden = !quiz.finished;
+        $('btnExitQuiz').textContent = quiz.finished ? 'Back to free practice' : 'Exit practice set';
+      }
+
+      renderPads();
+      renderChips();
+      renderOrbitals();
+      renderBohr();
+
+      const locked = state.solved;
+      $('btnCheck').disabled = locked || !state.z;
+      $('btnUndo').disabled = locked || !state.entries.length;
+      $('btnClear').disabled = locked || !state.entries.length;
+      const s = state.selected;
+      $('btnLeft').disabled = locked || s == null || s === 0;
+      $('btnRight').disabled = locked || s == null || s === state.entries.length - 1;
+      $('btnRemove').disabled = locked || s == null;
+
+      const q = currentQuestion();
+      $('btnNext').hidden = !(q && state.solved);
+      $('btnNext').textContent = state.quiz && state.quiz.index === state.quiz.questions.length - 1 ? 'Finish ▶' : 'Next question ▶';
+    }
+
+    function padButton(text, pressed, disabled, onClick, label) {
+      const b = el('button', 'btn', text);
+      b.setAttribute('aria-pressed', String(pressed));
+      if (label) b.setAttribute('aria-label', label);
+      b.disabled = disabled;
+      b.addEventListener('click', onClick);
+      return b;
+    }
+
+    function renderPads() {
+      const locked = state.solved;
+      const padN = $('padN');
+      padN.innerHTML = '';
+      for (let n = 1; n <= 5; n++) {
+        const invalid = (state.pickL === 'p' && n < 2) || (state.pickL === 'd' && n < 3);
+        padN.appendChild(padButton(String(n), state.pickN === n, locked || invalid, () => { state.pickN = n; render(); }, `Energy level ${n}`));
+      }
+      const padL = $('padL');
+      padL.innerHTML = '';
+      ['s', 'p', 'd'].forEach(l => {
+        const invalid = state.pickN != null && ((l === 'p' && state.pickN < 2) || (l === 'd' && state.pickN < 3));
+        padL.appendChild(padButton(l, state.pickL === l, locked || invalid, () => { state.pickL = l; render(); }, `${l} subshell`));
+      });
+      const padE = $('padE');
+      padE.innerHTML = '';
+      if (state.pickN && state.pickL) {
+        for (let e = 1; e <= CAPACITY[state.pickL]; e++) {
+          padE.appendChild(padButton(String(e), false, locked, () => addSub(e), `Add ${state.pickN}${state.pickL} with ${e} electrons`));
+        }
+      } else {
+        padE.appendChild(el('span', 'placeholder', 'Choose a level and subshell first'));
+      }
+      const padCore = $('padCore');
+      padCore.innerHTML = '';
+      NOBLE.forEach(g => padCore.appendChild(padButton(g.tag, false, locked, () => addCore(g), `Add ${g.tag} shortcut`)));
+    }
+
+    function renderChips() {
+      const host = $('chips');
+      host.innerHTML = '';
+      if (!state.entries.length) {
+        host.appendChild(el('span', 'empty', 'Your configuration will appear here.'));
+        return;
+      }
+      const icons = { ok: '✓', bad: '✗', order: '↔' };
+      state.entries.forEach((entry, i) => {
+        const mark = state.marks[i];
+        const chip = el('button', 'chip');
+        chip.setAttribute('role', 'listitem');
+        if (mark) chip.classList.add(mark);
+        if (state.selected === i) chip.classList.add('selected');
+        chip.disabled = state.solved;
+        if (mark) chip.appendChild(el('span', 'mark', icons[mark]));
+        chip.appendChild(document.createTextNode(entryText(entry)));
+        chip.setAttribute('aria-label', `${entryText(entry)}${mark ? `, ${{ ok: 'correct', bad: 'incorrect', order: 'out of order' }[mark]}` : ''}`);
+        chip.addEventListener('click', () => {
+          state.selected = state.selected === i ? null : i;
+          render();
+        });
+        host.appendChild(chip);
+      });
+    }
+
+    // Electrons per subshell from everything the student entered (shortcut expanded)
+    function combinedCounts(entries) {
+      const counts = new Map();
+      const core = new Set();
+      for (const e of entries) {
+        if (e.kind === 'core') {
+          for (const o of buildConfig(e.z)) {
+            counts.set(o.key, (counts.get(o.key) || 0) + o.e);
+            core.add(o.key);
+          }
+        } else {
+          const k = subKey(e);
+          counts.set(k, (counts.get(k) || 0) + e.e);
+        }
+      }
+      return { counts, core };
+    }
+
+    function renderOrbitals() {
+      const host = $('orbitals');
+      host.innerHTML = '';
+      const { counts, core } = combinedCounts(state.entries);
+      if (!counts.size) {
+        host.appendChild(el('p', 'empty-diagram', 'Add subshells to see the orbital diagram.'));
+        return;
+      }
+      const wrap = el('div', 'orbitals');
+      [...counts.keys()].sort((a, b) => aufbauIndex(a) - aufbauIndex(b)).forEach(key => {
+        const l = key.slice(-1);
+        const orbs = ORBITALS[l];
+        const count = counts.get(key);
+        const shown = Math.min(count, CAPACITY[l]);
+        const group = el('div', 'orb-group');
+        if (core.has(key)) group.classList.add('core');
+        if (count > CAPACITY[l]) group.classList.add('over');
+        const boxes = el('div', 'orb-boxes');
+        // Hund's rule: one up-arrow in each orbital first, then pair with down-arrows
+        for (let j = 0; j < orbs; j++) {
+          const box = el('div', 'orb-box');
+          if (j < shown) box.appendChild(el('span', 'up', '↑'));
+          if (j + orbs < shown) box.appendChild(el('span', 'down', '↓'));
+          boxes.appendChild(box);
+        }
+        group.append(boxes, el('div', 'orb-label', count > CAPACITY[l] ? `${key} (too many!)` : key));
+        wrap.appendChild(group);
+      });
+      host.appendChild(wrap);
+      if (core.size) host.appendChild(el('div', 'legend', 'Gray boxes = electrons included in the noble-gas shortcut.'));
+    }
+
+    function renderBohr() {
+      const host = $('bohr');
+      const { counts } = combinedCounts(state.entries);
+      const shells = [];
+      for (const [key, count] of counts) {
+        const n = +key[0];
+        shells[n] = (shells[n] || 0) + Math.min(count, CAPACITY[key.slice(-1)]);
+      }
+      const maxN = shells.length - 1;
+      const size = 380;
+      const c = size / 2;
+      const radius = n => 30 + n * 29;
+      const elem = ELEMENTS.get(state.z);
+      const parts = [`<svg class="bohr-svg" viewBox="0 0 ${size} ${size}" role="img" aria-label="Bohr model">`];
+      parts.push(`<circle cx="${c}" cy="${c}" r="26" class="nucleus"/>`);
+      parts.push(`<text x="${c}" y="${c - 3}" text-anchor="middle" font-weight="800" font-size="16">${elem ? elem.sym : '?'}</text>`);
+      if (elem) parts.push(`<text x="${c}" y="${c + 13}" text-anchor="middle" font-size="10" fill="#5b6474">${elem.z}p⁺</text>`);
+      for (let n = 1; n <= maxN; n++) {
+        const r = radius(n);
+        const isValence = n === maxN;
+        parts.push(`<circle cx="${c}" cy="${c}" r="${r}" class="ring${isValence ? ' valence' : ''}"/>`);
+        const count = shells[n] || 0;
+        // How many electrons sit at each spot around the ring (1 or 2)
+        let spots;
+        if (isValence && n === 1) {
+          spots = [count];                                    // H: one alone, He: one pair (as in Lewis dots)
+        } else if (isValence && count <= 8) {
+          spots = [0, 1, 2, 3].map(j => (j < count ? 1 : 0) + (j + 4 < count ? 1 : 0)); // Lewis: top, right, bottom, left; singles first, then pairs
+        } else {
+          spots = Array.from({ length: Math.ceil(count / 2) }, (_, j) => (j < Math.floor(count / 2) ? 2 : 1)); // inner shells: pairs
+        }
+        const sep = 6.5;
+        for (let k = 0; k < spots.length; k++) {
+          if (!spots[k]) continue;
+          const a = -Math.PI / 2 + (k * 2 * Math.PI) / spots.length;
+          const x = c + r * Math.cos(a);
+          const y = c + r * Math.sin(a);
+          const tx = -Math.sin(a);
+          const ty = Math.cos(a);
+          const offsets = spots[k] === 2 ? [-sep, sep] : [0];
+          for (const d of offsets) {
+            parts.push(`<circle cx="${(x + d * tx).toFixed(1)}" cy="${(y + d * ty).toFixed(1)}" r="5.5" class="e${isValence ? ' valence' : ''}"/>`);
+          }
+        }
+      }
+      parts.push('</svg>');
+      host.innerHTML = parts.join('');
+
+      const cap = $('bohrCaption');
+      cap.innerHTML = '';
+      if (maxN < 1) {
+        cap.textContent = 'Add subshells to see electrons in each shell.';
+        return;
+      }
+      const perShell = [];
+      for (let n = 1; n <= maxN; n++) perShell.push(shells[n] || 0);
+      cap.append(`Electrons per shell: ${perShell.join(', ')} · `, el('b', null, `Valence electrons: ${shells[maxN]}`));
+    }
+
+    // ===== Wire up =====
+    buildPicker();
+    $('btnHowto').addEventListener('click', () => {
+      const open = $('howto').hidden;
+      $('howto').hidden = !open;
+      $('btnHowto').setAttribute('aria-expanded', String(open));
+    });
+    $('btnCheck').addEventListener('click', check);
+    $('btnUndo').addEventListener('click', () => { state.entries.pop(); state.selected = null; edited(); });
+    $('btnClear').addEventListener('click', () => { state.entries = []; state.selected = null; edited(); });
+    $('btnLeft').addEventListener('click', () => move(-1));
+    $('btnRight').addEventListener('click', () => move(1));
+    $('btnRemove').addEventListener('click', removeSelected);
+    $('btnQuiz').addEventListener('click', startQuiz);
+    $('btnRandom').addEventListener('click', () => {
+      const zs = ELEMENT_LIST.map(r => r[0]).filter(z => z !== state.z);
+      loadElement(zs[Math.floor(Math.random() * zs.length)]);
+    });
+    $('btnNext').addEventListener('click', nextQuestion);
+    $('btnExitQuiz').addEventListener('click', exitQuiz);
+    $('btnShowResults').addEventListener('click', showResults);
+    $('btnNewSet').addEventListener('click', startQuiz);
+    $('btnCloseResults').addEventListener('click', () => { $('results').hidden = true; });
+    render();
+  </script>
+</body>
+</html>
