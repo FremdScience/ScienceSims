@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fremd Science Simulations Hub</title>
+    <!-- Favicon: microscope emoji as a quick icon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔬</text></svg>">
+    <style>
+        :root {
+            /* Viking Green and Gold Color Scheme */
+            --viking-green: #005530;
+            --viking-green-dark: #003d22;
+            --viking-green-soft: #e6f0eb;
+            --viking-gold: #FFD100;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2a24;
+            --text-light: #5b6660;
+            --line: #dfe5e1;
+            --radius: 16px;
+            --shadow: 0 1px 2px rgba(16, 40, 28, 0.06), 0 4px 16px rgba(16, 40, 28, 0.06);
+            --shadow-lift: 0 2px 4px rgba(16, 40, 28, 0.08), 0 14px 32px rgba(16, 40, 28, 0.14);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        :focus-visible {
+            outline: 3px solid var(--viking-green);
+            outline-offset: 3px;
+        }
+
+        /* --- Header --- */
+        .site-header {
+            background:
+                radial-gradient(circle at 85% 20%, rgba(255, 209, 0, 0.16), transparent 40%),
+                radial-gradient(circle at 10% 110%, rgba(255, 255, 255, 0.08), transparent 45%),
+                var(--viking-green);
+            color: white;
+            border-bottom: 6px solid var(--viking-gold);
+        }
+
+        .header-inner {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 48px 20px 40px;
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--viking-gold);
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: clamp(2rem, 5vw, 3rem);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.86);
+            font-size: 1.1rem;
+            max-width: 620px;
+            margin: 0 0 24px;
+        }
+
+        .search {
+            position: relative;
+            max-width: 520px;
+        }
+
+        .search svg {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            pointer-events: none;
+        }
+
+        .search input {
+            width: 100%;
+            font: inherit;
+            font-size: 16px; /* 16px+ stops iPad Safari from zooming in on focus */
+            padding: 14px 16px 14px 46px;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background: white;
+            color: var(--text-main);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+        }
+
+        .search input:focus {
+            outline: none;
+            border-color: var(--viking-gold);
+        }
+
+        /* --- Layout --- */
+        .container {
+            width: 100%;
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 36px 20px 24px;
+            flex-grow: 1;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        /* --- Category Cards (Splash Screen) --- */
+        .category-card {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 22px;
+            background: var(--card-bg);
+            border: 2px solid transparent;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            color: inherit;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .category-icon {
+            flex: 0 0 64px;
+            height: 64px;
+            display: grid;
+            place-items: center;
+            border-radius: 14px;
+            font-size: 2rem;
+            background: var(--tint, var(--viking-green-soft));
+        }
+
+        .category-title {
+            margin: 0;
+            font-size: 1.3rem;
+            color: var(--viking-green);
+        }
+
+        .category-count {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .category-arrow {
+            margin-left: auto;
+            font-size: 1.4rem;
+            color: var(--viking-green);
+            transition: transform 0.2s;
+        }
+
+        /* Hover effects only on devices with a mouse (prevents "sticky" hover on iPad) */
+        @media (hover: hover) {
+            .category-card:hover {
+                transform: translateY(-3px);
+                box-shadow: var(--shadow-lift);
+                border-color: var(--viking-gold);
+            }
+            .category-card:hover .category-arrow { transform: translateX(4px); }
+        }
+
+        /* --- Sub-screen headers --- */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .view-section.active { display: block; }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 44px;
+            padding: 10px 18px;
+            margin-bottom: 20px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: white;
+            color: var(--viking-green);
+            font-weight: 700;
+            text-decoration: none;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        @media (hover: hover) {
+            .back-btn:hover { border-color: var(--viking-green); background: var(--viking-green-soft); }
+        }
+
+        .section-top {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 14px;
+            border-bottom: 3px solid var(--viking-gold);
+        }
+
+        .section-header {
+            margin: 0;
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            color: var(--viking-green);
+        }
+
+        .section-count {
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: var(--viking-green-soft);
+            color: var(--viking-green);
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        /* --- Simulation Cards (Sub-screens) --- */
+        .sim-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            background: var(--card-bg);
+            border-top: 5px solid var(--viking-green);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        @media (hover: hover) {
+            .sim-card:not(.locked):hover {
+                transform: translateY(-4px);
+                box-shadow: var(--shadow-lift);
+            }
+        }
+
+        .sim-title {
+            margin: 0 0 8px;
+            font-size: 1.2rem;
+            line-height: 1.3;
+            color: var(--viking-green);
+        }
+
+        .sim-desc {
+            flex-grow: 1;
+            margin: 0 0 20px;
+            color: var(--text-light);
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        .launch-btn {
+            display: inline-flex;
+            align-items: center;
+            min-height: 44px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            background-color: var(--viking-green);
+            color: white;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        /* Makes the whole card tappable, not just the button */
+        a.launch-btn::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: var(--radius);
+        }
+
+        @media (hover: hover) {
+            .launch-btn:hover { background-color: var(--viking-green-dark); }
+        }
+
+        .status-badge {
+            padding: 5px 11px;
+            border-radius: 999px;
+            background-color: #eef1ef;
+            color: var(--text-light);
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        /* Coming-soon cards: add class="sim-card locked" */
+        .sim-card.locked {
+            background: #fafbfa;
+            border: 1px dashed #cfd6d2;
+            border-top: 5px solid #cfd6d2;
+            box-shadow: none;
+        }
+
+        .sim-card.locked .sim-title { color: #6b7570; }
+
+        .sim-card.locked .launch-btn {
+            background: #dde2df;
+            color: #5b6660;
+            cursor: not-allowed;
+        }
+
+        /* --- Search results --- */
+        body.searching #view-home { display: none; }
+        body.searching .view-section[data-subject] { display: block; margin-bottom: 40px; }
+        body.searching .back-btn { display: none; }
+        .sim-card.no-match { display: none; }
+        .view-section.empty { display: none !important; }
+
+        .no-results {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-light);
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        /* --- Privacy Notice --- */
+        .privacy-notice {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            width: calc(100% - 40px);
+            max-width: 1040px;
+            margin: 24px auto 40px;
+            padding: 16px 20px;
+            background: white;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            color: var(--text-light);
+        }
+
+        .privacy-notice strong { color: var(--text-main); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+
+        @media (max-width: 600px) {
+            .header-inner { padding: 32px 16px 28px; }
+            .container { padding: 24px 16px; }
+            .privacy-notice { width: calc(100% - 32px); }
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="header-inner">
+            <p class="eyebrow">Fremd High School</p>
+            <h1>Fremd Science Simulations</h1>
+            <p class="subtitle">Complete the activities for your class. Most progress remains only for the current session.</p>
+            <div class="search" role="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="search" id="search" placeholder="Search all activities (e.g. mole, circuits, egg)" aria-label="Search all activities" autocomplete="off">
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- ==========================================
+             SPLASH SCREEN: CATEGORIES
+        =========================================== -->
+        <div id="view-home" class="view-section active">
+            <div class="dashboard-grid">
+
+                <a class="category-card" href="#biology">
+                    <span class="category-icon" style="--tint: #e3f3e8;" aria-hidden="true">🧬</span>
+                    <span>
+                        <h2 class="category-title">Biology</h2>
+                        <span class="category-count" data-count="biology"></span>
+                    </span>
+                    <span class="category-arrow" aria-hidden="true">→</span>
+                </a>
+
+                <a class="category-card" href="#chemistry">
+                    <span class="category-icon" style="--tint: #ebeefc;" aria-hidden="true">🧪</span>
+                    <span>
+                        <h2 class="category-title">Chemistry</h2>
+                        <span class="category-count" data-count="chemistry"></span>
+                    </span>
+                    <span class="category-arrow" aria-hidden="true">→</span>
+                </a>
+
+                <a class="category-card" href="#earth-science">
+                    <span class="category-icon" style="--tint: #e3f0f7;" aria-hidden="true">🌍</span>
+                    <span>
+                        <h2 class="category-title">Earth Science</h2>
+                        <span class="category-count" data-count="earth-science"></span>
+                    </span>
+                    <span class="category-arrow" aria-hidden="true">→</span>
+                </a>
+
+                <a class="category-card" href="#physical-science">
+                    <span class="category-icon" style="--tint: #fff3cc;" aria-hidden="true">⚖️</span>
+                    <span>
+                        <h2 class="category-title">Physical Science</h2>
+                        <span class="category-count" data-count="physical-science"></span>
+                    </span>
+                    <span class="category-arrow" aria-hidden="true">→</span>
+                </a>
+
+                <a class="category-card" href="#physics">
+                    <span class="category-icon" style="--tint: #fbe7e4;" aria-hidden="true">🚀</span>
+                    <span>
+                        <h2 class="category-title">Physics</h2>
+                        <span class="category-count" data-count="physics"></span>
+                    </span>
+                    <span class="category-arrow" aria-hidden="true">→</span>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- ==========================================
+             SUB-SCREEN: BIOLOGY SIMULATIONS
+        =========================================== -->
+        <div id="view-biology" class="view-section" data-subject="biology">
+            <a class="back-btn" href="#">← Back to Subjects</a>
+            <div class="section-top">
+                <h2 class="section-header">🧬 Biology Simulations</h2>
+                <span class="section-count" data-count="biology"></span>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Macromolecule Lab -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Macromolecule Lab</h3>
+                    <p class="sim-desc">
+                        Identify the different types of macromolecules in food.
+                    </p>
+                    <div class="card-footer">
+                        <a href="macrolab.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Lab</span>
+                    </div>
+                </div>
+
+                <!-- Epigenetics Card -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Epigenetics: Lick Your Rats</h3>
+                    <p class="sim-desc">
+                        Investigate how maternal care during the first week of a rat's life affects the GR gene, shaping their adult personality and response to stress.
+                    </p>
+                    <div class="card-footer">
+                        <a href="lick_your_rats.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Lab</span>
+                    </div>
+                </div>
+
+                <!-- Egg Lab Card -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Egg Lab</h3>
+                    <p class="sim-desc">
+                        Investigate an Egg in Different Environments
+                    </p>
+                    <div class="card-footer">
+                        <a href="Egg_Lab.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Lab</span>
+                    </div>
+                </div>
+
+                <!-- Plant Growth Lab Card -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Plant Growth Lab</h3>
+                    <p class="sim-desc">
+                        Investigate how light, water, seed type, and soil treatment affect plant growth over 50 simulated days.
+                    </p>
+                    <div class="card-footer">
+                        <a href="plant-growth-lab/" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Lab</span>
+                    </div>
+                </div>
+
+                <!-- Microscope Parts Explorer Card -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Microscope Parts Explorer</h3>
+                    <p class="sim-desc">
+                        Explore the parts and safe use of a monocular compound light microscope, then complete a labeling practice round.
+                    </p>
+                    <div class="card-footer">
+                        <a href="microscope-parts/" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Placeholder for future bio sim -->
+                <div class="sim-card locked">
+                    <h3 class="sim-title">Cell Division (Coming Soon)</h3>
+                    <p class="sim-desc">
+                        Explore the phases of mitosis and meiosis.
+                    </p>
+                    <div class="card-footer">
+                        <span class="launch-btn">Locked</span>
+                        <span class="status-badge">Pending</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             SUB-SCREEN: CHEMISTRY SIMULATIONS
+        =========================================== -->
+        <div id="view-chemistry" class="view-section" data-subject="chemistry">
+            <a class="back-btn" href="#">← Back to Subjects</a>
+            <div class="section-top">
+                <h2 class="section-header">🧪 Chemistry Simulations</h2>
+                <span class="section-count" data-count="chemistry"></span>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Energy and Temperature Change Simulation -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Energy and Temperature Change Simulation</h3>
+                    <p class="sim-desc">
+                        Compare how energy added, mass, and material affect temperature in direct heating and calorimetry trials.
+                    </p>
+                    <div class="card-footer">
+                        <a href="investigation-6-energy/" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Lab</span>
+                    </div>
+                </div>
+
+                <!-- EConfig -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Electron Configuration Practice</h3>
+                    <p class="sim-desc">
+                        Practice Electron Configurations
+                    </p>
+                    <div class="card-footer">
+                        <a href="econfig.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Atom and Ion Chart -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Atom and Ion Chart</h3>
+                    <p class="sim-desc">
+                        Practice Atomic Number, Mass Number and Charge of Different Atoms!
+                    </p>
+                    <div class="card-footer">
+                        <a href="atom_and_ion_chart.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Acid Base Periodicity -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Acid Base Periodicity Lab</h3>
+                    <p class="sim-desc">
+                        Investigate the Patterns of Reactions of Different Metals and Non-Metals
+                    </p>
+                    <div class="card-footer">
+                        <a href="acid_base_perodicity.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Lab</span>
+                    </div>
+                </div>
+
+                <!-- Formula Writing -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Formula Writing and Naming Practice</h3>
+                    <p class="sim-desc">
+                        Practice your Ionic and Covalent Compound Naming and Formula Writing!
+                    </p>
+                    <div class="card-footer">
+                        <a href="Formula_Writing_and_Naming_Practice.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Balancing -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Balancing Equations</h3>
+                    <p class="sim-desc">
+                        Practice Balancing Equations While Visualizing Conservation of Matter
+                    </p>
+                    <div class="card-footer">
+                        <a href="balancing_equations.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Mole Intro -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Mole Intro</h3>
+                    <p class="sim-desc">
+                        Master the map, one step at a time.
+                    </p>
+                    <div class="card-footer">
+                        <a href="Mole_Intro.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Burette Practice -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Reading a Buret</h3>
+                    <p class="sim-desc">
+                        Practice Reading a Buret
+                    </p>
+                    <div class="card-footer">
+                        <a href="Titration_Practice.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Classifying and Predicting Products -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Classifying and Predicting Products</h3>
+                    <p class="sim-desc">Balance reactions, predict products, classify reaction types, and recognize no-reaction cases.</p>
+                    <div class="card-footer">
+                        <a href="Classifying_and_Predicting_Products.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Stoichiometry Setup Practice -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Stoichiometry Setup Practice</h3>
+                    <p class="sim-desc">Build dimensional-analysis setups for mole, mass, and particle conversions.</p>
+                    <div class="card-footer">
+                        <a href="Stoichiometry_Setup_Practice.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Net Ionic Equations Review -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Net Ionic Equations: Find the Mistake</h3>
+                    <p class="sim-desc">Evaluate complete and net ionic equations, identify mistakes, and explain the correction.</p>
+                    <div class="card-footer">
+                        <a href="Net_Ionic_Equations_Find_the_Mistake.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Review</span>
+                    </div>
+                </div>
+
+                <!-- Melting Ice and Phase Changes -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Melting Ice and Phase Changes</h3>
+                    <p class="sim-desc">Explore a heating curve and particle models as a 100.0 g water sample warms from ice through liquid water to water vapor.</p>
+                    <div class="card-footer">
+                        <a href="Melting_Ice_and_Phase_Changes.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Lab</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             SUB-SCREEN: EARTH SCIENCE SIMULATIONS
+        =========================================== -->
+        <div id="view-earth-science" class="view-section" data-subject="earth-science">
+            <a class="back-btn" href="#">← Back to Subjects</a>
+            <div class="section-top">
+                <h2 class="section-header">🌍 Earth Science Simulations</h2>
+                <span class="section-count" data-count="earth-science"></span>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="sim-card">
+                    <h3 class="sim-title">Plate Boundary Expedition</h3>
+                    <p class="sim-desc">Explore a 3D world, collect geologic evidence, identify plate boundaries, and make hazard decisions.</p>
+                    <div class="card-footer">
+                        <a href="plate-boundary-expedition/" class="launch-btn">Launch Game</a>
+                        <span class="status-badge">3D Evidence Game</span>
+                    </div>
+                </div>
+
+                <div class="sim-card">
+                    <h3 class="sim-title">Watershed Under Pressure</h3>
+                    <p class="sim-desc">Model runoff and erosion, then redesign a community to reduce flood risk within a budget.</p>
+                    <div class="card-footer">
+                        <a href="watershed-under-pressure/" class="launch-btn">Launch Challenge</a>
+                        <span class="status-badge">Design Lab</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             SUB-SCREEN: PHYSICAL SCIENCE SIMULATIONS
+        =========================================== -->
+        <div id="view-physical-science" class="view-section" data-subject="physical-science">
+            <a class="back-btn" href="#">← Back to Subjects</a>
+            <div class="section-top">
+                <h2 class="section-header">⚖️ Physical Science Simulations</h2>
+                <span class="section-count" data-count="physical-science"></span>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="sim-card">
+                    <h3 class="sim-title">Matter Under Pressure</h3>
+                    <p class="sim-desc">Connect particle motion, phase changes, temperature, and pressure in a virtual matter laboratory.</p>
+                    <div class="card-footer">
+                        <a href="matter-under-pressure/" class="launch-btn">Launch Lab</a>
+                        <span class="status-badge">Particle Lab</span>
+                    </div>
+                </div>
+
+                <div class="sim-card">
+                    <h3 class="sim-title">Blackout! Circuit Repair</h3>
+                    <p class="sim-desc">Build and diagnose circuits with a virtual multimeter and a responsive troubleshooting coach.</p>
+                    <div class="card-footer">
+                        <a href="blackout-circuit-repair/" class="launch-btn">Launch Game</a>
+                        <span class="status-badge">Adaptive Challenge</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             SUB-SCREEN: PHYSICS SIMULATIONS
+        =========================================== -->
+        <div id="view-physics" class="view-section" data-subject="physics">
+            <a class="back-btn" href="#">← Back to Subjects</a>
+            <div class="section-top">
+                <h2 class="section-header">🚀 Physics Simulations</h2>
+                <span class="section-count" data-count="physics"></span>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Newton's Law Lab -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Newton's Law Lab</h3>
+                    <p class="sim-desc">
+                        Find out the relationship between Force, Acceleration and Mass
+                    </p>
+                    <div class="card-footer">
+                        <a href="newtons_law_lab.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Lab</span>
+                    </div>
+                </div>
+
+                <!-- Right Hand Rules -->
+                <div class="sim-card">
+                    <h3 class="sim-title">Right Hand Rules</h3>
+                    <p class="sim-desc">
+                        Find out the relationship between Current in a wire, magnetic fields and moving charges.
+                    </p>
+                    <div class="card-footer">
+                        <a href="Right_hand_rule.html" class="launch-btn">Launch Activity</a>
+                        <span class="status-badge">Interactive Practice</span>
+                    </div>
+                </div>
+
+                <!-- Placeholder -->
+                <div class="sim-card locked">
+                    <h3 class="sim-title">Projectile Motion</h3>
+                    <p class="sim-desc">Coming soon to the physics portal.</p>
+                    <div class="card-footer">
+                        <span class="launch-btn">Locked</span>
+                        <span class="status-badge">Pending</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p id="no-results" class="no-results" hidden>No activities match your search.</p>
+
+    </main>
+
+    <div class="privacy-notice">
+        <span aria-hidden="true">🔒</span>
+        <p style="margin: 0;"><strong>Zero-Data Design:</strong> No names, emails, or answers are transmitted to FremdScience. Most activities keep progress only for the current session; activities that save progress do so locally on this device.</p>
+    </div>
+
+    <script>
+        // --- Navigation Logic ---
+        // Each subject has its own address (e.g. #biology), so the browser's
+        // Back button and iPad back-swipe return to the subject list.
+        const views = document.querySelectorAll('.view-section');
+        const subjectSections = document.querySelectorAll('.view-section[data-subject]');
+        const searchInput = document.getElementById('search');
+        const noResults = document.getElementById('no-results');
+
+        function showCategory(categoryId) {
+            location.hash = categoryId === 'home' ? '' : categoryId;
+        }
+
+        function showCurrentView() {
+            const id = location.hash.slice(1) || 'home';
+            const target = document.getElementById('view-' + id) || document.getElementById('view-home');
+            views.forEach(section => section.classList.toggle('active', section === target));
+        }
+
+        window.addEventListener('hashchange', () => {
+            clearSearch();
+            showCurrentView();
+            window.scrollTo(0, 0);
+        });
+
+        // --- Activity counts (updates automatically when cards are added) ---
+        subjectSections.forEach(section => {
+            const n = section.querySelectorAll('.sim-card:not(.locked)').length;
+            const label = n + (n === 1 ? ' activity' : ' activities');
+            document.querySelectorAll('[data-count="' + section.dataset.subject + '"]')
+                .forEach(el => el.textContent = label);
+        });
+
+        // --- Search across every subject ---
+        function runSearch() {
+            const query = searchInput.value.trim().toLowerCase();
+            document.body.classList.toggle('searching', query !== '');
+            let total = 0;
+            subjectSections.forEach(section => {
+                const subjectMatches = section.querySelector('.section-header').textContent.toLowerCase().includes(query);
+                let matches = 0;
+                section.querySelectorAll('.sim-card').forEach(card => {
+                    const hit = !query || subjectMatches || card.textContent.toLowerCase().includes(query);
+                    card.classList.toggle('no-match', !hit);
+                    if (hit) matches++;
+                });
+                section.classList.toggle('empty', query !== '' && matches === 0);
+                total += matches;
+            });
+            noResults.hidden = !query || total > 0;
+        }
+
+        function clearSearch() {
+            if (searchInput.value) {
+                searchInput.value = '';
+                runSearch();
+            }
+        }
+
+        searchInput.addEventListener('input', runSearch);
+        searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') clearSearch(); });
+
+        showCurrentView();
+    </script>
+</body>
+</html>
