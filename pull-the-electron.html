@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pull the Electron · S332 Investigation 3</title>
+<style>
+/* Layout: one column of cards, a three-step bar on top, lab = picture left + controls right */
+:root{
+  --teal:#0F766E; --teal-soft:#E6F4F1; --ink:#1E293B; --muted:#475569; --line:#CBD5E1;
+  --paper:#F8FAFC; --card:#FFFFFF; --orange:#F59E0B; --orange-soft:#FFF7ED; --red:#DC2626;
+  --good:#166534; --good-soft:#DCFCE7; --warn:#92400E; --warn-soft:#FEF3C7;
+  --head:"Lexend","Poppins",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Poppins",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--body)}
+button,input{font:inherit}
+button{cursor:pointer}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:14px max(16px,4%)}
+header h1{font:600 22px/1.2 var(--head);color:var(--teal);margin:0}
+header p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+main{max-width:1080px;margin:0 auto;padding:18px max(16px,3%) 40px}
+.steps{display:flex;gap:6px;background:#E2E8F0;padding:5px;border-radius:12px;margin-bottom:16px}
+.steps button{flex:1;border:0;background:transparent;color:var(--muted);padding:10px 8px;border-radius:8px;font-weight:600;font-size:14px;min-height:44px}
+.steps button[aria-current="step"]{background:var(--teal);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+h2{font:600 20px/1.25 var(--head);margin:0 0 8px;color:var(--ink)}
+h3{font:600 16px/1.3 var(--head);margin:0 0 6px}
+p{margin:6px 0 10px}
+.small{font-size:14px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.lab{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:820px){.grid2,.lab{grid-template-columns:1fr}}
+.box{background:var(--teal-soft);border-radius:10px;padding:12px 14px;font-size:14px}
+.box.orange{background:var(--orange-soft)}
+.box b{color:var(--teal)}
+svg{display:block;width:100%;height:auto}
+.stage{background:#F1F5F9;border-radius:12px;touch-action:none;user-select:none;-webkit-user-select:none}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.opt{border:2px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:10px 14px;min-height:44px;font-weight:500}
+.opt.picked{border-color:var(--teal);background:var(--teal-soft)}
+.opt.right{border-color:var(--good);background:var(--good-soft)}
+.opt.wrong{border-color:#B45309;background:var(--warn-soft)}
+.fb{font-size:14px;min-height:22px;margin:4px 0 12px}
+.fb.good{color:var(--good)} .fb.bad{color:var(--warn)}
+.ctrl{margin-bottom:14px}
+.ctrl label{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:48px;height:48px;border-radius:10px;border:2px solid var(--teal);background:#fff;color:var(--teal);font-size:24px;font-weight:700;line-height:1}
+.stepper output{font:600 26px var(--head);min-width:44px;text-align:center}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;min-height:48px;border-radius:10px;border:2px solid var(--line);background:#fff;font-weight:600;color:var(--ink)}
+.seg button.on{border-color:var(--teal);background:var(--teal);color:#fff}
+.btn{border:0;border-radius:10px;background:var(--teal);color:#fff;font-weight:600;padding:12px 16px;min-height:48px;width:100%}
+.btn.alt{background:#fff;color:var(--teal);border:2px solid var(--teal)}
+.btn:disabled{opacity:.45;cursor:default}
+.meter{height:22px;background:#E2E8F0;border-radius:11px;overflow:hidden;margin:6px 0}
+.meter>div{height:100%;width:0;background:var(--orange);border-radius:11px}
+.readout{display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
+.readout strong{font:600 22px var(--head)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border:1px solid var(--line);padding:7px 9px;text-align:center}
+th{background:var(--teal-soft);font-weight:600}
+.tests li{margin-bottom:8px}
+.tick{font-weight:700;font-size:13px;border-radius:20px;padding:2px 9px;white-space:nowrap}
+.tick.done{background:var(--good-soft);color:var(--good)}
+.tick.todo{background:#E2E8F0;color:var(--muted)}
+.pair{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.summary{white-space:pre-line;font-size:15px}
+:focus-visible{outline:3px solid #B45309;outline-offset:3px}
+.sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Pull the Electron</h1>
+  <p>S332 Investigation 3 · Use this with your worksheet (Part A). About 15 minutes.</p>
+</header>
+<main>
+  <nav class="steps" aria-label="Steps">
+    <button data-step="0" aria-current="step">1 · Two measurements</button>
+    <button data-step="1">2 · Test the pull</button>
+    <button data-step="2">3 · Predict</button>
+  </nav>
+
+  <!-- STEP 1 -->
+  <section id="s0">
+    <div class="card">
+      <h2>We can't measure the pull directly. So what can we measure?</h2>
+      <p class="small">In Investigation 2 you found that the pull on a valence electron is stronger with more protons and weaker with more distance. Scientists can't put a force meter inside an atom. They measure two other things instead.</p>
+      <div class="grid2">
+        <div>
+          <h3>Atomic radius</h3>
+          <svg viewBox="0 0 420 250" role="img" aria-label="An atom with a red line from the nucleus to its outermost electron, labeled atomic radius">
+            <rect width="420" height="250" rx="12" fill="#F1F5F9"/>
+            <g id="atomR"></g>
+            <line x1="150" y1="125" x2="150" y2="33" stroke="#DC2626" stroke-width="3.5"/>
+            <line x1="142" y1="125" x2="158" y2="125" stroke="#DC2626" stroke-width="3"/>
+            <line x1="150" y1="60" x2="262" y2="92" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <text x="268" y="98" font-size="15" font-weight="700" fill="#DC2626">atomic radius</text>
+            <text x="268" y="118" font-size="13" fill="#475569">from the nucleus to</text>
+            <text x="268" y="135" font-size="13" fill="#475569">the outermost</text>
+            <text x="268" y="152" font-size="13" fill="#475569">(valence) electrons</text>
+          </svg>
+          <div class="box" style="margin-top:10px"><b>Atomic radius</b> tells us the size of an atom: the typical distance from the nucleus to its outermost (valence) electrons. Atoms don't have a hard edge, so this is an average. It is measured in <b>picometers (pm)</b>. One picometer is a trillionth of a meter.</div>
+        </div>
+        <div>
+          <h3>First ionization energy</h3>
+          <svg viewBox="0 0 420 250" role="img" aria-label="An atom with one valence electron being pulled away by added energy">
+            <rect width="420" height="250" rx="12" fill="#F1F5F9"/>
+            <g id="atomI"></g>
+            <circle cx="220" cy="125" r="7" fill="none" stroke="#F59E0B" stroke-width="2" stroke-dasharray="3 3"/>
+            <line x1="236" y1="125" x2="322" y2="125" stroke="#F59E0B" stroke-width="4"/>
+            <polygon points="322,116 322,134 340,125" fill="#F59E0B"/>
+            <circle cx="360" cy="125" r="8" fill="#F59E0B"/>
+            <text x="290" y="100" text-anchor="middle" font-size="15" font-weight="700" fill="#B45309">energy added</text>
+            <text x="360" y="155" text-anchor="middle" font-size="13" fill="#475569">electron</text>
+            <text x="360" y="172" text-anchor="middle" font-size="13" fill="#475569">removed</text>
+          </svg>
+          <div class="box orange" style="margin-top:10px"><b style="color:#B45309">First ionization energy</b> is the energy that must be <b style="color:#B45309">added</b> to remove one valence electron from a single, separate atom. It is measured in <b style="color:#B45309">kilojoules per mole (kJ/mol)</b>.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Check yourself</h3>
+      <p><b>1.</b> An atom with a larger atomic radius has valence electrons that are…</p>
+      <div class="opts" data-q="0"><button class="opt" data-a="0">closer to the nucleus</button><button class="opt" data-a="1">farther from the nucleus</button></div>
+      <div class="fb" id="fb0" role="status"></div>
+      <p><b>2.</b> First ionization energy is the energy needed to…</p>
+      <div class="opts" data-q="1"><button class="opt" data-a="0">add a proton to the nucleus</button><button class="opt" data-a="1">melt the element</button><button class="opt" data-a="2">remove one valence electron</button></div>
+      <div class="fb" id="fb1" role="status"></div>
+      <div class="fb bad" id="nudge1" role="status"></div>
+      <button class="btn" id="to1">Next: test the pull →</button>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section id="s1" hidden>
+    <div class="card">
+      <h2>Build a simple atom, then pull its electron off</h2>
+      <p class="small">Set the number of protons and the energy level of the valence electron. Then drag the orange electron to the right (or press the button). The meter shows how much energy it took, in <b>model units</b>. These are made-up units for comparing atoms, not real kJ/mol values.</p>
+      <div class="lab">
+        <div>
+          <svg id="stage" class="stage" viewBox="0 0 700 340" role="group" aria-label="Simple atom with one valence electron">
+            <g id="rings"></g>
+            <rect x="590" y="20" width="96" height="300" rx="10" fill="#FFF7ED" stroke="#F59E0B" stroke-width="2" stroke-dasharray="6 5"/>
+            <text x="638" y="46" text-anchor="middle" font-size="14" font-weight="700" fill="#B45309">free</text>
+            <line id="pullArrow" x1="0" y1="170" x2="0" y2="170" stroke="#DC2626" stroke-opacity=".8"/>
+            <polygon id="pullHead" points="0,0" fill="#DC2626" fill-opacity=".8"/>
+            <circle cx="110" cy="170" r="34" fill="#E6F4F1" stroke="#0F766E" stroke-width="3"/>
+            <text id="nucText" x="110" y="177" text-anchor="middle" font-size="19" font-weight="700" fill="#134E4A">2 p+</text>
+            <g id="electron" tabindex="0" role="button" aria-label="Valence electron. Drag right to remove it." style="cursor:grab">
+              <circle id="eHalo" cx="0" cy="170" r="24" fill="#F59E0B" fill-opacity=".18"/>
+              <circle id="eDot" cx="0" cy="170" r="13" fill="#F59E0B" stroke="#B45309" stroke-width="2"/>
+              <text id="eMinus" x="0" y="176" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" pointer-events="none">−</text>
+            </g>
+            <text id="stageMsg" x="350" y="325" text-anchor="middle" font-size="15" fill="#475569"></text>
+          </svg>
+          <div class="readout" style="margin-top:10px"><span>Energy added so far</span><strong><span id="eNow">0</span> model units</strong></div>
+          <div class="meter" aria-hidden="true"><div id="meterFill"></div></div>
+          <div class="fb" id="labMsg" role="status" aria-live="polite"></div>
+        </div>
+        <div>
+          <div class="ctrl">
+            <label id="pl">Protons in the nucleus</label>
+            <div class="stepper" role="group" aria-labelledby="pl">
+              <button id="pMinus" aria-label="Fewer protons">−</button>
+              <output id="pOut">2</output>
+              <button id="pPlus" aria-label="More protons">+</button>
+            </div>
+          </div>
+          <div class="ctrl">
+            <label id="ll">Energy level of the valence electron</label>
+            <div class="seg" id="levels" role="group" aria-labelledby="ll">
+              <button data-n="1">1</button><button data-n="2" class="on">2</button><button data-n="3">3</button><button data-n="4">4</button>
+            </div>
+            <div class="small" style="margin-top:4px">In this model, the energy level sets the <b>distance</b>. A higher energy level is farther from the nucleus, so the atom has a larger radius.</div>
+          </div>
+          <button class="btn" id="pullBtn">Pull the electron off</button>
+          <button class="btn alt" id="resetBtn" style="margin-top:8px">Put the electron back</button>
+          <div class="box" style="margin-top:14px">The red arrow shows the <b>pull</b> of the nucleus on the electron. A thicker arrow means a stronger pull.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>Run these tests (record on your worksheet)</h3>
+        <ol class="tests">
+          <li><b>Test 1: change only the protons.</b> Keep energy level 2. Try 1, 2, then 4 protons. <span class="tick" id="tk1"></span></li>
+          <li><b>Test 2: change only the distance.</b> Keep 2 protons. Try energy level 1, 2, then 4. <span class="tick" id="tk2"></span></li>
+          <li><b>Test 3: tug of war.</b> Predict first, then test. <span class="tick" id="tk3"></span><br>Atom A: 1 proton, level 1 &nbsp;vs.&nbsp; Atom B: 4 protons, level 2<br>Atom C: 3 protons, level 1 &nbsp;vs.&nbsp; Atom D: 6 protons, level 3</li>
+        </ol>
+        <div class="box orange">This simple atom has only a nucleus and one valence electron. Real atoms also have inner electrons between the nucleus and the valence electrons, and they cancel some of the pull. The graphs you read next will show what real atoms do.</div>
+      </div>
+      <div class="card">
+        <h3>My trials</h3>
+        <table aria-label="Trials">
+          <thead><tr><th>Trial</th><th>Protons</th><th>Energy level</th><th>Energy to remove (model units)</th></tr></thead>
+          <tbody id="log"><tr><td colspan="4" class="small">Remove an electron to record a trial.</td></tr></tbody>
+        </table>
+        <button class="btn alt" id="clearLog" style="margin-top:10px">Clear my trials</button>
+        <div class="fb bad" id="nudge2" role="status"></div>
+        <button class="btn" id="to2" style="margin-top:8px">Next: predict →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section id="s2" hidden>
+    <div class="card">
+      <h2>Predict what real atoms will do</h2>
+      <p class="small">Use what you learned from the tests and from Investigation 2. There is no answer check here. You will test your predictions with real data on graph day. Copy your choices onto your worksheet.</p>
+
+      <div class="pair" style="border-top:0;margin-top:0;padding-top:0">
+        <h3>Pair 1: sodium (Na) and potassium (K) · same family, K is one row down</h3>
+        <div id="draw1"></div>
+        <p><b>Which has the larger atomic radius?</b></p>
+        <div class="opts" data-p="r1"><button class="opt">Na</button><button class="opt">K</button><button class="opt">about the same</button></div>
+        <p><b>Which has the higher first ionization energy?</b></p>
+        <div class="opts" data-p="i1"><button class="opt">Na</button><button class="opt">K</button><button class="opt">about the same</button></div>
+      </div>
+
+      <div class="pair">
+        <h3>Pair 2: sodium (Na) and chlorine (Cl) · same row, Cl is far to the right</h3>
+        <div id="draw2"></div>
+        <p><b>Which has the larger atomic radius?</b></p>
+        <div class="opts" data-p="r2"><button class="opt">Na</button><button class="opt">Cl</button><button class="opt">about the same</button></div>
+        <p><b>Which has the higher first ionization energy?</b></p>
+        <div class="opts" data-p="i2"><button class="opt">Na</button><button class="opt">Cl</button><button class="opt">about the same</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>My predictions</h3>
+      <div class="summary box" id="summary">Choose an answer for each question above.</div>
+      <p class="small" style="margin-top:10px">Write these in the prediction table on your worksheet, with your reason for each pair.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){const n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);if(parent)parent.appendChild(n);return n;}
+
+/* ---------- steps ---------- */
+function show(step){
+  [0,1,2].forEach(i=>{$("s"+i).hidden=i!==step;});
+  document.querySelectorAll("[data-step]").forEach(b=>{
+    if(+b.dataset.step===step)b.setAttribute("aria-current","step");else b.removeAttribute("aria-current");
+  });
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("[data-step]").forEach(b=>b.onclick=()=>show(+b.dataset.step));
+const checksDone=[false,false];
+let warned1=false, warned2=false;
+$("to1").onclick=()=>{
+  if(checksDone[0]&&checksDone[1]||warned1){show(1);return;}
+  warned1=true;$("nudge1").textContent="Answer both Check yourself questions correctly first. Tap again to go on anyway.";
+};
+$("to2").onclick=()=>{
+  const left=testsLeft();
+  if(!left.length||warned2){show(2);return;}
+  warned2=true;$("nudge2").textContent="Still to finish: "+left.join(", ")+". Tap again to go on anyway.";
+};
+
+/* ---------- step 1 checks ---------- */
+const CHECKS=[
+  {c:1,good:"Right. A larger radius means the outer electrons are farther from the nucleus.",bad:"Not quite. Radius is the distance from the nucleus to the outer electrons, so a larger radius means farther."},
+  {c:2,good:"Right. It is the energy added to pull one valence electron off the atom.",bad:"Not quite. Look at the picture: energy is added and one electron leaves."}
+];
+document.querySelectorAll("[data-q]").forEach(group=>{
+  const q=+group.dataset.q;
+  group.querySelectorAll(".opt").forEach(btn=>btn.onclick=()=>{
+    const ok=+btn.dataset.a===CHECKS[q].c;
+    group.querySelectorAll(".opt").forEach(b=>b.classList.remove("right","wrong"));
+    btn.classList.add(ok?"right":"wrong");
+    if(ok){checksDone[q]=true;if(checksDone[0]&&checksDone[1])$("nudge1").textContent="";}
+    const fb=$("fb"+q);fb.textContent=ok?CHECKS[q].good:CHECKS[q].bad;fb.className="fb "+(ok?"good":"bad");
+  });
+});
+
+/* ---------- step 2 lab ---------- */
+const NUC_X=110, FREE_X=638, MAX_E=80;
+const lab={Z:2,n:2,removed:false,progress:0,dragging:false,anim:null,log:[]};
+const levelX=n=>NUC_X+70+n*75;            // 255, 330, 405, 480
+const energy=()=>10*lab.Z/lab.n;           // relative units
+const pull=()=>lab.Z/(lab.n*lab.n);
+const fmt=v=>(Math.round(v*10)/10).toString();
+
+function drawRings(){
+  const g=$("rings");g.replaceChildren();
+  for(let n=1;n<=4;n++){
+    el("circle",{cx:NUC_X,cy:170,r:levelX(n)-NUC_X,fill:"none",stroke:n===lab.n?"#0F766E":"#CBD5E1","stroke-width":n===lab.n?2.5:1.5,"stroke-dasharray":n===lab.n?"none":"5 5"},g);
+    const t=el("text",{x:levelX(n),y:28,"text-anchor":"middle","font-size":13,fill:n===lab.n?"#0F766E":"#94A3B8","font-weight":n===lab.n?700:400},g);
+    t.textContent="level "+n;
+  }
+}
+function electronX(){return levelX(lab.n)+(FREE_X-levelX(lab.n))*lab.progress;}
+function paint(){
+  const x=electronX();
+  ["eHalo","eDot","eMinus"].forEach(id=>$(id).setAttribute(id==="eMinus"?"x":"cx",x));
+  const a=$("pullArrow");
+  const head=$("pullHead");
+  if(lab.removed){a.setAttribute("stroke-width",0);head.setAttribute("points","0,0");}
+  else{
+    const w=(2+13*Math.sqrt(pull()/8))*(1-0.6*lab.progress), tip=NUC_X+38, hl=10+w*1.2, hw=5+w*0.9;
+    a.setAttribute("x1",x-16);a.setAttribute("x2",tip+hl-1);a.setAttribute("stroke-width",w);
+    head.setAttribute("points",tip+",170 "+(tip+hl)+","+(170-hw)+" "+(tip+hl)+","+(170+hw));
+  }
+  const e=energy()*lab.progress;
+  $("eNow").textContent=fmt(e);
+  $("meterFill").style.width=(e/MAX_E*100)+"%";
+  $("nucText").textContent=lab.Z+" p+";
+  $("pOut").textContent=lab.Z;
+  $("stageMsg").textContent=lab.removed?"Electron removed":"Drag the electron to the free zone →";
+  $("pullBtn").disabled=lab.removed||!!lab.anim;
+  $("pMinus").disabled=lab.Z<=1;$("pPlus").disabled=lab.Z>=8;
+  document.querySelectorAll("#levels button").forEach(b=>b.classList.toggle("on",+b.dataset.n===lab.n));
+}
+function resetElectron(msg){
+  if(lab.anim){cancelAnimationFrame(lab.anim);lab.anim=null;}
+  lab.removed=false;lab.progress=0;lab.dragging=false;
+  $("labMsg").textContent=msg||"";$("labMsg").className="fb";
+  drawRings();paint();
+}
+function release(){
+  lab.removed=true;lab.progress=1;lab.dragging=false;
+  lab.log.push({Z:lab.Z,n:lab.n,E:energy()});
+  $("labMsg").textContent="Electron removed. It took "+fmt(energy())+" model units of energy. Trial recorded.";
+  $("labMsg").className="fb good";
+  paint();drawLog();
+}
+const TESTS=[[[1,2],[2,2],[4,2]],[[2,1],[2,2],[2,4]],[[1,1],[4,2],[3,1],[6,3]]];
+function testDone(i){return TESTS[i].every(([Z,n])=>lab.log.some(r=>r.Z===Z&&r.n===n));}
+function testsLeft(){return [0,1,2].filter(i=>!testDone(i)).map(i=>"Test "+(i+1));}
+function drawTicks(){
+  [0,1,2].forEach(i=>{const t=$("tk"+(i+1)), d=testDone(i);t.textContent=d?"✓ done":"not done yet";t.className="tick "+(d?"done":"todo");});
+  if(!testsLeft().length)$("nudge2").textContent="";
+}
+function drawLog(){
+  drawTicks();
+  const tb=$("log");
+  if(!lab.log.length){tb.innerHTML='<tr><td colspan="4" class="small">Remove an electron to record a trial.</td></tr>';return;}
+  tb.innerHTML=lab.log.map((r,i)=>"<tr><td>"+(i+1)+"</td><td>"+r.Z+"</td><td>"+r.n+"</td><td><b>"+fmt(r.E)+"</b></td></tr>").join("");
+}
+$("pMinus").onclick=()=>{if(lab.Z>1){lab.Z--;resetElectron();}};
+$("pPlus").onclick=()=>{if(lab.Z<8){lab.Z++;resetElectron();}};
+document.querySelectorAll("#levels button").forEach(b=>b.onclick=()=>{lab.n=+b.dataset.n;resetElectron();});
+$("resetBtn").onclick=()=>resetElectron();
+$("clearLog").onclick=()=>{lab.log=[];drawLog();};
+$("pullBtn").onclick=()=>{
+  if(lab.removed||lab.anim)return;
+  const dur=700+energy()*45, t0=performance.now();
+  const tick=t=>{
+    lab.progress=Math.min(1,(t-t0)/dur);
+    if(lab.progress>=1){lab.anim=null;release();return;}
+    paint();lab.anim=requestAnimationFrame(tick);
+  };
+  lab.anim=requestAnimationFrame(tick);paint();
+};
+/* drag */
+const stage=$("stage"), electron=$("electron");
+function svgX(evt){
+  const pt=stage.createSVGPoint();pt.x=evt.clientX;pt.y=evt.clientY;
+  const m=stage.getScreenCTM();return m?pt.matrixTransform(m.inverse()).x:0;
+}
+electron.addEventListener("pointerdown",e=>{
+  if(lab.removed||lab.anim)return;
+  lab.dragging=true;electron.setPointerCapture(e.pointerId);electron.style.cursor="grabbing";e.preventDefault();
+});
+electron.addEventListener("pointermove",e=>{
+  if(!lab.dragging)return;
+  const x0=levelX(lab.n);
+  lab.progress=Math.max(0,Math.min(1,(svgX(e)-x0)/(FREE_X-x0)));
+  if(lab.progress>=0.98){electron.style.cursor="grab";release();}else paint();
+});
+function endDrag(){
+  if(!lab.dragging)return;
+  lab.dragging=false;electron.style.cursor="grab";
+  if(!lab.removed){lab.progress=0;$("labMsg").textContent="The electron snapped back. Pull it all the way to the free zone.";$("labMsg").className="fb bad";paint();}
+}
+electron.addEventListener("pointerup",endDrag);
+electron.addEventListener("pointercancel",endDrag);
+electron.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("pullBtn").click();}});
+
+/* ---------- step 3 predictions ---------- */
+function drawAtom(parent,cx,cy,shells,o){
+  o=o||{};const r0=o.r0||18, step=o.step||19;
+  shells.forEach((count,s)=>{
+    const r=r0+step*(s+1), last=s===shells.length-1;
+    el("circle",{cx,cy,r,fill:"none",stroke:"#64748B","stroke-width":1.4},parent);
+    const slots=[90,270,180,0];let left=count,k=0;
+    while(left>0){
+      const two=left>=2, ang=slots[k]*Math.PI/180, offs=two?[-7/r,7/r]:[0];
+      offs.forEach(a=>el("circle",{cx:cx+r*Math.cos(ang+a),cy:cy-r*Math.sin(ang+a),r:o.dot||4.6,fill:(last&&!o.noValence)?"#F59E0B":"#1E293B"},parent));
+      left-=two?2:1;k++;
+    }
+  });
+  el("circle",{cx,cy,r:r0,fill:"#E6F4F1",stroke:"#0F766E","stroke-width":2.2},parent);
+  const t=el("text",{x:cx,y:cy+5,"text-anchor":"middle","font-size":12,"font-weight":700,fill:"#134E4A"},parent);t.textContent=o.label||"+";
+}
+function bohr(host,atoms){
+  const svg=el("svg",{viewBox:"0 0 700 262",role:"img","aria-label":"Bohr models of "+atoms.map(a=>a.name).join(" and ")});
+  el("rect",{width:700,height:262,rx:12,fill:"#F1F5F9"},svg);
+  atoms.forEach((a,i)=>{
+    const cx=i===0?190:510;
+    drawAtom(svg,cx,118,a.shells,{label:a.p+" p+"});
+    const t=el("text",{x:cx,y:234,"text-anchor":"middle","font-size":15,"font-weight":700,fill:"#1E293B"},svg);t.textContent=a.name;
+  });
+  const note=el("text",{x:350,y:254,"text-anchor":"middle","font-size":12,fill:"#64748B"},svg);
+  note.textContent="Models show electron arrangement only. They are not drawn to scale.";
+  host.appendChild(svg);
+}
+drawAtom($("atomR"),150,125,[2,8,1],{r0:16,step:28,dot:5});
+drawAtom($("atomI"),130,125,[2,0],{r0:18,step:36,dot:5,noValence:true});
+bohr($("draw1"),[{name:"Sodium (Na)",p:11,shells:[2,8,1]},{name:"Potassium (K)",p:19,shells:[2,8,8,1]}]);
+bohr($("draw2"),[{name:"Sodium (Na)",p:11,shells:[2,8,1]},{name:"Chlorine (Cl)",p:17,shells:[2,8,7]}]);
+const picks={};
+const LABELS={r1:"Na vs. K, larger radius",i1:"Na vs. K, higher ionization energy",r2:"Na vs. Cl, larger radius",i2:"Na vs. Cl, higher ionization energy"};
+document.querySelectorAll("[data-p]").forEach(group=>{
+  group.querySelectorAll(".opt").forEach(btn=>btn.onclick=()=>{
+    group.querySelectorAll(".opt").forEach(b=>b.classList.remove("picked"));
+    btn.classList.add("picked");picks[group.dataset.p]=btn.textContent;
+    $("summary").textContent=Object.keys(LABELS).map(k=>LABELS[k]+": "+(picks[k]||"—")).join("\n");
+  });
+});
+
+resetElectron();
+</script>
+</body>
+</html>
