@@ -440,14 +440,14 @@ function drawAtom(parent,cx,cy,shells,o){
     }
   });
   el("circle",{cx,cy,r:r0,fill:"#E6F4F1",stroke:"#0F766E","stroke-width":2.2},parent);
-  const t=el("text",{x:cx,y:cy+5,"text-anchor":"middle","font-size":12,"font-weight":700,fill:"#134E4A"},parent);t.textContent=o.label||"+";
+  const t=el("text",{x:cx,y:cy+(o.font?3.5:5),"text-anchor":"middle","font-size":o.font||12,"font-weight":700,fill:"#134E4A"},parent);t.textContent=o.label||"+";
 }
 function bohr(host,atoms){
   const svg=el("svg",{viewBox:"0 0 700 262",role:"img","aria-label":"Bohr models of "+atoms.map(a=>a.name).join(" and ")});
   el("rect",{width:700,height:262,rx:12,fill:"#F1F5F9"},svg);
   atoms.forEach((a,i)=>{
     const cx=i===0?190:510;
-    drawAtom(svg,cx,118,a.shells,{label:a.p+" p+"});
+    drawAtom(svg,cx,118,a.shells,{label:a.p+" p+",step:a.step});
     const t=el("text",{x:cx,y:234,"text-anchor":"middle","font-size":15,"font-weight":700,fill:"#1E293B"},svg);t.textContent=a.name;
   });
   const note=el("text",{x:350,y:254,"text-anchor":"middle","font-size":12,fill:"#64748B"},svg);
@@ -457,7 +457,7 @@ function bohr(host,atoms){
 drawAtom($("atomR"),150,125,[2,8,1],{r0:16,step:28,dot:5});
 drawAtom($("atomI"),130,125,[2,0],{r0:18,step:36,dot:5,noValence:true});
 bohr($("draw1"),[{name:"Sodium (Na)",p:11,shells:[2,8,1]},{name:"Potassium (K)",p:19,shells:[2,8,8,1]}]);
-bohr($("draw2"),[{name:"Sodium (Na)",p:11,shells:[2,8,1]},{name:"Chlorine (Cl)",p:17,shells:[2,8,7]}]);
+bohr($("draw2"),[{name:"Sodium (Na)",p:11,shells:[2,8,1]},{name:"Chlorine (Cl)",p:17,shells:[2,8,7],step:16}]);
 const picks={};
 const LABELS={r1:"Na vs. K, larger radius",i1:"Na vs. K, higher ionization energy",r2:"Na vs. Cl, larger radius",i2:"Na vs. Cl, higher ionization energy"};
 document.querySelectorAll("[data-p]").forEach(group=>{
