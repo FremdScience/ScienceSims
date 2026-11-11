@@ -63,7 +63,8 @@ svg{display:block;width:100%;height:auto}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{border:1px solid var(--line);padding:7px 9px;text-align:center}
 th{background:var(--teal-soft);font-weight:600}
-.tests li{margin-bottom:8px}
+td:first-child{white-space:nowrap}
+.tests{padding-left:20px}.tests li{margin-bottom:8px}
 .tick{font-weight:700;font-size:13px;border-radius:20px;padding:2px 9px;white-space:nowrap}
 .tick.done{background:var(--good-soft);color:var(--good)}
 .tick.todo{background:#E2E8F0;color:var(--muted)}
@@ -71,12 +72,16 @@ th{background:var(--teal-soft);font-weight:600}
 .summary{white-space:pre-line;font-size:15px}
 :focus-visible{outline:3px solid #B45309;outline-offset:3px}
 .sr{position:absolute;left:-9999px}
+.cmp-row{display:grid;grid-template-columns:minmax(96px,auto) 1fr 40px;align-items:center;gap:8px;font-size:13px;margin:6px 0}
+.cmp-bar{height:20px;background:#E2E8F0;border-radius:10px;overflow:hidden}
+.cmp-bar>div{height:100%;background:var(--orange);border-radius:10px;transition:width .4s}
+.cmp-row b{font:600 15px var(--head);text-align:right}
 </style>
 </head>
 <body>
 <header>
   <h1>Pull the Electron</h1>
-  <p>S332 Investigation 3 · Use this with your worksheet (Part A). About 15 minutes.</p>
+  <p>S332 Investigation 3 · Use this with your Investigation 3, Part 1 sheet. About 15 minutes, then iPads away.</p>
 </header>
 <main>
   <nav class="steps" aria-label="Steps">
@@ -150,7 +155,7 @@ th{background:var(--teal-soft);font-weight:600}
             <line id="pullArrow" x1="0" y1="170" x2="0" y2="170" stroke="#DC2626" stroke-opacity=".8"/>
             <polygon id="pullHead" points="0,0" fill="#DC2626" fill-opacity=".8"/>
             <circle cx="110" cy="170" r="34" fill="#E6F4F1" stroke="#0F766E" stroke-width="3"/>
-            <text id="nucText" x="110" y="177" text-anchor="middle" font-size="19" font-weight="700" fill="#134E4A">2 p+</text>
+            <text id="nucText" x="110" y="177" text-anchor="middle" font-size="19" font-weight="700" fill="#134E4A">1 p+</text>
             <g id="electron" tabindex="0" role="button" aria-label="Valence electron. Drag right to remove it." style="cursor:grab">
               <circle id="eHalo" cx="0" cy="170" r="24" fill="#F59E0B" fill-opacity=".18"/>
               <circle id="eDot" cx="0" cy="170" r="13" fill="#F59E0B" stroke="#B45309" stroke-width="2"/>
@@ -167,7 +172,7 @@ th{background:var(--teal-soft);font-weight:600}
             <label id="pl">Protons in the nucleus</label>
             <div class="stepper" role="group" aria-labelledby="pl">
               <button id="pMinus" aria-label="Fewer protons">−</button>
-              <output id="pOut">2</output>
+              <output id="pOut">1</output>
               <button id="pPlus" aria-label="More protons">+</button>
             </div>
           </div>
@@ -178,22 +183,24 @@ th{background:var(--teal-soft);font-weight:600}
             </div>
             <div class="small" style="margin-top:4px">In this model, the energy level sets the <b>distance</b>. A higher energy level is farther from the nucleus, so the atom has a larger radius.</div>
           </div>
+          <div class="box" id="setupTag" role="status" style="margin-bottom:12px"></div>
           <button class="btn" id="pullBtn">Pull the electron off</button>
           <button class="btn alt" id="resetBtn" style="margin-top:8px">Put the electron back</button>
-          <div class="box" style="margin-top:14px">The red arrow shows the <b>pull</b> of the nucleus on the electron. A thicker arrow means a stronger pull.</div>
+          <div class="box" style="margin-top:14px">The red arrow shows the <b>pull</b> of the nucleus on the electron. A thicker arrow means a stronger pull. Watch it get thinner as the electron moves away, and watch the meter climb fastest at the start.</div>
         </div>
       </div>
     </div>
 
     <div class="grid2">
       <div class="card">
-        <h3>Run these tests (record on your worksheet)</h3>
-        <ol class="tests">
-          <li><b>Test 1: change only the protons.</b> Keep energy level 2. Try 1, 2, then 4 protons. <span class="tick" id="tk1"></span></li>
-          <li><b>Test 2: change only the distance.</b> Keep 2 protons. Try energy level 1, 2, then 4. <span class="tick" id="tk2"></span></li>
-          <li><b>Test 3: tug of war.</b> Predict first, then test. <span class="tick" id="tk3"></span><br>Atom A: 1 proton, level 1 &nbsp;vs.&nbsp; Atom B: 4 protons, level 2<br>Atom C: 3 protons, level 1 &nbsp;vs.&nbsp; Atom D: 6 protons, level 3</li>
-        </ol>
-        <div class="box orange">This simple atom has only a nucleus and one valence electron. Real atoms also have inner electrons between the nucleus and the valence electrons, and they cancel some of the pull. The graphs you read next will show what real atoms do.</div>
+        <h3>Run these four trials</h3>
+        <p class="small">Circle your prediction on your sheet <b>before</b> each trial. Then run it and record the energy.</p>
+        <ul class="tests">
+          <li><b>Trials A and B: change only the protons.</b> Keep energy level 2. Try 1 proton (A), then 4 protons (B). <span class="tick" id="tk1"></span></li>
+          <li><b>Trials B and C: change only the distance.</b> Keep 4 protons. Move from energy level 2 (B) to energy level 4 (C). <span class="tick" id="tk2"></span></li>
+          <li><b>Trial D: change both.</b> Try 6 protons in energy level 4. Compare it with trial B. <span class="tick" id="tk3"></span></li>
+        </ul>
+        <div class="box orange">This simple atom has only a nucleus and one valence electron. Real atoms also have inner electrons between the nucleus and the valence electrons, and they cancel some of the pull. The graphs you read tomorrow will show what real atoms do.</div>
       </div>
       <div class="card">
         <h3>My trials</h3>
@@ -201,6 +208,8 @@ th{background:var(--teal-soft);font-weight:600}
           <thead><tr><th>Trial</th><th>Protons</th><th>Energy level</th><th>Energy to remove (model units)</th></tr></thead>
           <tbody id="log"><tr><td colspan="4" class="small">Remove an electron to record a trial.</td></tr></tbody>
         </table>
+        <h3 style="margin-top:16px">Compare trials A–D</h3>
+        <div id="cmp" aria-label="Bar chart of energy for trials A to D"></div>
         <button class="btn alt" id="clearLog" style="margin-top:10px">Clear my trials</button>
         <div class="fb bad" id="nudge2" role="status"></div>
         <button class="btn" id="to2" style="margin-top:8px">Next: predict →</button>
@@ -212,7 +221,7 @@ th{background:var(--teal-soft);font-weight:600}
   <section id="s2" hidden>
     <div class="card">
       <h2>Predict what real atoms will do</h2>
-      <p class="small">Use what you learned from the tests and from Investigation 2. There is no answer check here. You will test your predictions with real data on graph day. Copy your choices onto your worksheet.</p>
+      <p class="small">Use what you learned from the tests and from Investigation 2. There is no answer check here. You will test your predictions with real data on graph day. Copy your choices onto your sheet.</p>
 
       <div class="pair" style="border-top:0;margin-top:0;padding-top:0">
         <h3>Pair 1: sodium (Na) and potassium (K) · same family, K is one row down</h3>
@@ -235,7 +244,7 @@ th{background:var(--teal-soft);font-weight:600}
     <div class="card">
       <h3>My predictions</h3>
       <div class="summary box" id="summary">Choose an answer for each question above.</div>
-      <p class="small" style="margin-top:10px">Write these in the prediction table on your worksheet, with your reason for each pair.</p>
+      <p class="small" style="margin-top:10px">Write these in the prediction table on your sheet, with a reason for each one. Then put the iPad away.</p>
     </div>
   </section>
 </main>
@@ -285,10 +294,17 @@ document.querySelectorAll("[data-q]").forEach(group=>{
 
 /* ---------- step 2 lab ---------- */
 const NUC_X=110, FREE_X=638, MAX_E=80;
-const lab={Z:2,n:2,removed:false,progress:0,dragging:false,anim:null,log:[]};
+const lab={Z:1,n:2,removed:false,progress:0,dragging:false,anim:null,log:[]};
 const levelX=n=>NUC_X+70+n*75;            // 255, 330, 405, 480
-const energy=()=>10*lab.Z/lab.n;           // relative units
-const pull=()=>lab.Z/(lab.n*lab.n);
+const energy=()=>10*lab.Z/lab.n;           // relative units (total energy to remove, ~ Z/r)
+const R_FREE=FREE_X-NUC_X;
+const r0=()=>levelX(lab.n)-NUC_X;
+/* Pull (force) at distance r: ~ Z/r^2, scaled so that at the electron's starting level it equals Z/n^2 */
+const forceAt=r=>{const nEff=(r-70)/75;return lab.Z/(nEff*nEff);};
+/* Share of the total energy used once the electron reaches progress p.
+   Coulomb: work = kZ(1/r0 - 1/r). The pull is strongest close in, so most energy goes into the first part of the trip. */
+function energyFrac(p){const a=r0(), r=a+(R_FREE-a)*p;return (1/a-1/r)/(1/a-1/R_FREE);}
+function progressFromFrac(f){const a=r0(), r=1/(1/a-f*(1/a-1/R_FREE));return (r-a)/(R_FREE-a);}
 const fmt=v=>(Math.round(v*10)/10).toString();
 
 function drawRings(){
@@ -307,11 +323,11 @@ function paint(){
   const head=$("pullHead");
   if(lab.removed){a.setAttribute("stroke-width",0);head.setAttribute("points","0,0");}
   else{
-    const w=(2+13*Math.sqrt(pull()/8))*(1-0.6*lab.progress), tip=NUC_X+38, hl=10+w*1.2, hw=5+w*0.9;
+    const w=2+13*Math.sqrt(forceAt(x-NUC_X)/8), tip=NUC_X+38, hl=10+w*1.2, hw=5+w*0.9;
     a.setAttribute("x1",x-16);a.setAttribute("x2",tip+hl-1);a.setAttribute("stroke-width",w);
     head.setAttribute("points",tip+",170 "+(tip+hl)+","+(170-hw)+" "+(tip+hl)+","+(170+hw));
   }
-  const e=energy()*lab.progress;
+  const e=energy()*energyFrac(lab.progress);
   $("eNow").textContent=fmt(e);
   $("meterFill").style.width=(e/MAX_E*100)+"%";
   $("nucText").textContent=lab.Z+" p+";
@@ -319,6 +335,8 @@ function paint(){
   $("stageMsg").textContent=lab.removed?"Electron removed":"Drag the electron to the free zone →";
   $("pullBtn").disabled=lab.removed||!!lab.anim;
   $("pMinus").disabled=lab.Z<=1;$("pPlus").disabled=lab.Z>=8;
+  const L=LETTERS[lab.Z+","+lab.n];
+  $("setupTag").innerHTML=L?"This setup is <b>Trial "+L+"</b>.":"This setup is not one of trials A–D. Exploring is fine.";
   document.querySelectorAll("#levels button").forEach(b=>b.classList.toggle("on",+b.dataset.n===lab.n));
 }
 function resetElectron(msg){
@@ -334,18 +352,27 @@ function release(){
   $("labMsg").className="fb good";
   paint();drawLog();
 }
-const TESTS=[[[1,2],[2,2],[4,2]],[[2,1],[2,2],[2,4]],[[1,1],[4,2],[3,1],[6,3]]];
+const TESTS=[[[1,2],[4,2]],[[4,2],[4,4]],[[6,4]]];
+const TEST_NAMES=["trials A and B","trials B and C","trial D"];
+const LETTERS={"1,2":"A","4,2":"B","4,4":"C","6,4":"D"};
 function testDone(i){return TESTS[i].every(([Z,n])=>lab.log.some(r=>r.Z===Z&&r.n===n));}
-function testsLeft(){return [0,1,2].filter(i=>!testDone(i)).map(i=>"Test "+(i+1));}
+function testsLeft(){return [0,1,2].filter(i=>!testDone(i)).map(i=>TEST_NAMES[i]);}
 function drawTicks(){
   [0,1,2].forEach(i=>{const t=$("tk"+(i+1)), d=testDone(i);t.textContent=d?"✓ done":"not done yet";t.className="tick "+(d?"done":"todo");});
   if(!testsLeft().length)$("nudge2").textContent="";
 }
+function drawCmp(){
+  $("cmp").innerHTML=[["A",1,2],["B",4,2],["C",4,4],["D",6,4]].map(([L,Z,n])=>{
+    const hits=lab.log.filter(r=>r.Z===Z&&r.n===n), E=hits.length?hits[hits.length-1].E:null;
+    return '<div class="cmp-row"><span><b style="font-size:14px">'+L+'</b> · '+Z+' p+, level '+n+'</span>'+
+      '<div class="cmp-bar"><div style="width:'+(E===null?0:E/24*100)+'%"></div></div><b>'+(E===null?"—":fmt(E))+'</b></div>';
+  }).join("");
+}
 function drawLog(){
-  drawTicks();
+  drawTicks();drawCmp();
   const tb=$("log");
   if(!lab.log.length){tb.innerHTML='<tr><td colspan="4" class="small">Remove an electron to record a trial.</td></tr>';return;}
-  tb.innerHTML=lab.log.map((r,i)=>"<tr><td>"+(i+1)+"</td><td>"+r.Z+"</td><td>"+r.n+"</td><td><b>"+fmt(r.E)+"</b></td></tr>").join("");
+  tb.innerHTML=lab.log.map((r,i)=>"<tr><td>"+(i+1)+(LETTERS[r.Z+","+r.n]?" ("+LETTERS[r.Z+","+r.n]+")":"")+"</td><td>"+r.Z+"</td><td>"+r.n+"</td><td><b>"+fmt(r.E)+"</b></td></tr>").join("");
 }
 $("pMinus").onclick=()=>{if(lab.Z>1){lab.Z--;resetElectron();}};
 $("pPlus").onclick=()=>{if(lab.Z<8){lab.Z++;resetElectron();}};
@@ -356,7 +383,9 @@ $("pullBtn").onclick=()=>{
   if(lab.removed||lab.anim)return;
   const dur=700+energy()*45, t0=performance.now();
   const tick=t=>{
-    lab.progress=Math.min(1,(t-t0)/dur);
+    // Energy goes in at a steady rate, so the electron crawls near the nucleus and speeds up as the pull weakens.
+    const f=Math.min(1,(t-t0)/dur);
+    lab.progress=f>=1?1:progressFromFrac(f);
     if(lab.progress>=1){lab.anim=null;release();return;}
     paint();lab.anim=requestAnimationFrame(tick);
   };
@@ -381,7 +410,16 @@ electron.addEventListener("pointermove",e=>{
 function endDrag(){
   if(!lab.dragging)return;
   lab.dragging=false;electron.style.cursor="grab";
-  if(!lab.removed){lab.progress=0;$("labMsg").textContent="The electron snapped back. Pull it all the way to the free zone.";$("labMsg").className="fb bad";paint();}
+  if(!lab.removed){
+    $("labMsg").textContent="The nucleus pulled the electron back. Pull it all the way to the free zone.";$("labMsg").className="fb bad";
+    const p0=lab.progress, t0=performance.now();
+    const back=t=>{
+      const k=Math.min(1,(t-t0)/280);lab.progress=p0*(1-k)*(1-k);
+      if(k>=1){lab.anim=null;lab.progress=0;paint();return;}
+      paint();lab.anim=requestAnimationFrame(back);
+    };
+    lab.anim=requestAnimationFrame(back);
+  }
 }
 electron.addEventListener("pointerup",endDrag);
 electron.addEventListener("pointercancel",endDrag);
@@ -430,6 +468,7 @@ document.querySelectorAll("[data-p]").forEach(group=>{
 });
 
 resetElectron();
+drawLog();
 </script>
 </body>
 </html>
