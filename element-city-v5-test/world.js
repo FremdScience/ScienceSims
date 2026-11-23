@@ -2,33 +2,34 @@
 export const WORLD = { width: 2400, height: 1800 };
 export const stations = [
   { id: 'hq', name: 'Periodic Research Center', x: 510, y: 1050, code: 'HQ', color: '#6ee7cf' },
-  { id: 'power', name: 'Power to the Block', x: 850, y: 950, code: '01', color: '#ffc46a' },
-  { id: 'identity', name: 'The Missing Identity', x: 1950, y: 1200, code: '02', color: '#77d7e6' },
-  { id: 'family', name: 'Family Business', x: 1200, y: 400, code: '03', color: '#bcacf4' },
-  { id: 'reaction', name: 'Reaction Dispatch', x: 450, y: 400, code: '04', color: '#f49d71' },
-  { id: 'ions', name: 'City of Ions', x: 1950, y: 400, code: '05', color: '#6ee7cf' },
+  { id: 'courier', name: 'Who Am I?', x: 450, y: 1250, code: '01', color: '#ffc46a' },
+  { id: 'race', name: 'The Pull', x: 1200, y: 400, code: '02', color: '#ff7a59' },
+  { id: 'power', name: 'Power to the Block', x: 850, y: 950, code: '03', color: '#ffd84a' },
+  { id: 'show', name: 'Fountain Show', x: 2150, y: 950, code: '04', color: '#bcacf4' },
+  { id: 'survey', name: 'OH So Acidic?', x: 300, y: 400, code: '05', color: '#77d7e6' },
+  { id: 'ions', name: 'City of Ions', x: 1950, y: 400, code: '06', color: '#6ee7cf' },
 ];
 export const buildings = [
  {x:100,y:125,w:215,h:175,hue:'#657b7c',name:'ALKALI WORKS',mark:'Li',height:26},
  {x:575,y:120,w:235,h:170,hue:'#778077',name:'VIRTUAL REACTIVITY LAB',mark:'Na',height:32},
  {x:880,y:140,w:175,h:150,hue:'#5e7e80',name:'CITY ARCHIVES',mark:'K',height:25},
- {x:1320,y:100,w:225,h:200,hue:'#6d738d',name:'FAMILY RESEARCH',mark:'18',height:40},
+ {x:1320,y:100,w:225,h:200,hue:'#6d738d',name:'FAMILY RESEARCH',mark:'F',height:40},
  {x:1640,y:150,w:165,h:155,hue:'#777f8e',name:'NOBLE LIGHT CO.',mark:'Ne',height:30},
- {x:2070,y:110,w:160,h:200,hue:'#4f8f8b',name:'ION GRID',mark:'±',height:32},
+ {x:2070,y:110,w:160,h:200,hue:'#4f8f8b',name:'ION GRID',mark:'O',height:32},
  {x:90,y:535,w:230,h:245,hue:'#657a72',name:'ALKALINE HEIGHTS',mark:'Mg',height:35},
  {x:585,y:550,w:200,h:260,hue:'#5a7e85',name:'TRANSIT CONTROL',mark:'Cu',height:44},
  {x:890,y:545,w:170,h:145,hue:'#777d7b',name:'ALLOY + CO.',mark:'Fe',height:32},
- {x:1325,y:540,w:205,h:280,hue:'#627f91',name:'TRANSITION TOWER',mark:'Ti',height:60},
- {x:1640,y:535,w:150,h:180,hue:'#9a8c74',name:'JUNCTION CAFÉ',mark:'Si',height:27},
+ {x:1325,y:540,w:205,h:280,hue:'#627f91',name:'TRANSITION TOWER',mark:'Zn',height:60},
+ {x:1640,y:535,w:150,h:180,hue:'#9a8c74',name:'JUNCTION CAFÉ',mark:'S',height:27},
  {x:2070,y:540,w:160,h:290,hue:'#5b8588',name:'HARBOR EXCHANGE',mark:'Cl',height:35},
  {x:100,y:1115,w:235,h:250,hue:'#4c8580',name:'PERIODIC RESEARCH',mark:'P',height:40},
  {x:610,y:1090,w:175,h:145,hue:'#859084',name:'FIELD SUPPLY',mark:'C',height:22},
- {x:910,y:1100,w:160,h:260,hue:'#647d87',name:'METALLOID JUNCTION',mark:'Ge',height:40},
- {x:1325,y:1080,w:180,h:180,hue:'#718587',name:'CIVIC LIBRARY',mark:'26',height:32},
+ {x:910,y:1100,w:160,h:260,hue:'#647d87',name:'METALLOID JUNCTION',mark:'Si',height:40},
+ {x:1325,y:1080,w:180,h:180,hue:'#718587',name:'CIVIC LIBRARY',mark:'N',height:32},
  {x:1610,y:1100,w:175,h:260,hue:'#5e8688',name:'SIGNAL HOUSE',mark:'Ar',height:44},
  {x:2070,y:1070,w:165,h:290,hue:'#648b87',name:'SAMPLE DEPOT',mark:'Br',height:30},
- {x:90,y:1610,w:240,h:130,hue:'#5e7778',name:'FLEET GARAGE',mark:'EC',height:20},
- {x:600,y:1610,w:200,h:120,hue:'#647974',name:'BOTANICAL LAB',mark:'O',height:25},
+ {x:90,y:1610,w:240,h:130,hue:'#5e7778',name:'FLEET GARAGE',mark:'Ca',height:20},
+ {x:600,y:1610,w:200,h:120,hue:'#647974',name:'BOTANICAL LAB',mark:'I',height:25},
  {x:1320,y:1630,w:220,h:100,hue:'#73827b',name:'MATERIALS MUSEUM',mark:'Al',height:20},
  {x:1640,y:1620,w:160,h:120,hue:'#6c828b',name:'HARBOR RADIO',mark:'He',height:23},
 ];
@@ -134,13 +135,14 @@ export class CityWorld {
   if(this.time-this.notifyAt>.12){this.notify();this.notifyAt=this.time;}
  }
  loop(timestamp){
-  if(this.destroyed)return;const dt=Math.min((timestamp-(this.last||timestamp))/1000,.04);this.last=timestamp;
+  if(this.destroyed)return;this.frame=requestAnimationFrame(this.loop);try{this.frameBody(timestamp)}catch(err){const k=String(err);if(this.lastLoopError!==k){this.lastLoopError=k;console.error(err)}}}
+ frameBody(timestamp){const dt=Math.min((timestamp-(this.last||timestamp))/1000,.04);this.last=timestamp;
   if(!this.config.paused){this.time+=dt;this.tick(dt);}
   const smooth=this.config.reducedMotion?1:1-Math.exp(-5*dt);
   const vw=this.width/this.zoom,vh=this.height/this.zoom;
   this.camera.x+=(clamp(this.player.x,vw/2,Math.max(vw/2,WORLD.width-vw/2))-this.camera.x)*smooth;
   this.camera.y+=(clamp(this.player.y,vh/2,Math.max(vh/2,WORLD.height-vh/2))-this.camera.y)*smooth;
-  this.render();this.renderMap();this.frame=requestAnimationFrame(this.loop);
+  this.render();this.renderMap();
  }
  drawStatic(){
   const c=this.surface.getContext('2d');const rand=seedRandom(211);c.clearRect(0,0,2400,1800);c.fillStyle='#263f3d';c.fillRect(0,0,2400,1800);

@@ -1,14 +1,14 @@
 /** Element City v5 — real-time 3D city. Original procedural art; physics and map data are
  * shared with the tested 2D fallback (world.js). Public API is unchanged from v4. */
-import {driveStep,cameraSafePosition} from './driving.js?v=5.0.1';
-import {POWER_POINTS} from './power-scene.js?v=5.0.1';
-import {MONITORS} from './sidejobs.js?v=5.0.1';
-import {routeTo} from './navigation.js?v=5.0.1';
-import {ELEMENTS} from './elements.js?v=5.0.1';
+import {driveStep,cameraSafePosition} from './driving.js?v=5.1.0';
+import {POWER_POINTS} from './power-scene.js?v=5.1.0';
+import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.1.0';
+import {routeTo} from './navigation.js?v=5.1.0';
+import {ELEMENTS} from './elements.js?v=5.1.0';
 import * as THREE from './vendor/three.module.js';
-import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions} from './world.js?v=5.0.1';
+import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions} from './world.js?v=5.1.0';
 import {FLOOR,GROUND,BAY,CURB,rng,canvasTexture,mergeGeometries,tint,Batch,facadeBox,splitBox,asphaltTexture,paverTexture,grassTexture,roofTexture,chevronTexture,
-  STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries} from './assets3d.js?v=5.0.1';
+  STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries} from './assets3d.js?v=5.1.0';
 export {WORLD,stations,buildings,circleCollides,moveWithCollisions};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -23,6 +23,21 @@ const SUN=new THREE.Vector3(.78,.5,.36).normalize();
 export const toKmh=speed=>Math.round(Math.abs(speed)/15*3.6);
 /** Decorative lawns: kept off every road and sidewalk (see release5 tests). */
 export const LAWNS=[[700,1270,860,1405],[1380,1270,1560,1405],[90,800,330,850],[960,700,1100,820]];
+/** Courier drop zones: one doorstep per building, on the side nearest a street. */
+export const DROP_ZONES=buildings.map(b=>{const c=[{x:b.x+b.w/2,y:b.y-24},{x:b.x+b.w/2,y:b.y+b.h+24},{x:b.x-24,y:b.y+b.h/2},{x:b.x+b.w+24,y:b.y+b.h/2}].filter(q=>!circleCollides(q.x,q.y,12));
+  const roadDist=q=>Math.min(...ROAD_X.map(r=>Math.abs(q.x-r)),...ROAD_Y.map(r=>Math.abs(q.y-r)));c.sort((a,b2)=>roadDist(a)-roadDist(b2));const q=c[0]||{x:b.x+b.w/2,y:b.y+b.h+24};return {id:'drop-'+b.mark,kind:'drop',symbol:b.mark,name:b.name,x:q.x,y:q.y}});
+/** City Share cars: authorized fleet vehicles parked off the street that anyone on the response team may borrow. */
+export const FLEET_SPEC={id:'fleet',type:'compact',paint:'#eef2ef',stripe:'#14a38f'};
+export const PARKED_SPOTS=[
+ {id:'share-1',x:575,y:1300,angle:Math.PI/2,type:'sedan',paint:'#b3262e',stripe:'#ffffff'},
+ {id:'share-2',x:1580,y:1064,angle:Math.PI,type:'suv',paint:'#1d3557',stripe:'#ffcc33'},
+ {id:'share-3',x:1360,y:843,angle:0,type:'van',paint:'#f2f2ee',stripe:'#14a38f'},
+ {id:'share-4',x:1780,y:790,angle:0,type:'compact',paint:'#f2c14e',stripe:'#1d3557'},
+ {id:'share-5',x:348,y:1655,angle:-Math.PI/2,type:'sedan',paint:'#9aa3a8',stripe:'#d24d57'},
+ {id:'share-6',x:860,y:1242,angle:0,type:'suv',paint:'#2e6b4f',stripe:'#ffffff'}];
+const CAR_DIMS={compact:[58,27],sedan:[68,28],suv:[70,30],van:[76,31]};
+/** Axis-aligned box around a parked car (rotated footprint), for collisions. */
+export function carBox(c){const [L,W]=CAR_DIMS[c.spec?.type||c.type]||[64,28],ca=Math.abs(Math.cos(c.angle||0)),sa=Math.abs(Math.sin(c.angle||0)),hw=(L*ca+W*sa)/2,hh=(L*sa+W*ca)/2;return {x:c.x-hw,y:c.y-hh,w:hw*2,h:hh*2}}
 export const QUALITY={high:{dpr:1.6,shadow:2048,shadows:true},balanced:{dpr:1.3,shadow:1024,shadows:true},low:{dpr:1,shadow:0,shadows:false}};
 const STREET_NAMES={x450:'MEITNER ST',x1200:'CURIE AVE',x1950:'HARBOR DR',y400:'ALKALI AVE',y950:'TRANSITION BLVD',y1500:'RESEARCH LOOP'};
 /** Ground height: roads sit slightly below the sidewalk/plaza level. */
@@ -88,7 +103,7 @@ export class CityWorld extends FlatWorld{
     this.viewCamera=new THREE.PerspectiveCamera(60,1,3,16000);this.viewCamera.position.set(520,60,1150);
     this.disposables=[];this.markerGroups=new Map();
     this.buildEnvironment();this.buildGround();this.buildBuildings();this.buildWater();this.buildProps();
-    this.buildMarkers();this.buildWorkshop();this.buildMonitors();this.buildSecrets();this.buildVehicles();this.buildPeople();this.buildRouteLine();
+    this.buildMarkers();this.buildWorkshop();this.buildSurvey();this.buildRelays();this.buildGates();this.buildFountains();this.buildDropZones();this.buildSecrets();this.buildVehicles();this.buildPeople();this.buildRouteLine();
     this.applyQuality(this.quality);
     this.raycaster=new THREE.Raycaster();this.lookTarget=new THREE.Vector3();this.desiredCamera=new THREE.Vector3();this.camTarget=new THREE.Vector3();this.tmp=new THREE.Vector3();
     this.cameraObstacles=buildings.map(b=>({x:b.x,y:b.y,w:b.w,h:b.h,height:(buildingHeight(b)+CURB)/3.1}));
@@ -253,7 +268,7 @@ export class CityWorld extends FlatWorld{
   }
   buildProps(){
     const metal=new THREE.MeshStandardMaterial({color:'#3c4246',roughness:.5,metalness:.6}),lens=new THREE.MeshStandardMaterial({color:'#fff4d8',emissive:'#ffe3a8',emissiveIntensity:.5});
-    const avoid=(x,z,r)=>circleCollides(x,z,r)||stations.some(s=>Math.hypot(s.x-x,s.y-z)<80)||POWER_POINTS.some(p=>Math.hypot(p.x-x,p.y-z)<60)||MONITORS.some(m=>Math.hypot(m.x-x,m.y-z)<50)||Math.hypot(x-580,z-1025)<60;
+    const avoid=(x,z,r)=>circleCollides(x,z,r)||stations.some(s=>Math.hypot(s.x-x,s.y-z)<80)||POWER_POINTS.some(p=>Math.hypot(p.x-x,p.y-z)<60)||[...READINGS,...RELAYS].some(m=>Math.hypot(m.x-x,m.y-z)<50)||Math.hypot(x-580,z-1025)<60;
     // street lights (instanced)
     const pole=new THREE.CylinderGeometry(.9,1.3,78,7);pole.translate(0,39,0);const arm=new THREE.BoxGeometry(22,1.4,1.4);arm.translate(-10,77,0);const head=new THREE.BoxGeometry(9,2.2,4.4);head.translate(-20,76,0);
     const lightGeo=mergeGeometries([pole,arm,head]),lensGeo=new THREE.BoxGeometry(7,.6,3.4);lensGeo.translate(-20,74.8,0);
@@ -329,7 +344,7 @@ export class CityWorld extends FlatWorld{
       const ring=new THREE.Mesh(new THREE.RingGeometry(24,26.5,40),new THREE.MeshBasicMaterial({color:'#ffc46a',side:THREE.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.3;group.add(ring);
       const mk=(geo,mat,x,yy,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,yy,z);m.castShadow=true;group.add(m);return m};
       if(point.kind==='sample'){for(const [dx,dz] of [[-14,-8],[14,-8],[-14,8],[14,8]])mk(new THREE.CylinderGeometry(.8,.8,13,6),steel,dx,6.5,dz);mk(new THREE.BoxGeometry(34,1.6,22),top,0,13.5,0);mk(new THREE.BoxGeometry(30,1,18),cab,0,4,0);
-        const paint=new THREE.MeshStandardMaterial({color:{copper:'#c4733f',graphite:'#3b3f42',sulfur:'#e2c445'}[point.material],metalness:point.material==='copper'?.85:0,roughness:point.material==='copper'?.3:.75});
+        const paint=new THREE.MeshStandardMaterial({color:{copper:'#c4733f',graphite:'#3b3f42',sulfur:'#e2c445',silicon:'#7d8790'}[point.material],metalness:{copper:.85,silicon:.6}[point.material]||0,roughness:{copper:.3,silicon:.35}[point.material]||.75});
         const parts=[mk(new THREE.BoxGeometry(10,1.6,3.4),paint,-5.5,15.2,0),mk(new THREE.BoxGeometry(10,1.6,3.4),paint,5.5,15.2,0)];
         const light=mk(new THREE.BoxGeometry(5,3,2),new THREE.MeshStandardMaterial({color:'#dca768',emissive:'#dca768',emissiveIntensity:.6}),0,15.8,9);
         this.sampleModels.set(point.material,{parts,light});const sign=spriteLabel(point.material.toUpperCase(),'#ffc46a',undefined,150);sign.position.y=34;group.add(sign);(this.workshopLabels||=[]).push({sign,point})}
@@ -344,39 +359,92 @@ export class CityWorld extends FlatWorld{
   updateWorkshop(){const work=this.config.powerState||{},done=this.config.completed?.includes('power');
     for(const [id,m] of this.sampleModels){const scanned=work.measurements?.[id]||[],last=work.lastTest;
       m.light.material.color.set(scanned.length>=3?'#77e5c1':'#dca768');m.light.material.emissive.set(scanned.length>=3?'#3fd6a5':'#dca768');
-      const failedFlex=last?.material===id&&last?.test==='bend'&&id!=='copper',compressed=last?.material===id&&last?.test==='malleability',flex=last?.material===id&&last?.test==='bend';
+      const failedFlex=last?.material===id&&last?.test==='bend'&&id!=='copper',compressed=false,flex=last?.material===id&&last?.test==='bend';
       m.parts[1].position.x=failedFlex||compressed&&id!=='copper'?9:5.5;m.parts[1].rotation.z=failedFlex?-.35:flex&&id==='copper'?.2:0;
       for(const part of m.parts){part.scale.y=compressed&&id==='copper'?.4:1;part.scale.z=compressed&&id==='copper'?1.8:1}
-      if(last?.material===id&&last?.test==='conductivity'){m.light.material.color.set(id==='sulfur'?'#6a6f73':'#7ce7c8');m.light.material.emissive.set(id==='sulfur'?'#222':'#3fd6a5')}}
+      if(last?.material===id&&last?.test==='conduct'){m.light.material.color.set(id==='sulfur'?'#6a6f73':id==='silicon'?'#c9b46a':'#7ce7c8');m.light.material.emissive.set(id==='sulfur'?'#222':id==='silicon'?'#5a4a1a':'#3fd6a5')}}
     for(const [id,m] of this.socketModels){const on=done||work.connections?.includes(id.at(-1));m.material.color.set(on?'#78e3c1':'#dca768');m.material.emissive.set(on?'#2fbf8f':'#7d4b20')}
-    this.cable.visible=!!(done||work.connections?.includes('a'));const mat={copper:'#b97545',graphite:'#3d4245',sulfur:'#d9c04a'}[work.material]||'#b97545';
+    this.cable.visible=!!(done||work.connections?.includes('a'));const mat={copper:'#b97545',graphite:'#3d4245',sulfur:'#d9c04a',silicon:'#7d8790'}[work.material]||'#b97545';
     this.cable.material.color.set(done||work.success?'#c4733f':work.failed?'#9a4a3a':mat);
     }
-  buildMonitors(){this.monitorModels=new Map();const metal=new THREE.MeshStandardMaterial({color:'#2f3c44',metalness:.5,roughness:.45});
-    const screenTex=canvasTexture(256,160,(c,w,h)=>{c.fillStyle='#0b2f45';c.fillRect(0,0,w,h);c.fillStyle='#5fd3ff';c.font='800 30px system-ui,sans-serif';c.textAlign='center';c.fillText('WATER WATCH',w/2,48);c.font='600 20px system-ui,sans-serif';c.fillStyle='#cfefff';c.fillText('indicator record',w/2,82);
-      const cols=['#d7263d','#f28c28','#f2d43a','#3fae49','#2f7fd1','#6a3bb5'];cols.forEach((k,i)=>{c.fillStyle=k;c.fillRect(22+i*36,104,32,30)})});
-    const screenMat=new THREE.MeshStandardMaterial({map:screenTex,emissive:'#ffffff',emissiveMap:screenTex,emissiveIntensity:.5});
-    const glassMat=new THREE.MeshStandardMaterial({color:'#dff3ff',transparent:true,opacity:.35,roughness:.05});
-    for(const m of MONITORS){const g=new THREE.Group();g.position.set(m.x,groundHeight(m.x,m.y),m.y);g.userData.pointId='monitor-'+m.id;this.scene.add(g);this.workshopTargets.push(g);
-      const post=new THREE.Mesh(new THREE.BoxGeometry(8,22,10),metal);post.position.y=11;post.castShadow=true;g.add(post);
-      const scr=new THREE.Mesh(new THREE.PlaneGeometry(14,9),screenMat);scr.position.set(-4.2,24,0);scr.rotation.y=-Math.PI/2;g.add(scr);const frame=new THREE.Mesh(new THREE.BoxGeometry(1.5,10,15),metal);frame.position.set(-3.4,24,0);g.add(frame);
-      const vial=new THREE.Mesh(new THREE.CylinderGeometry(2,2,9,12),glassMat);vial.position.set(0,26.5,6.5);g.add(vial);
-      const liquid=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,6,12),new THREE.MeshStandardMaterial({color:'#a9c6d6',emissive:'#000000',roughness:.2}));liquid.position.set(0,25,6.5);g.add(liquid);
-      const ring=new THREE.Mesh(new THREE.RingGeometry(16,18.5,40),new THREE.MeshBasicMaterial({color:'#5fd3ff',transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.4;g.add(ring);
-      this.monitorModels.set(m.id,{g,liquid,ring,color:m.color})}}
+  kiosk(x,y,id,screenMat){const metal=this.kioskMetal||(this.kioskMetal=new THREE.MeshStandardMaterial({color:'#2f3c44',metalness:.5,roughness:.45})),glass=this.kioskGlass||(this.kioskGlass=new THREE.MeshStandardMaterial({color:'#dff3ff',transparent:true,opacity:.35,roughness:.05}));
+    const g=new THREE.Group();g.position.set(x,groundHeight(x,y),y);g.userData.pointId=id;this.scene.add(g);this.workshopTargets.push(g);
+    const post=new THREE.Mesh(new THREE.BoxGeometry(8,22,10),metal);post.position.y=11;post.castShadow=true;g.add(post);
+    const scr=new THREE.Mesh(new THREE.PlaneGeometry(14,9),screenMat);scr.position.set(-4.2,24,0);scr.rotation.y=-Math.PI/2;g.add(scr);const frame=new THREE.Mesh(new THREE.BoxGeometry(1.5,10,15),metal);frame.position.set(-3.4,24,0);g.add(frame);
+    const vial=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.2,10,12),glass);vial.position.set(0,27,6.5);g.add(vial);
+    const liquid=new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.8,6.5,12),new THREE.MeshStandardMaterial({color:'#a9c6d6',emissive:'#000000',roughness:.2}));liquid.position.set(0,25.5,6.5);g.add(liquid);
+    const ring=new THREE.Mesh(new THREE.RingGeometry(16,18.5,40),new THREE.MeshBasicMaterial({color:'#5fd3ff',transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.4;g.add(ring);
+    return {g,liquid,ring}}
+  buildSurvey(){this.surveyModels=new Map();
+    const tex=canvasTexture(256,160,(c,w,h)=>{c.fillStyle='#0b2f45';c.fillRect(0,0,w,h);c.fillStyle='#5fd3ff';c.font='800 28px system-ui,sans-serif';c.textAlign='center';c.fillText('WATER MONITOR',w/2,46);c.font='600 19px system-ui,sans-serif';c.fillStyle='#cfefff';c.fillText('universal indicator',w/2,80);
+      ['#d7263d','#f2a33a','#3fae49','#2f7fd1','#6a3bb5'].forEach((k,i)=>{c.fillStyle=k;c.fillRect(24+i*42,102,38,30)})});
+    const mat=new THREE.MeshStandardMaterial({map:tex,emissive:'#ffffff',emissiveMap:tex,emissiveIntensity:.5});
+    for(const r of READINGS){const k=this.kiosk(r.x,r.y,'reading-'+r.sym,mat);const label=spriteLabel(r.sym+' · '+r.formula.replace(/(\d)/g,m=>'₀₁₂₃₄₅₆₇₈₉'[m]),'#5fd3ff',undefined,170);label.position.y=44;k.g.add(label);k.label=label;this.surveyModels.set(r.sym,{...k,color:uiOf(r.ui).color})}}
+  buildRelays(){this.relayModels=new Map();const steel=new THREE.MeshStandardMaterial({color:'#8d969b',metalness:.7,roughness:.35});
+    for(const t of RELAYS){const g=new THREE.Group();g.position.set(t.x,groundHeight(t.x,t.y),t.y);g.userData.pointId='relay-'+t.id;this.scene.add(g);this.workshopTargets.push(g);
+      for(const [dx,dz] of [[-5,-5],[5,-5],[-5,5],[5,5]]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(.7,1,150,6),steel);leg.position.set(dx*(1-.0),75,dz);leg.castShadow=true;g.add(leg)}
+      for(let y=15;y<150;y+=22){const ring=new THREE.Mesh(new THREE.BoxGeometry(11,1,11),steel);ring.position.y=y;g.add(ring)}
+      const dish=new THREE.Mesh(new THREE.SphereGeometry(9,14,8,0,Math.PI*2,0,Math.PI*.35),steel);dish.rotation.x=Math.PI/2.6;dish.position.set(0,128,6);g.add(dish);
+      const beacon=new THREE.Mesh(new THREE.SphereGeometry(4,14,10),new THREE.MeshStandardMaterial({color:'#ffb455',emissive:'#ffb455',emissiveIntensity:1.6}));beacon.position.y=156;g.add(beacon);
+      const beam=new THREE.Mesh(new THREE.CylinderGeometry(6,9,700,20,1,true),beamMaterial('#6ee7cf'));beam.position.y=156+350;beam.visible=false;g.add(beam);
+      const ring=new THREE.Mesh(new THREE.RingGeometry(16,18.5,40),new THREE.MeshBasicMaterial({color:'#6ee7cf',transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.4;g.add(ring);
+      const label=spriteLabel(t.name.toUpperCase(),'#6ee7cf',undefined,150);label.position.y=60;g.add(label);
+      this.relayModels.set(t.id,{g,beacon,beam,ring,label})}}
+  buildGates(){const post=new THREE.MeshStandardMaterial({color:'#f4f1ea',roughness:.5}),glow=new THREE.MeshBasicMaterial({color:'#ffcc33',transparent:true,opacity:.55,depthWrite:false,side:THREE.DoubleSide});
+    this.gate={group:new THREE.Group(),arches:{}};this.scene.add(this.gate.group);this.gate.group.visible=false;
+    for(const side of ['a','b']){const g=new THREE.Group();this.gate.group.add(g);
+      for(const dz of [-27,27]){const p=new THREE.Mesh(new THREE.BoxGeometry(3,46,3),post);p.position.set(0,23,dz);p.castShadow=true;g.add(p)}
+      const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
+      const sign=new THREE.Mesh(new THREE.BoxGeometry(3,13,58),[new THREE.MeshStandardMaterial({map:tex,emissive:'#ffffff',emissiveMap:tex,emissiveIntensity:.55}),new THREE.MeshStandardMaterial({map:tex,emissive:'#ffffff',emissiveMap:tex,emissiveIntensity:.55}),post,post,post,post]);sign.position.y=50;g.add(sign);
+      const band=new THREE.Mesh(new THREE.PlaneGeometry(6,56),glow);band.rotation.x=-Math.PI/2;band.position.y=.5;g.add(band);
+      this.gate.arches[side]={g,canvas,tex}}}
+  setGateLabels(a,b){for(const [side,text] of [['a',a],['b',b]]){const arch=this.gate.arches[side],c=arch.canvas.getContext('2d');c.fillStyle=side==='a'?'#14324a':'#3b1f4a';c.fillRect(0,0,512,128);c.strokeStyle='#ffcc33';c.lineWidth=8;c.strokeRect(4,4,504,120);
+    c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';let size=64;c.font=`900 ${size}px system-ui,sans-serif`;while(c.measureText(text).width>470&&size>26){size-=4;c.font=`900 ${size}px system-ui,sans-serif`}c.fillText(text,256,68);arch.tex.needsUpdate=true}}
+  placeGate(slot){const s=GATE_SLOTS[slot];if(!s){this.gate.group.visible=false;return}this.gate.group.visible=true;
+    for(const [side,off] of [['a',-30],['b',30]]){const g=this.gate.arches[side].g;if(s.axis==='x'){g.position.set(s.x,.25,s.y+off);g.rotation.y=0}else{g.position.set(s.x+off,.25,s.y);g.rotation.y=Math.PI/2}}}
+  buildFountains(){this.fountain={group:new THREE.Group(),nozzles:[]};const f=this.fountain;f.group.position.set(2470,0,950);this.scene.add(f.group);
+    const deck=new THREE.Mesh(new THREE.BoxGeometry(70,6,300),new THREE.MeshStandardMaterial({color:'#39444b',roughness:.7}));deck.position.y=1;deck.castShadow=true;f.group.add(deck);
+    const rim=new THREE.MeshStandardMaterial({color:'#c9d2d6',metalness:.6,roughness:.3});
+    for(let i=0;i<4;i++){const z=-112+i*75,base=new THREE.Mesh(new THREE.CylinderGeometry(11,13,6,20),rim);base.position.set(0,5,z);f.group.add(base);
+      const mat=new THREE.MeshStandardMaterial({color:'#7d3cc8',emissive:'#7d3cc8',emissiveIntensity:1.1,transparent:true,opacity:.82,depthWrite:false,roughness:.2});
+      const jet=new THREE.Mesh(new THREE.CylinderGeometry(2.6,7,1,14,1,true),mat);jet.position.set(0,8,z);jet.scale.y=.01;f.group.add(jet);
+      const crown=new THREE.Mesh(new THREE.SphereGeometry(9,14,8),mat);crown.position.set(0,8,z);crown.scale.setScalar(.01);f.group.add(crown);
+      const label=spriteLabel('—','#bcacf4',undefined,230);label.position.set(0,30,z);label.visible=false;f.group.add(label);
+      f.nozzles.push({z,mat,jet,crown,label,h:0,target:0,start:0})}}
+  /** Run a fountain act: entries [{sym,h,color,text}] in the player's order. Calls done() when finished. */
+  playShow(entries,done){const f=this.fountain;f.entries=entries;f.t0=this.clockLast;f.done=done;f.running=true;this.viewMode='show';this.snapCamera=true;
+    f.nozzles.forEach((n,i)=>{const e=entries[i];n.target=e?e.h:0;n.h=0;n.start=i*1.1;n.label.visible=false;if(e){n.mat.emissive.set(e.color);n.mat.color.set(e.color);n.label.material.map?.dispose();const sp=spriteLabel(`${i+1} · ${e.sym}`,'#bcacf4',undefined,230);n.label.material.map=sp.material.map;n.label.material.needsUpdate=true}});
+    f.duration=1.1*entries.length+2.6;this.lastRender=0}
+  resetShow(){const f=this.fountain;if(!f)return;f.running=false;f.nozzles.forEach(n=>{n.h=0;n.target=0;n.label.visible=false})}
+  updateFountains(realDt,reduced){const f=this.fountain;if(!f)return;const el=f.running?(performance.now()-f.t0)/1000:0;
+    f.nozzles.forEach(n=>{const active=f.running?el>n.start:false;const goal=active?n.target:(f.running?0:n.h);n.h+=(goal-n.h)*Math.min(1,realDt*(reduced?20:3));const H=Math.max(.01,n.h*165),wob=reduced?0:Math.sin(performance.now()/120+n.z)*.04;
+      n.jet.scale.y=H;n.jet.position.y=8+H/2;n.crown.scale.setScalar(n.h>.03?(.6+n.h)*(1+wob):.01);n.crown.position.y=8+H;n.label.visible=f.running&&active||(!f.running&&n.target>0);n.label.position.y=8+H+18});
+    if(f.running&&el>f.duration){f.running=false;const cb=f.done;f.done=null;this.viewMode='chase';this.snapCamera=true;cb?.()}}
+  buildDropZones(){this.dropRings=new THREE.Group();this.scene.add(this.dropRings);this.dropRings.visible=false;const mat=new THREE.MeshBasicMaterial({color:'#ffc46a',transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false});
+    for(const d of DROP_ZONES){const r=new THREE.Mesh(new THREE.RingGeometry(13,16,32),mat);r.rotation.x=-Math.PI/2;r.position.set(d.x,groundHeight(d.x,d.y)+.45,d.y);this.dropRings.add(r)}}
   buildSecrets(){this.secretModels=[];const sym={hydrogen:'H',graphite:'C',neon:'Ne'};
     for(const s of this.secretPoints){const tex=canvasTexture(128,128,(c,w,h)=>{c.fillStyle='#ffe082';c.fillRect(0,0,w,h);c.fillStyle='#4a3a10';c.font='900 64px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(sym[s.id]||'?',w/2,h/2+4)});
       const mat=new THREE.MeshStandardMaterial({color:'#ffd54f',metalness:.8,roughness:.25,emissive:'#5a4300',emissiveIntensity:.4}),face=new THREE.MeshStandardMaterial({map:tex,emissive:'#ffffff',emissiveMap:tex,emissiveIntensity:.3});
       const coin=new THREE.Mesh(new THREE.CylinderGeometry(7,7,1.6,6),[mat,face,face]);coin.rotation.x=Math.PI/2;const g=new THREE.Group();g.add(coin);g.position.set(s.x,groundHeight(s.x,s.y)+16,s.y);this.scene.add(g);this.secretModels.push({id:s.id,g})}}
   buildVehicles(){
-    this.fleet=makeVehicle('compact',{paint:'#eef2ef',fleet:true,stripe:'#14a38f',ownTail:true});this.scene.add(this.fleet);
+    this.carSpec={...FLEET_SPEC};this.fleet=this.makeDriven(this.carSpec);
+    this.parked=PARKED_SPOTS.map(p=>({x:p.x,y:p.y,angle:p.angle,spec:{id:p.id,type:p.type,paint:p.paint,stripe:p.stripe}}));this.parked.forEach(c=>this.meshParked(c));
     const types=['sedan','compact','suv','sedan','van','compact','sedan','suv','sedan','compact'],paints=['#f4f4f2','#1d3557','#a8adb3','#8b1e2b','#ffffff','#2f4f4f','#c9b28d','#111317','#5f8fb8','#7a1f1f'];
     this.trafficMeshes=this.traffic.map((t,i)=>{const m=compactGroup(makeVehicle(types[i%types.length],{paint:paints[i%paints.length]}));this.scene.add(m);return m});
   }
+  makeDriven(spec){if(this.fleet){this.scene.remove(this.fleet);this.fleet.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()})}const m=makeVehicle(spec.type,{paint:spec.paint,fleet:true,stripe:spec.stripe,ownTail:true});this.scene.add(m);return m}
+  resetCars(){if(!this.parked)return;this.carSpec={...FLEET_SPEC};PARKED_SPOTS.forEach((p,i)=>{Object.assign(this.parked[i],{x:p.x,y:p.y,angle:p.angle,spec:{id:p.id,type:p.type,paint:p.paint,stripe:p.stripe}});this.meshParked(this.parked[i])});this.fleet=this.makeDriven(this.carSpec);this.refreshProgress()}
+  meshParked(c){if(c.mesh){this.scene.remove(c.mesh);c.mesh.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()})}c.mesh=compactGroup(makeVehicle(c.spec.type,{paint:c.spec.paint,fleet:true,stripe:c.spec.stripe}));c.mesh.position.set(c.x,groundHeight(c.x,c.y),c.y);c.mesh.rotation.y=-c.angle;this.scene.add(c.mesh)}
+  /** Obstacles for movement: buildings plus parked cars (and your own car while you are on foot). */
+  obstacles(){if(!this.parked)return buildings;const list=this.parked.map(carBox);if(!this.player.inVehicle&&this.carSpec)list.push(carBox({...this.car,spec:this.carSpec}));return buildings.concat(list)}
+  nearestParked(){if(!this.parked)return -1;let best=-1,bd=100;for(let i=0;i<this.parked.length;i++){const d=distance(this.parked[i],this.player);if(d<bd){bd=d;best=i}}return distance(this.car,this.player)<bd?-1:best}
+  /** Swap into parked car i: the car you were using stays parked where you left it. */
+  swapInto(i){const P=this.parked[i];if(!P)return false;const left={x:this.car.x,y:this.car.y,angle:this.car.angle,spec:this.carSpec};this.car={x:P.x,y:P.y,angle:P.angle};this.carSpec=P.spec;
+    Object.assign(P,{x:left.x,y:left.y,angle:left.angle,spec:left.spec});if(this.scene){this.meshParked(P);this.fleet=this.makeDriven(this.carSpec);this.refreshProgress()}return true}
   buildPeople(){
     this.avatar=makeHuman({skin:'#a86b3c',shirt:'#14a38f',pants:'#2d3a4e',hair:'#1c1713'});this.scene.add(this.avatar);
     this.carriedSample=new THREE.Mesh(new THREE.BoxGeometry(10,1.6,3),new THREE.MeshStandardMaterial({color:'#c4733f',metalness:.7,roughness:.3}));this.carriedSample.position.set(4.2,15.5,2.5);this.avatar.add(this.carriedSample);this.carriedSample.visible=false;
-    const contacts=stations.length;this.busySpots=[...POWER_POINTS,...MONITORS,...stations.map(s=>({x:s.x+38,y:s.y-25}))];this.crowd=new Crowd(this.scene,this.pedestrians.length+contacts);const r=rng(55);
+    const contacts=stations.length;this.busySpots=[...POWER_POINTS,...READINGS,...RELAYS,...stations.map(s=>({x:s.x+38,y:s.y-25}))];this.crowd=new Crowd(this.scene,this.pedestrians.length+contacts);const r=rng(55);
     for(let i=0;i<this.pedestrians.length+contacts;i++)this.crowd.setColors(i,{skin:SKIN[Math.floor(r()*SKIN.length)],shirt:i>=this.pedestrians.length?stations[i-this.pedestrians.length].color:SHIRTS[Math.floor(r()*SHIRTS.length)],pants:PANTS[Math.floor(r()*PANTS.length)],hair:HAIR[Math.floor(r()*HAIR.length)]});
   }
   buildRouteLine(){const tex=chevronTexture();tex.repeat.set(1,1);this.routeTex=tex;
@@ -393,27 +461,31 @@ export class CityWorld extends FlatWorld{
     this.routeGeo.dispose();this.routeGeo=new THREE.BufferGeometry();this.routeGeo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));this.routeGeo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));this.routeMesh.geometry=this.routeGeo}
   // ------------------------------------------------------------------ controls & state API (unchanged contract)
   setStick(x,y){this.stick={x:clamp(Number(x)||0,-1,1),y:clamp(Number(y)||0,-1,1)}}
-  focusWorkshop(){if(Math.hypot(this.player.x-910,this.player.y-940)>420)return false;this.viewMode='workshop';this.snapCamera=true;return true}
+  focusWorkshop(){if(Math.hypot(this.player.x-940,this.player.y-940)>460)return false;this.viewMode='workshop';this.snapCamera=true;return true}
   recenterCamera(){this.viewMode='chase';this.cameraYaw=this.player.angle;this.orbitOffset=0;this.pitchOffset=0;this.lastLookAt=-10;this.snapCamera=true;this.carYaw=null}
   setCamera(mode){this.viewMode=mode==='overhead'?'overhead':'chase';this.orbitOffset=0;this.snapCamera=true;return this.viewMode}
-  toggleVehicle(){const was=this.player.inVehicle,result=super.toggleVehicle();if(was&&result)this.cameraYaw=this.player.angle;this.orbitOffset=0;if(result){this.player.steer=0;this.carYaw=null;if(this.viewMode==='workshop'&&!was)this.viewMode='chase'}return result}
+  toggleVehicle(){const was=this.player.inVehicle;if(!was){const k=this.nearestParked();if(k>=0)this.swapInto(k)}const result=super.toggleVehicle();if(was&&result)this.cameraYaw=this.player.angle;this.orbitOffset=0;if(result){this.player.steer=0;this.carYaw=null;if(this.viewMode==='workshop'&&!was)this.viewMode='chase'}return result}
   recover(){super.recover();this.viewMode='chase';this.cameraYaw=-Math.PI/2;this.orbitOffset=0;this.pitchOffset=0;this.snapCamera=true;this.setStick(0,0);this.player.steer=0;this.carYaw=null}
-  loadPosition(position){super.loadPosition(position);this.cameraYaw=this.player.angle;this.snapCamera=true;this.carYaw=null}
+  getState(){return {...super.getState(),carSpec:this.carSpec,parked:this.parked?.map(({x,y,angle,spec})=>({x,y,angle,spec}))}}
+  loadPosition(position){super.loadPosition(position);
+    if(this.parked&&Array.isArray(position?.parked)&&position.parked.length===this.parked.length&&position.carSpec?.type&&position.parked.every(c=>Number.isFinite(c?.x)&&Number.isFinite(c?.y)&&c?.spec?.type)){this.carSpec=position.carSpec;position.parked.forEach((c,i)=>{Object.assign(this.parked[i],{x:c.x,y:c.y,angle:c.angle||0,spec:c.spec});this.meshParked(this.parked[i])});this.fleet=this.makeDriven(this.carSpec)}this.cameraYaw=this.player.angle;this.snapCamera=true;this.carYaw=null}
   updateConfig(config){super.updateConfig(config);if(config.paused){this.setStick(0,0);this.drag=null}if(config.touchMode!==undefined)this.touchMode=!!config.touchMode;
     if(config.quality&&config.quality!=='auto'&&config.quality!==this.quality&&this.renderer)this.applyQuality(config.quality);
     if(config.quality==='auto'&&this.renderer&&this.qualityLocked){this.qualityLocked=false}
     if(this.markerGroups)this.refreshProgress();if(this.sampleModels)this.updateWorkshop();this.lastRender=0}
   tick(dt){
-    this.frameDelta=dt;
+    this.frameDelta=dt;const before0={x:this.player.x,y:this.player.y};if(this.fountain?.running){this.advanceAmbient(dt);return}
+    try{return this.tickMove(dt)}finally{const sc=this.config.scene;if(sc?.kind==='race'&&Number.isInteger(sc.slot)&&GATE_SLOTS[sc.slot]){const choice=gateCrossing(before0,this.player,GATE_SLOTS[sc.slot]);if(choice)this.onGate?.(sc.slot,choice)}}}
+  tickMove(dt){
     if(this.player.inVehicle){const p=this.player,before={x:p.x,y:p.y};
       const steering=clamp((this.input.right?1:0)-(this.input.left?1:0)+(this.stick?.x||0),-1,1);
-      const movedBy=driveStep(p,this.input,steering,dt,this.touchMode);const moved=moveWithCollisions(p.x,p.y,movedBy.dx,movedBy.dy,19);
+      const movedBy=driveStep(p,this.input,steering,dt,this.touchMode);const moved=moveWithCollisions(p.x,p.y,movedBy.dx,movedBy.dy,19,this.obstacles());
       p.x=moved.x;p.y=moved.y;if(moved.hit){p.speed*=.3;this.bumpAt=this.time}Object.assign(this.car,{x:p.x,y:p.y,angle:p.angle});this.driven+=distance(p,before);this.advanceAmbient(dt);return}
     const p=this.player,before={x:p.x,y:p.y};
     const right=(this.input.right?1:0)-(this.input.left?1:0)+(this.stick?.x||0),forward=(this.input.up?1:0)-(this.input.down?1:0)-(this.stick?.y||0),length=Math.hypot(right,forward);
     p.speed=length?(this.input.shift?230:165)*Math.min(length,1):0;
     if(length){const yaw=this.moveYaw(),dx=(Math.cos(yaw)*forward-Math.sin(yaw)*right)/length,dy=(Math.sin(yaw)*forward+Math.cos(yaw)*right)/length;
-      p.angle=Math.atan2(dy,dx);const move=moveWithCollisions(p.x,p.y,dx*p.speed*dt,dy*p.speed*dt,12);p.x=move.x;p.y=move.y}
+      p.angle=Math.atan2(dy,dx);const move=moveWithCollisions(p.x,p.y,dx*p.speed*dt,dy*p.speed*dt,12,this.obstacles());p.x=move.x;p.y=move.y}
     this.walked+=distance(p,before);this.advanceAmbient(dt)}
   /** Heading that 'up' means: the chase camera's yaw, or the facing of a fixed camera that is on screen. */
   moveYaw(){if(this.viewMode==='chase')return this.cameraYaw;return Number.isFinite(this.viewYaw)?this.viewYaw:-Math.PI/2}
@@ -423,22 +495,30 @@ export class CityWorld extends FlatWorld{
     if(this.time-this.notifyAt>.12){this.notify();this.notifyAt=this.time}}
   nearbyWork(){if(this.player.inVehicle)return null;const p=this.player;let best=null,bd=Infinity;
     if(this.config.powerState?.enabled)for(const q of POWER_POINTS){const d=distance(q,p);if(d<105&&d<bd){best=q;bd=d}}
-    if(!best&&this.config.waterEnabled){this.monitorPoints||=MONITORS.map(m=>({id:'monitor-'+m.id,kind:'monitor',monitor:m.id,name:m.name,x:m.x,y:m.y}));for(const q of this.monitorPoints){const d=distance(q,p);if(d<95&&d<bd){best=q;bd=d}}}
+    const sc=this.config.scene||{};const consider=(list,r)=>{for(const q of list){const d=distance(q,p);if(d<r&&d<bd){best=q;bd=d}}};
+    if(!best&&sc.kind==='courier')consider(DROP_ZONES,70);
+    if(!best&&sc.kind==='survey')consider((this.readingPoints||=READINGS.map(r=>({id:'reading-'+r.sym,kind:'reading',sym:r.sym,name:r.where,x:r.x,y:r.y}))).filter(q=>!(sc.collected||{})[q.sym]),95);
+    if(!best&&sc.kind==='relay')consider((this.relayPoints||=RELAYS.map(t=>({id:'relay-'+t.id,kind:'relay',relay:t.id,name:t.name,x:t.x,y:t.y}))).filter(q=>!(sc.solved||{})[q.relay]),95);
     return best}
-  notify(){this.onChange({...this.player,nearby:this.nearbyStation(),nearbyWork:this.nearbyWork(),vehicleNearby:!this.player.inVehicle&&distance(this.player,this.car)<100,district:this.district(),walked:this.walked,driven:this.driven})}
+  notify(){this.onChange({...this.player,nearby:this.nearbyStation(),nearbyWork:this.nearbyWork(),vehicleNearby:!this.player.inVehicle&&(distance(this.player,this.car)<100||this.nearestParked()>=0),carType:this.carSpec?.type,district:this.district(),walked:this.walked,driven:this.driven})}
   interact(){const point=this.nearbyWork();if(point){this.onWorldAction(point.id);return true}return super.interact()}
   tapWorkshop(event){if(!this.raycaster||this.player.inVehicle)return;const rect=this.canvas.getBoundingClientRect(),pointer=new THREE.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
     this.raycaster.far=2000;this.raycaster.setFromCamera(pointer,this.viewCamera);const hit=this.raycaster.intersectObjects(this.workshopTargets,true)[0];if(!hit)return;
     let object=hit.object;while(object&&!object.userData.pointId)object=object.parent;const id=object?.userData.pointId;if(!id)return;
-    const pt=POWER_POINTS.find(p=>p.id===id)||MONITORS.map(m=>({id:'monitor-'+m.id,x:m.x,y:m.y})).find(p=>p.id===id);
-    const allowed=id.startsWith('monitor-')?this.config.waterEnabled:this.config.powerState?.enabled;if(pt&&allowed&&distance(pt,this.player)<155)this.onWorldAction(id)}
+    const sc=this.config.scene||{};const pt=POWER_POINTS.find(p=>p.id===id)||READINGS.map(r=>({id:'reading-'+r.sym,x:r.x,y:r.y})).find(p=>p.id===id)||RELAYS.map(t=>({id:'relay-'+t.id,x:t.x,y:t.y})).find(p=>p.id===id);
+    const allowed=id.startsWith('reading-')?sc.kind==='survey':id.startsWith('relay-')?sc.kind==='relay':this.config.powerState?.enabled;if(pt&&allowed&&distance(pt,this.player)<155)this.onWorldAction(id)}
   refreshProgress(){if(!this.markerGroups)return;const completed=this.config.completed||[];
     for(const [id,m] of this.markerGroups){const s=stations.find(x=>x.id===id),active=id===this.config.activeMission,done=completed.includes(id);
       if(m.done!==done){m.icon.material.map?.dispose();m.icon.material.map=iconTexture(s.code,done?'#86d9b7':s.color,done);m.icon.material.needsUpdate=true;m.done=done}
       m.active=active;m.beam.visible=active||id==='hq';m.beam.material.uniforms.uOpacity.value=active?.75:.35;m.ring.material.opacity=active?.95:done?.3:.55;m.disc.visible=active||id==='hq'}
     const live=completed.includes('power');this.signalsLive=live;
-    if(this.fleet){const skin=this.config.skin==='amber'?'#e09a2a':this.config.skin==='violet'?'#8a6fd1':'#14a38f';this.fleet.userData.stripe?.color.set(skin)}
-    const water=this.config.waterState||{};for(const [id,m] of this.monitorModels||[]){const done=!!water[id];m.liquid.material.color.set(done?m.color:'#a9c6d6');m.liquid.material.emissive.set(done?m.color:'#000000');m.liquid.material.emissiveIntensity=done?.35:0;m.ring.visible=!!this.config.waterEnabled&&!done}}
+    if(this.fleet&&this.carSpec?.id==='fleet'){const skin=this.config.skin==='amber'?'#e09a2a':this.config.skin==='violet'?'#8a6fd1':'#14a38f';this.fleet.userData.stripe?.color.set(skin)}
+    this.refreshScene()}
+  refreshScene(){const sc=this.config.scene||{},done=this.config.completed||[];
+    for(const [sym,m] of this.surveyModels||[]){const got=!!(sc.collected||{})[sym]||done.includes('survey');m.liquid.material.color.set(got?m.color:'#a9c6d6');m.liquid.material.emissive.set(got?m.color:'#000000');m.liquid.material.emissiveIntensity=got?.45:0;m.ring.visible=sc.kind==='survey'&&!got;m.g.visible=sc.kind==='survey'||done.includes('survey');m.label.visible=sc.kind==='survey'}
+    for(const [id,m] of this.relayModels||[]){const on=!!(sc.solved||{})[id]||done.includes('ions');m.beacon.material.color.set(on?'#6ee7cf':'#ffb455');m.beacon.material.emissive.set(on?'#6ee7cf':'#ffb455');m.beam.visible=on;m.ring.visible=sc.kind==='relay'&&!on;m.label.visible=sc.kind==='relay'}
+    if(this.gate){if(sc.kind==='race'&&Number.isInteger(sc.slot)){if(this.gate.key!==sc.slot+'|'+sc.a+'|'+sc.b){this.gate.key=sc.slot+'|'+sc.a+'|'+sc.b;this.setGateLabels(sc.a||'',sc.b||'');this.placeGate(sc.slot)}}else{this.gate.group.visible=false;this.gate.key=null}}
+    if(this.dropRings)this.dropRings.visible=sc.kind==='courier'}
   // ------------------------------------------------------------------ per-frame
   render(){
     if(!this.renderer||!this.scene)return;const now=performance.now(),realDt=Math.min(.1,(now-this.clockLast)/1000);this.clockLast=now;
@@ -456,7 +536,7 @@ export class CityWorld extends FlatWorld{
     this.fleet.rotation.x+=(roll-this.fleet.rotation.x)*Math.min(1,realDt*6);this.fleet.rotation.z+=(pitch-this.fleet.rotation.z)*Math.min(1,realDt*6);
     const braking=p.inVehicle&&(this.input.space||(this.input.down&&p.speed>3)||(this.input.up&&p.speed<-3));this.fleet.userData.tail.emissiveIntensity=braking?2.2:.35;
     // carried sample
-    const mat=this.config.powerState?.material;this.carriedSample.visible=!!mat&&!p.inVehicle&&!!this.config.powerState?.enabled;if(mat)this.carriedSample.material.color.set({copper:'#c4733f',graphite:'#3b3f42',sulfur:'#e2c445'}[mat]);
+    const mat=this.config.powerState?.material;this.carriedSample.visible=!!mat&&!p.inVehicle&&!!this.config.powerState?.enabled;if(mat)this.carriedSample.material.color.set({copper:'#c4733f',graphite:'#3b3f42',sulfur:'#e2c445',silicon:'#7d8790'}[mat]);
     const live=this.config.completed?.includes('power')||this.config.powerState?.success;
     this.currentBeads.forEach((bead,i)=>{bead.visible=!!live&&this.cable.visible;if(bead.visible)bead.position.copy(this.cableCurve.getPointAt((i/5+(reduced?0:t*.3))%1))});
     // traffic
@@ -476,7 +556,9 @@ export class CityWorld extends FlatWorld{
       m.text.visible=(d<650||m.active)&&d>60&&this.viewMode!=='overhead';m.beam.visible=(m.active||id==='hq')&&d>40}
     const powerOn=!!this.config.powerState?.enabled;for(const l of this.workshopLabels||[])l.sign.visible=powerOn&&!p.inVehicle&&Math.hypot(l.point.x-p.x,l.point.y-p.y)<420;
     for(const s of this.secretModels){s.g.visible=!this.discovered.has(s.id);if(s.g.visible&&!reduced)s.g.rotation.y=t*1.6}
-    for(const [,mm] of this.monitorModels)if(mm.ring.visible&&!reduced)mm.ring.scale.setScalar(1+Math.sin(t*3)*.07);
+    for(const [,mm] of this.surveyModels)if(mm.ring.visible&&!reduced)mm.ring.scale.setScalar(1+Math.sin(t*3)*.07);
+    if(this.dropRings?.visible&&!reduced)this.dropRings.children.forEach((r,i)=>r.scale.setScalar(1+Math.sin(t*3+i)*.08));
+    this.updateFountains(realDt,reduced);
     for(const b of this.boats){b.g.position.y=reduced?0:Math.sin(t*.9+b.phase)*1.2;b.g.rotation.z=reduced?0:Math.sin(t*.7+b.phase)*.025}
     this.water.material.uniforms.uTime.value=reduced?0:t;
     this.updateSignals(t);this.updateRoute(realDt);
@@ -490,7 +572,12 @@ export class CityWorld extends FlatWorld{
   updateSignals(t){const S=this.signal;if(!S)return;const set=(g,r,a,gr)=>{g.r.emissiveIntensity=r;g.a.emissiveIntensity=a;g.g.emissiveIntensity=gr};
     if(!this.signalsLive){const blink=(Math.floor(t*1.6)%2)?2.4:.15;set(S.ns,0,blink,0);set(S.ew,0,blink,0);return}
     const c=t%16;if(c<6.5){set(S.ns,0,0,2.4);set(S.ew,2.4,0,0)}else if(c<8){set(S.ns,0,2.4,0);set(S.ew,2.4,0,0)}else if(c<14.5){set(S.ns,2.4,0,0);set(S.ew,0,0,2.4)}else{set(S.ns,2.4,0,0);set(S.ew,0,2.4,0)}}
-  activeTarget(){const id=this.config.activeMission;if(id==='water'){const m=MONITORS.find(m=>!(this.config.waterState||{})[m.id]);return m?{x:m.x,y:m.y}:null}const s=stations.find(s=>s.id===id);return s?{x:s.x,y:s.y}:null}
+  activeTarget(){const sc=this.config.scene||{},p=this.player,near=list=>list.reduce((b,q)=>!b||distance(q,p)<distance(b,p)?q:b,null);
+    if(sc.kind==='race'&&Number.isInteger(sc.slot))return GATE_SLOTS[sc.slot]||null;
+    if(sc.kind==='survey'){const left=READINGS.filter(r=>!(sc.collected||{})[r.sym]);if(left.length)return near(left)}
+    if(sc.kind==='relay'){const left=RELAYS.filter(t=>!(sc.solved||{})[t.id]);if(left.length)return near(left)}
+    if(sc.kind==='courier')return null;
+    const id=this.config.activeMission,s=stations.find(s=>s.id===id);return s?{x:s.x,y:s.y}:null}
   updateRoute(dt){const target=this.activeTarget(),p=this.player;const show=!!target&&this.config.guideLine!==false&&this.viewMode!=='workshop'&&Math.hypot(target.x-p.x,target.y-p.y)>150;
     this.routeMesh.visible=show;if(!target){this.route=[];return}
     const key=`${Math.round(p.x/30)},${Math.round(p.y/30)},${target.x},${target.y}`;if(key!==this.routeKey){this.routeKey=key;this.route=routeTo(p,target);if(show)this.setRouteGeometry(this.route)}
@@ -502,7 +589,8 @@ export class CityWorld extends FlatWorld{
       if(p.inVehicle)this.orbitOffset*=Math.exp(-dt*1.6);else if(p.speed>30&&!this.stick?.x&&!this.input.left&&!this.input.right)this.cameraYaw+=wrap(p.angle-this.cameraYaw)*(1-Math.exp(-dt*.8))}
     const base=this.camTarget;
     if(this.config.titleCam){const a=(reduced?0:now()/1000*.045)+2.3;base.set(1200,40,950);this.desiredCamera.set(1200+Math.cos(a)*780,820,950+Math.sin(a)*780);this.lookTarget.set(1250,120,950);cam.position.copy(this.desiredCamera);cam.lookAt(this.lookTarget);this.smoothLook=this.lookTarget.clone();if(cam.fov!==55){cam.fov=55;cam.updateProjectionMatrix()}this.snapCamera=true;return}
-    if(this.viewMode==='workshop'&&!p.inVehicle){base.set(915,10,940);this.desiredCamera.set(640,170,962);this.lookTarget.set(930,8,935);fov=55}
+    if(this.viewMode==='show'){base.set(2470,30,950);this.desiredCamera.set(2236,95,1150);this.lookTarget.set(2470,70,950);fov=55}
+    else if(this.viewMode==='workshop'&&!p.inVehicle){base.set(940,10,940);this.desiredCamera.set(620,175,962);this.lookTarget.set(960,8,935);fov=55}
     else if(this.viewMode==='overhead'){base.set(p.x,0,p.y);this.desiredCamera.set(p.x,720,p.y+160);this.lookTarget.set(p.x,0,p.y);fov=55}
     else if(p.inVehicle){const speed=Math.min(Math.abs(p.speed)/285,1);if(this.carYaw===null||this.snapCamera)this.carYaw=p.angle;
       const follow=reduced?1:1-Math.exp(-dt*(2.2+speed*2.5));this.carYaw+=wrap(p.angle-this.carYaw)*follow;
@@ -511,11 +599,11 @@ export class CityWorld extends FlatWorld{
       this.desiredCamera.set(base.x-Math.cos(yaw)*Math.cos(pitch)*dist,base.y+Math.sin(pitch)*dist+6,base.z-Math.sin(yaw)*Math.cos(pitch)*dist);this.lookTarget.copy(base);fov=reduced?60:60+speed*9}
     else{const pitch=clamp(this.cameraPitch+this.pitchOffset,.02,1.05),dist=86,yaw=this.cameraYaw;base.set(p.x,this.avatarY+21,p.y);
       this.desiredCamera.set(base.x-Math.cos(yaw)*Math.cos(pitch)*dist,base.y+Math.sin(pitch)*dist,base.z-Math.sin(yaw)*Math.cos(pitch)*dist);this.lookTarget.set(base.x+Math.cos(yaw)*14,base.y-2,base.z+Math.sin(yaw)*14)}
-    if(this.viewMode!=='overhead'){const safe=cameraSafePosition(this.viewMode==='workshop'?this.lookTarget:base,this.desiredCamera,this.cameraObstacles,9);this.desiredCamera.set(safe.x,Math.max(safe.y,groundHeight(safe.x,safe.z)+5),safe.z)}
+    if(this.viewMode!=='overhead'&&this.viewMode!=='show'){const safe=cameraSafePosition(this.viewMode==='workshop'?this.lookTarget:base,this.desiredCamera,this.cameraObstacles,9);this.desiredCamera.set(safe.x,Math.max(safe.y,groundHeight(safe.x,safe.z)+5),safe.z)}
     const smooth=this.snapCamera||reduced?1:1-Math.exp(-(p.inVehicle?9:10)*dt);cam.position.lerp(this.desiredCamera,smooth);
     if(this.snapCamera||reduced)this.smoothLook=this.lookTarget.clone();else{this.smoothLook||=this.lookTarget.clone();this.smoothLook.lerp(this.lookTarget,1-Math.exp(-14*dt))}
     cam.lookAt(this.smoothLook);this.viewYaw=this.viewMode==='chase'?this.cameraYaw:Math.atan2(this.smoothLook.z-cam.position.z,this.smoothLook.x-cam.position.x);
-    if(this.viewMode==='workshop'&&!p.inVehicle&&Math.hypot(p.x-915,p.y-940)>430){this.cameraYaw=this.viewYaw;this.viewMode='chase'}if(Math.abs(cam.fov-fov)>.05){cam.fov+=(fov-cam.fov)*(reduced?1:Math.min(1,dt*3));cam.updateProjectionMatrix()}this.snapCamera=false}
+    if(this.viewMode==='workshop'&&!p.inVehicle&&Math.hypot(p.x-940,p.y-940)>480){this.cameraYaw=this.viewYaw;this.viewMode='chase'}if(Math.abs(cam.fov-fov)>.05){cam.fov+=(fov-cam.fov)*(reduced?1:Math.min(1,dt*3));cam.updateProjectionMatrix()}this.snapCamera=false}
   trackPerformance(now){const f=this.fpsWindow;if(this.config.paused||document.hidden){f.t=0;f.n=0;return}f.n++;if(!f.t)f.t=now;if(now-f.t<2500)return;const fps=f.n*1000/(now-f.t);f.t=now;f.n=0;
     this.canvas.dataset.renderFps=String(Math.round(fps));this.canvas.dataset.drawCalls=String(this.renderer.info.render.calls);this.canvas.dataset.triangles=String(this.renderer.info.render.triangles);this.canvas.dataset.quality=this.quality;
     if(this.config.paused||this.config.quality&&this.config.quality!=='auto')return;
@@ -531,7 +619,12 @@ export class CityWorld extends FlatWorld{
     const toScreen=(x,y)=>{const dx=x-p.x,dy=y-p.y,a=-Math.PI/2-yaw,ca=Math.cos(a),sa=Math.sin(a);let sx=(dx*ca-dy*sa)*k,sy=(dx*sa+dy*ca)*k;const L=Math.hypot(sx,sy),edge=L>R-9;if(edge){sx*=(R-9)/L;sy*=(R-9)/L}return {x:w/2+sx,y:h/2+sy,edge}};
     const completed=this.config.completed||[],active=this.config.activeMission;
     for(const s of stations){const q=toScreen(s.x,s.y),act=s.id===active,done=completed.includes(s.id);if(q.edge&&!act&&s.id!=='hq')continue;this.blip(c,q.x,q.y,done?'✓':s.code,act?'#ffcc33':done?'#7fbfa8':s.color,act?11:8,act&&!this.config.reducedMotion?1+Math.sin(now/180)*.12:1)}
-    if(this.config.waterEnabled){const water=this.config.waterState||{};for(const m of MONITORS){if(water[m.id])continue;const q=toScreen(m.x,m.y);if(q.edge&&active!=='water')continue;this.drop(c,q.x,q.y,active==='water'?'#ffcc33':'#5fd3ff')}}
+    const sc=this.config.scene||{};
+    if(sc.kind==='survey')for(const r of READINGS){if((sc.collected||{})[r.sym])continue;const q=toScreen(r.x,r.y);this.drop(c,q.x,q.y,'#5fd3ff')}
+    if(sc.kind==='relay')for(const t of RELAYS){if((sc.solved||{})[t.id])continue;const q=toScreen(t.x,t.y);this.blip(c,q.x,q.y,'⚡','#6ee7cf',8)}
+    if(sc.kind==='race'&&GATE_SLOTS[sc.slot]){const g=GATE_SLOTS[sc.slot],q=toScreen(g.x,g.y);this.blip(c,q.x,q.y,'⛳','#ffcc33',10)}
+    if(sc.kind==='courier'){c.font='900 10px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';for(const b of buildings){const q=toScreen(b.x+b.w/2,b.y+b.h/2);if(q.edge)continue;c.fillStyle='#0b1418';c.beginPath();c.roundRect(q.x-10,q.y-8,20,16,4);c.fill();c.fillStyle='#ffc46a';c.fillText(b.mark,q.x,q.y+.5)}}
+    for(const pc of this.parked||[]){const q=toScreen(pc.x,pc.y);if(q.edge)continue;c.fillStyle=pc.spec.paint;c.strokeStyle='#0b1418';c.lineWidth=1.5;c.beginPath();c.roundRect(q.x-4.5,q.y-3,9,6,2);c.fill();c.stroke()}
     if(!p.inVehicle){const q=toScreen(this.car.x,this.car.y);if(!q.edge){c.fillStyle='#14a38f';c.strokeStyle='#fff';c.lineWidth=1.5;c.beginPath();c.roundRect(q.x-5,q.y-3.5,10,7,2);c.fill();c.stroke()}}
     c.save();c.translate(w/2,h/2);c.rotate(p.angle-yaw);c.fillStyle='#ffffff';c.strokeStyle='#0b1418';c.lineWidth=2;c.beginPath();c.moveTo(0,-8);c.lineTo(6,7);c.lineTo(0,4);c.lineTo(-6,7);c.closePath();c.fill();c.stroke();c.restore();
     const na=-Math.PI/2-yaw-Math.PI/2,nx=w/2+Math.cos(na)*(R-8),ny=h/2+Math.sin(na)*(R-8);c.fillStyle='#0b1418';c.beginPath();c.arc(nx,ny,7,0,7);c.fill();c.fillStyle='#fff';c.font='800 9px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('N',nx,ny+.5);
@@ -546,7 +639,9 @@ export class CityWorld extends FlatWorld{
   drawFullMap(ctx,w,h){const sx=w/2400,sy=h/1800,s=Math.min(sx,sy);ctx.save();ctx.fillStyle='#24312b';ctx.fillRect(0,0,w,h);ctx.scale(s,s);this.drawCity(ctx,1/s*2.4);
     ctx.font='800 54px system-ui,sans-serif';ctx.fillStyle='#dfe8e4';ctx.textAlign='center';for(const [k,n] of Object.entries(STREET_NAMES)){const v=Number(k.slice(1));if(k[0]==='x'){ctx.save();ctx.translate(v+4,300);ctx.rotate(Math.PI/2);ctx.fillText(n,0,0);ctx.restore()}else ctx.fillText(n,300,v+10)}
     const completed=this.config.completed||[];for(const st of stations){const act=st.id===this.config.activeMission;this.blip(ctx,st.x,st.y,completed.includes(st.id)?'✓':st.code,act?'#ffcc33':st.color,act?70:56)}
-    if(this.config.waterEnabled)for(const m of MONITORS)if(!(this.config.waterState||{})[m.id])this.drop2(ctx,m.x,m.y);
+    const sc=this.config.scene||{};ctx.font='900 40px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';for(const b of buildings){ctx.fillStyle='#0b1418cc';ctx.beginPath();ctx.roundRect(b.x+b.w/2-34,b.y+b.h/2-28,68,56,10);ctx.fill();ctx.fillStyle='#ffc46a';ctx.fillText(b.mark,b.x+b.w/2,b.y+b.h/2+2)}
+    if(sc.kind==='survey')for(const r of READINGS)if(!(sc.collected||{})[r.sym])this.drop2(ctx,r.x,r.y);
+    if(sc.kind==='relay')for(const t of RELAYS)if(!(sc.solved||{})[t.id])this.blip(ctx,t.x,t.y,'⚡','#6ee7cf',50);
     ctx.translate(this.player.x,this.player.y);ctx.rotate(this.player.angle+Math.PI/2);ctx.fillStyle='#fff';ctx.strokeStyle='#0b1418';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,-64);ctx.lineTo(46,50);ctx.lineTo(0,30);ctx.lineTo(-46,50);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore()}
   drop2(c,x,y){c.save();c.translate(x,y);c.scale(6,6);this.drop(c,0,0,'#5fd3ff');c.restore()}
   destroy(){super.destroy();if(!this.renderer)return;const cv=this.canvas;cv.removeEventListener('pointerdown',this.pointerDown);cv.removeEventListener('pointermove',this.pointerMove);
