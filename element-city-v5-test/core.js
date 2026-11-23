@@ -1,4 +1,4 @@
-import {EXTRA_MISSIONS} from './missions.js';
+import {EXTRA_MISSIONS} from './missions.js?v=5.0.1';
 export const SAVE_KEY='element-city-v1';
 export const freshState=()=>({version:1,started:false,tutorial:0,completed:[],active:null,step:0,evidence:[],journal:[],revisions:0,hints:{},discoveries:[],walked:0,driven:0,challenge:false,position:null,settings:{volume:0,reducedMotion:false,touch:"auto",timer:false,controlStyle:"stick",controlSize:1,cameraSensitivity:1,autoCamera:true,quality:"auto",guideLine:true},work:{},water:{},trackWater:false});
 export function readSave(storage){try{const s=JSON.parse(storage.getItem(SAVE_KEY));if(!s||s.version!==1)return freshState();const b=freshState();return {...b,...s,completed:Array.isArray(s.completed)?s.completed.filter(x=>['power','identity','family','reaction','ions'].includes(x)):[],settings:{...b.settings,...s.settings},work:s.work&&typeof s.work==='object'?s.work:{},water:s.water&&typeof s.water==='object'?s.water:{},journal:Array.isArray(s.journal)?s.journal:[],discoveries:Array.isArray(s.discoveries)?s.discoveries:[],hints:s.hints&&typeof s.hints==='object'?s.hints:{}}}catch{return freshState()}}

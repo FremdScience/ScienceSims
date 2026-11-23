@@ -1,14 +1,14 @@
 /** Element City v5 — real-time 3D city. Original procedural art; physics and map data are
  * shared with the tested 2D fallback (world.js). Public API is unchanged from v4. */
-import {driveStep,cameraSafePosition} from './driving.js';
-import {POWER_POINTS} from './power-scene.js';
-import {MONITORS} from './sidejobs.js';
-import {routeTo} from './navigation.js';
-import {ELEMENTS} from './elements.js';
+import {driveStep,cameraSafePosition} from './driving.js?v=5.0.1';
+import {POWER_POINTS} from './power-scene.js?v=5.0.1';
+import {MONITORS} from './sidejobs.js?v=5.0.1';
+import {routeTo} from './navigation.js?v=5.0.1';
+import {ELEMENTS} from './elements.js?v=5.0.1';
 import * as THREE from './vendor/three.module.js';
-import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions} from './world.js';
+import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions} from './world.js?v=5.0.1';
 import {FLOOR,GROUND,BAY,CURB,rng,canvasTexture,mergeGeometries,tint,Batch,facadeBox,splitBox,asphaltTexture,paverTexture,grassTexture,roofTexture,chevronTexture,
-  STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries} from './assets3d.js';
+  STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries} from './assets3d.js?v=5.0.1';
 export {WORLD,stations,buildings,circleCollides,moveWithCollisions};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -412,9 +412,11 @@ export class CityWorld extends FlatWorld{
     const p=this.player,before={x:p.x,y:p.y};
     const right=(this.input.right?1:0)-(this.input.left?1:0)+(this.stick?.x||0),forward=(this.input.up?1:0)-(this.input.down?1:0)-(this.stick?.y||0),length=Math.hypot(right,forward);
     p.speed=length?(this.input.shift?230:165)*Math.min(length,1):0;
-    if(length){const yaw=this.viewMode!=='chase'?-Math.PI/2:this.cameraYaw,dx=(Math.cos(yaw)*forward-Math.sin(yaw)*right)/length,dy=(Math.sin(yaw)*forward+Math.cos(yaw)*right)/length;
+    if(length){const yaw=this.moveYaw(),dx=(Math.cos(yaw)*forward-Math.sin(yaw)*right)/length,dy=(Math.sin(yaw)*forward+Math.cos(yaw)*right)/length;
       p.angle=Math.atan2(dy,dx);const move=moveWithCollisions(p.x,p.y,dx*p.speed*dt,dy*p.speed*dt,12);p.x=move.x;p.y=move.y}
     this.walked+=distance(p,before);this.advanceAmbient(dt)}
+  /** Heading that 'up' means: the chase camera's yaw, or the facing of a fixed camera that is on screen. */
+  moveYaw(){if(this.viewMode==='chase')return this.cameraYaw;return Number.isFinite(this.viewYaw)?this.viewYaw:-Math.PI/2}
   advanceAmbient(dt){const p=this.player;
     for(const car of this.traffic){const next=this.trafficPosition(car.progress+car.speed*dt);if(distance(next,p)>100)car.progress=(car.progress+car.speed*dt)%5200}
     for(const secret of this.secretPoints)if(distance(secret,p)<85&&!this.discovered.has(secret.id)){this.discovered.add(secret.id);this.onDiscover(secret.id)}
@@ -512,7 +514,8 @@ export class CityWorld extends FlatWorld{
     if(this.viewMode!=='overhead'){const safe=cameraSafePosition(this.viewMode==='workshop'?this.lookTarget:base,this.desiredCamera,this.cameraObstacles,9);this.desiredCamera.set(safe.x,Math.max(safe.y,groundHeight(safe.x,safe.z)+5),safe.z)}
     const smooth=this.snapCamera||reduced?1:1-Math.exp(-(p.inVehicle?9:10)*dt);cam.position.lerp(this.desiredCamera,smooth);
     if(this.snapCamera||reduced)this.smoothLook=this.lookTarget.clone();else{this.smoothLook||=this.lookTarget.clone();this.smoothLook.lerp(this.lookTarget,1-Math.exp(-14*dt))}
-    cam.lookAt(this.smoothLook);if(Math.abs(cam.fov-fov)>.05){cam.fov+=(fov-cam.fov)*(reduced?1:Math.min(1,dt*3));cam.updateProjectionMatrix()}this.snapCamera=false}
+    cam.lookAt(this.smoothLook);this.viewYaw=this.viewMode==='chase'?this.cameraYaw:Math.atan2(this.smoothLook.z-cam.position.z,this.smoothLook.x-cam.position.x);
+    if(this.viewMode==='workshop'&&!p.inVehicle&&Math.hypot(p.x-915,p.y-940)>430){this.cameraYaw=this.viewYaw;this.viewMode='chase'}if(Math.abs(cam.fov-fov)>.05){cam.fov+=(fov-cam.fov)*(reduced?1:Math.min(1,dt*3));cam.updateProjectionMatrix()}this.snapCamera=false}
   trackPerformance(now){const f=this.fpsWindow;if(this.config.paused||document.hidden){f.t=0;f.n=0;return}f.n++;if(!f.t)f.t=now;if(now-f.t<2500)return;const fps=f.n*1000/(now-f.t);f.t=now;f.n=0;
     this.canvas.dataset.renderFps=String(Math.round(fps));this.canvas.dataset.drawCalls=String(this.renderer.info.render.calls);this.canvas.dataset.triangles=String(this.renderer.info.render.triangles);this.canvas.dataset.quality=this.quality;
     if(this.config.paused||this.config.quality&&this.config.quality!=='auto')return;
