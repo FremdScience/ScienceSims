@@ -1,14 +1,14 @@
 /** Element City v5 — real-time 3D city. Original procedural art; physics and map data are
  * shared with the tested 2D fallback (world.js). Public API is unchanged from v4. */
-import {driveStep,cameraSafePosition} from './driving.js?v=5.1.0';
-import {POWER_POINTS} from './power-scene.js?v=5.1.0';
-import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.1.0';
-import {routeTo} from './navigation.js?v=5.1.0';
-import {ELEMENTS} from './elements.js?v=5.1.0';
+import {driveStep,cameraSafePosition} from './driving.js?v=5.1.1';
+import {POWER_POINTS} from './power-scene.js?v=5.1.1';
+import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.1.1';
+import {routeTo} from './navigation.js?v=5.1.1';
+import {ELEMENTS} from './elements.js?v=5.1.1';
 import * as THREE from './vendor/three.module.js';
-import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions} from './world.js?v=5.1.0';
+import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions} from './world.js?v=5.1.1';
 import {FLOOR,GROUND,BAY,CURB,rng,canvasTexture,mergeGeometries,tint,Batch,facadeBox,splitBox,asphaltTexture,paverTexture,grassTexture,roofTexture,chevronTexture,
-  STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries} from './assets3d.js?v=5.1.0';
+  STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries} from './assets3d.js?v=5.1.1';
 export {WORLD,stations,buildings,circleCollides,moveWithCollisions};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));

@@ -13,23 +13,32 @@ const CH={maj7:[0,4,7,11],m7:[0,3,7,10],m9:[0,3,7,10,14],dom13:[0,4,10,14,21],ma
 const PROG={noble:[[53,'maj7'],[52,'m7'],[50,'m7'],[48,'maj7']],valence:[[45,'min'],[41,'maj'],[48,'maj'],[43,'maj']],catalyst:[[50,'m9'],[50,'m9'],[43,'dom13'],[43,'dom13']]};
 const SCALE={noble:[57,60,62,64,67,69,72,74,76],valence:[69,71,72,74,76,79,81,84],catalyst:[62,65,67,68,69,72,74,77]};
 
+/** A one-second silent WAV, built in code. Playing it in a loop from a tap moves iOS Safari's
+ * audio session to "playback", so Web Audio is heard even when the iPad is in silent mode. */
+function silentWav(){const rate=8000,n=rate,b=new ArrayBuffer(44+n),v=new DataView(b),w=(o,t)=>[...t].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+ w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate,true);v.setUint16(32,1,true);v.setUint16(34,8,true);w(36,'data');v.setUint32(40,n,true);
+ for(let i=0;i<n;i++)v.setUint8(44+i,128);return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
 export class Radio{
  constructor(){this.ctx=null;this.station=-1;this.volume=.6;this.duck=1;this.timer=null;this.step=0;this.next=0;this.onFoot=false}
  get playing(){return this.station>=0&&!!this.timer}
- ensure(){if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;const c=this.ctx=new AC();
+ /** Call from a tap or key press: unlocks iOS audio (including in silent mode). */
+ unlock(){try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback'}catch{}
+  try{if(!this.keepAlive){const a=this.keepAlive=new Audio(silentWav());a.loop=true;a.setAttribute('playsinline','');a.preload='auto'}const p=this.keepAlive.play();p?.catch?.(()=>{})}catch{}
+  if(this.ctx&&this.ctx.state!=='running'){try{this.ctx.resume()}catch{}}}
+ ensure(){this.unlock();if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;const c=this.ctx=new AC();
    this.master=c.createGain();this.master.gain.value=0;const comp=c.createDynamicsCompressor();comp.threshold.value=-18;comp.ratio.value=3;this.master.connect(comp);comp.connect(c.destination);
    this.verb=c.createConvolver();const len=c.sampleRate*2.2,ir=c.createBuffer(2,len,c.sampleRate);for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}this.verb.buffer=ir;
    this.verbGain=c.createGain();this.verbGain.gain.value=.22;this.verb.connect(this.verbGain);this.verbGain.connect(this.master);
    const nb=c.createBuffer(1,c.sampleRate,c.sampleRate),nd=nb.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;this.noise=nb}
-  if(this.ctx.state==='suspended')this.ctx.resume();return true}
- level(){if(!this.ctx)return;this.master.gain.setTargetAtTime(this.station>=0&&this.timer?this.volume*this.duck*.55:0,this.ctx.currentTime,.25)}
+  if(this.ctx.state!=='running'){try{this.ctx.resume()}catch{}}return true}
+ level(){if(!this.ctx)return;this.master.gain.setTargetAtTime(this.station>=0&&this.timer?this.volume*this.duck*.85:0,this.ctx.currentTime,.25)}
  setVolume(v){this.volume=v;this.level()}
  setDuck(d){this.duck=d;this.level()}
  /** Tune to station i (-1 = off). Must be called from a tap or key press the first time (iOS audio rule). */
  tune(i){this.station=i;if(i<0){this.stop();return}if(!this.ensure())return;this.start()}
- start(){if(this.station<0||!this.ensure())return;if(!this.timer){this.step=0;this.next=this.ctx.currentTime+.08;this.timer=setInterval(()=>this.schedule(),25)}this.sting();this.level()}
- stop(){if(this.timer){clearInterval(this.timer);this.timer=null}this.level()}
- suspend(){this.stop();try{this.ctx?.suspend()}catch{}}
+ start(){if(this.station<0||!this.ensure())return;try{this.keepAlive?.play()?.catch?.(()=>{})}catch{}if(!this.timer){this.step=0;this.next=this.ctx.currentTime+.08;this.timer=setInterval(()=>this.schedule(),25)}this.sting();this.level()}
+ stop(){if(this.timer){clearInterval(this.timer);this.timer=null}this.level();try{this.keepAlive?.pause()}catch{}}
+ suspend(){this.stop();try{this.keepAlive?.pause()}catch{}try{this.ctx?.suspend()}catch{}}
  schedule(){const st=STATIONS[this.station];if(!st)return;const sixteenth=60/st.bpm/4;
   while(this.next<this.ctx.currentTime+.16){const swing=(this.step%2)?(st.swing-.5)*2*sixteenth:0;this.play(st.id,this.step,this.next+swing,sixteenth);this.next+=sixteenth;this.step++}}
  // ---- instruments

@@ -1,15 +1,15 @@
 /** Element City v5.1 — app shell: HUD, saving, input wiring and the six-investigation campaign. */
-import {attachTabletControls,InputMixer} from './controls.js?v=5.1.0';
-import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStage,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.1.0';
-import {PRACTICE,checkPractice} from './practice.js?v=5.1.0';
-import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.1.0';
-import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.1.0';
-import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS} from './elements.js?v=5.1.0';
-import {Radio,STATIONS} from './radio.js?v=5.1.0';
-import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS} from './core.js?v=5.1.0';
+import {attachTabletControls,InputMixer} from './controls.js?v=5.1.1';
+import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStage,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.1.1';
+import {PRACTICE,checkPractice} from './practice.js?v=5.1.1';
+import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.1.1';
+import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.1.1';
+import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS} from './elements.js?v=5.1.1';
+import {Radio,STATIONS} from './radio.js?v=5.1.1';
+import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS} from './core.js?v=5.1.1';
 import {COURIER,validateDelivery,describe,GATES,GATE_SLOTS,gateCrossing,validateGate,MATERIALS,validateClass,validatePower,
   BEHAVIOR,SHOW_ROUNDS,WHY_OPTIONS,validateShow,validateWhy,UI_SCALE,READINGS,uiOf,validateSort,SURVEY_QUESTIONS,validateSurvey,
-  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el} from './campaign.js?v=5.1.0';
+  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el} from './campaign.js?v=5.1.1';
 
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const DEBUG=new URLSearchParams(location.search).has('debug');
@@ -345,6 +345,8 @@ window.addEventListener('blur',()=>{clearInputs();if(state.started&&!modal&&!DEB
 document.addEventListener('visibilitychange',()=>{clearInputs();if(document.hidden)radio.suspend();else updateRadio();if(document.hidden&&state.started){save();if(!modal&&!DEBUG)pause()}});
 window.addEventListener('pagehide',()=>{clearInputs();save()});
 window.addEventListener('pageshow',e=>{clearInputs();if(e.persisted&&state.started&&!modal)pause()});
+// iOS only (re)starts audio inside a tap or key press: resume the radio on the next gesture after app switching.
+for(const t of ['pointerdown','keydown'])document.addEventListener(t,()=>{if(radioWanted()){radio.unlock();if(!radio.playing)radio.start()}},{capture:true,passive:true});
 for(const t of ['gesturestart','gesturechange','gestureend'])document.addEventListener(t,e=>e.preventDefault(),{passive:false});
 document.addEventListener('contextmenu',e=>{if(e.target.closest('#world,#touch'))e.preventDefault()});
 document.addEventListener('dblclick',e=>{if(e.target.closest('#world,#touch'))e.preventDefault()},{passive:false});
