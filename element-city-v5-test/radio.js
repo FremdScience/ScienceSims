@@ -77,7 +77,7 @@ export class Radio{
  * own output bus, so they play while the radio is off. All sounds are synthesized here. volume 0 = silent. */
 export class Sfx{
  constructor(radio){this.radio=radio;this.volume=0;this.bus=null;this.eng=null;this.lastHonk=0}
- ctx(){if(!this.volume)return null;const r=this.radio;try{if(!r.ctx&&!r.ensure())return null;const c=r.ctx;if(c.state==='suspended')c.resume();
+ ctx(){if(!this.volume)return null;const r=this.radio;try{if(!r.ctx&&!r.ensure())return null;const c=r.ctx;if(c.state!=='running'||!r.keepAlive||r.keepAlive.paused)r.unlock();if(c.state==='suspended')c.resume();
    if(!this.bus){this.bus=c.createGain();const comp=c.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;this.bus.connect(comp);comp.connect(c.destination)}
    this.bus.gain.setTargetAtTime(this.volume,c.currentTime,.02);return c}catch{return null}}
  env(c,t,a,d,peak){const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+d);g.connect(this.bus);return g}
@@ -88,7 +88,7 @@ export class Sfx{
  chime(ok){const c=this.ctx();if(!c)return;const t=c.currentTime;if(ok){this.osc(c,t,'triangle',880,.18,.16);this.osc(c,t+.12,'triangle',1318.5,.3,.16)}else{this.osc(c,t,'sine',330,.16,.12);this.osc(c,t+.13,'sine',262,.26,.12)}}
  coin(){const c=this.ctx();if(!c)return;const t=c.currentTime;[1046.5,1318.5,1568,2093].forEach((f,i)=>this.osc(c,t+i*.05,'square',f,.12,.05,{cut:5000}))}
  /** Car horn (H key). far=true is a softer, lower honk from another car in traffic. */
- horn(far=false){const c=this.ctx();if(!c)return;const t=c.currentTime,k=far?.35:1,d=far?.22:.35;for(const f of far?[349,440]:[392,494])this.osc(c,t,'square',f,d,.09*k,{a:.01,cut:far?1100:1800})}
+ horn(far=false){const c=this.ctx();if(!c)return;const t=c.currentTime,k=far?.35:1,d=far?.22:.35;for(const f of far?[349,440]:[392,494])this.osc(c,t,'square',f,d,.14*k,{a:.01,cut:far?1100:1800})}
  honk(){const now=Date.now();if(now-this.lastHonk<2500)return;this.lastHonk=now;this.horn(true)}
  door(){const c=this.ctx();if(!c)return;const t=c.currentTime;this.noise(c,t,'lowpass',600,.06,.25);this.osc(c,t+.02,'sine',120,.12,.25)}
  thud(k=1){const c=this.ctx();if(!c)return;const t=c.currentTime,v=Math.max(.15,Math.min(1,k));this.noise(c,t,'lowpass',300,.22,.45*v);this.osc(c,t,'sine',70,.25,.4*v,{to:40})}

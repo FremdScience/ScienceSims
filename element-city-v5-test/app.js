@@ -1,16 +1,16 @@
 /** Element City v5.1 — app shell: HUD, saving, input wiring and the six-investigation campaign. */
-import {attachTabletControls,InputMixer} from './controls.js?v=5.3.0';
-import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStage,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.3.0';
-import {PRACTICE,checkPractice} from './practice.js?v=5.3.0';
-import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.3.0';
-import * as worldMod from './world.js?v=5.3.0';
-import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.3.0';
-import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS,MASS,EN_ALL,configOf,fullConfigOf,shellsOf} from './elements.js?v=5.3.0';
-import {Radio,STATIONS,Sfx} from './radio.js?v=5.3.0';
-import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS,pickTouch,toastMs,pushBrief} from './core.js?v=5.3.0';
+import {attachTabletControls,InputMixer} from './controls.js?v=5.3.1';
+import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStage,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.3.1';
+import {PRACTICE,checkPractice} from './practice.js?v=5.3.1';
+import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.3.1';
+import * as worldMod from './world.js?v=5.3.1';
+import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.3.1';
+import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS,MASS,EN_ALL,configOf,fullConfigOf,shellsOf} from './elements.js?v=5.3.1';
+import {Radio,STATIONS,Sfx} from './radio.js?v=5.3.1';
+import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS,pickTouch,toastMs,pushBrief} from './core.js?v=5.3.1';
 import {COURIER,validateDelivery,describe,GATES,GATE_SLOTS,gateCrossing,validateGate,MATERIALS,validateClass,validatePower,
   BEHAVIOR,SHOW_ROUNDS,WHY_OPTIONS,validateShow,validateWhy,UI_SCALE,READINGS,uiOf,validateSort,SURVEY_QUESTIONS,validateSurvey,
-  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el,valence,missionStats,checkWant,makeExpressJob,coinCard,rankFor,expressReward,SIDE_REP_CAP} from './campaign.js?v=5.3.0';
+  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el,valence,missionStats,checkWant,makeExpressJob,coinCard,rankFor,expressReward,SIDE_REP_CAP} from './campaign.js?v=5.3.1';
 
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const DEBUG=new URLSearchParams(location.search).has('debug');
@@ -349,7 +349,7 @@ const actions={start,close:closeModal,guide,pause,table:()=>table(),notebook,sum
   'close-guide':()=>state.started?closeModal():title(),'table-here':()=>table(modal==='express'?'express':state.active==='ions'&&modal==='relay'?`relay:${W().currentRelay}`:state.active),'table-back':backToTask,
   express:startExpress,'express-end':()=>endExpress(),brief:briefLog,'waypoint-clear':()=>{setWaypoint(null);drawMap()},
   'express-hint':()=>{const x=state.express;if(!x?.job)return;const h=x.job.hints;x.hint=Math.min((x.hint||0)+1,h.length);$('#hint').textContent=`Hint ${x.hint}/${h.length}: ${h[x.hint-1]}`;save()},
-  'sound-toggle':()=>{state.settings.volume=sfx.volume>0?0:.6;if(sfx.volume>0){radio.ensure();sfx.chime(true)}const b=$('#sound-toggle');if(b){b.textContent=sfx.volume>0?'Sound: on':'Sound: off';b.setAttribute('aria-pressed',String(sfx.volume>0))}save()},
+  'sound-toggle':()=>{state.settings.volume=sfx.volume>0?0:.6;state.settings.sfxChosen=true;if(sfx.volume>0){radio.ensure();sfx.chime(true)}const b=$('#sound-toggle');if(b){b.textContent=sfx.volume>0?'Sound: on':'Sound: off';b.setAttribute('aria-pressed',String(sfx.volume>0))}save()},
   'skip-tutorial':()=>{state.tutorial=3;closeModal();toast('Follow the gold route to Noor.');save()},
   recover:()=>{world.recover();closeModal();toast('Returned safely to HQ.');save()},
   restart:()=>{const m=current();if(!m)return toast('No active investigation to restart.');state.work={};state.step=0;world.resetShow?.();world.setCamera?.('chase');streetPoint=null;save();closeModal();toast(`${m.title} restarted. Talk to ${m.person} to begin again.`)},
@@ -410,7 +410,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
     const ok=checkPractice(id,answer),task=PRACTICE.find(t=>t.id===id);setFeedback(ok?task.explanation:'The model needs revision. Compare your prediction with the evidence and use a hint if needed.',!ok);beep(ok?'success':'wrong');if(ok){state.practice||=[];if(!state.practice.includes(id))state.practice.push(id);record(task.title,task.explanation)}save()}
 });
 document.addEventListener('input',e=>{if(e.target.id==='element-search'){const q=e.target.value.trim().toLowerCase();$$('[data-element]').forEach(b=>{const x=ELEMENTS[Number(b.dataset.element)-1];b.classList.toggle('dim',!!q&&!(x.name.toLowerCase().includes(q)||x.symbol.toLowerCase()===q||String(x.number)===q))})}
-  if(e.target.id==='volume'){state.settings.volume=Number(e.target.value);$('#vol-label').textContent=Math.round(state.settings.volume*100)+'%';beep();save()}});
+  if(e.target.id==='volume'){state.settings.volume=Number(e.target.value);state.settings.sfxChosen=true;$('#vol-label').textContent=Math.round(state.settings.volume*100)+'%';beep();save()}});
 document.addEventListener('change',e=>{const id=e.target.id;if(id?.startsWith('practice-')){state.practiceDrafts||={};state.practiceDrafts[practiceId]||={};state.practiceDrafts[practiceId][id.slice(9)]=e.target.value;save();return}
   const s=state.settings;if(id==='reduced')s.reducedMotion=e.target.checked;if(id==='show-touch')s.touch=e.target.checked;if(id==='control-style'){s.controlStyle=e.target.value;clearInputs()}if(id==='control-size')s.controlSize=Number(e.target.value);
   if(id==='camera-sensitivity')s.cameraSensitivity=Number(e.target.value);if(id==='auto-camera')s.autoCamera=e.target.checked;if(id==='quality'){s.quality=e.target.value;if(e.target.value!=='auto')world.applyQuality?.(e.target.value)}if(id==='guide-line')s.guideLine=e.target.checked;if(id==='station'){s.station=Number(e.target.value);radio.tune(s.station);radio.stop()}if(id==='music-volume'){s.musicVolume=Number(e.target.value);radio.setVolume(s.musicVolume)}if(id==='radio-foot')s.radioOnFoot=e.target.checked;if(id==='time-of-day'){s.timeOfDay=e.target.value;world.setTimeMode?.(s.timeOfDay)}if(id==='units')s.units=e.target.value;if(id==='timed-jobs')s.timer=e.target.checked;sync();save()});
@@ -438,6 +438,7 @@ document.addEventListener('contextmenu',e=>{if(e.target.closest('#world,#touch')
 document.addEventListener('dblclick',e=>{if(e.target.closest('#world,#touch'))e.preventDefault()},{passive:false});
 allInputs=new InputMixer((key,held)=>world.setInput(key,held));
 tabletControls=attachTabletControls($('#touch'),()=>world,()=>state.started&&!modal,allInputs);
+$('#horn-btn')?.addEventListener('pointerdown',e=>{e.preventDefault();if(worldInfo.inVehicle)sfx.horn()});
 $('#vehicle').onclick=()=>{if((state.settings.station??-1)>=0)radio.ensure();sfx.door();world.toggleVehicle()};$('#toast').onclick=hideToast;
 $('#objective').addEventListener('click',e=>{if(!e.target.closest('button'))$('#objective').classList.toggle('expanded')});$('#radio').onclick=cycleRadio;$('#interact').onclick=interactNow;$('#pause').onclick=pause;$('#dispatch-btn').onclick=dispatch;
 if(DEBUG)window.__ec={radio,get world(){return world},get state(){return state},actions,sync,save,clearInputs,get modal(){return modal},deliver,pointAction,collectReading,relayUI,showConsole,surveyBoard,complete,interactStation,sfx,startExpress,deliverExpress,endExpress,setWaypoint,cityMap,get brief(){return brief}};

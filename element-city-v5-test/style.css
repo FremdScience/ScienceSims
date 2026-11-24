@@ -373,3 +373,9 @@ body:not(.touch-mode) .radio-chip{left:auto;right:calc(190px + var(--sar));botto
 @media(max-width:1100px){.ride{display:none}}
 /* landscape phones: drive-up delivery adds a second context button; keep them side by side above GAS instead of stacking into REP */
 @media(max-height:620px) and (min-width:601px){.touch-mode.driving .context-buttons{flex-direction:row}.touch-mode.driving .context button{min-width:108px;min-height:54px;padding:0 12px}.touch-mode.driving .context>span{max-width:220px}}
+
+/* 5.3.1 touch horn: sits on top of BRAKE so it never covers GAS or the joystick */
+.pedal-col{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.pedals .horn{height:46px;background:#3b2c08d9;color:#ffe08a;font-size:13px;letter-spacing:.12em}
+@media(max-width:600px){.pedals .horn{height:38px;font-size:11px}}
+@media(max-height:620px){.pedals .horn{height:36px;font-size:11px}}

@@ -10,7 +10,7 @@
 <meta name="description" content="PTA: Periodic Table Auto — an original open-world chemistry adventure. Explore Element City, borrow an authorized fleet car, and restore the city through scientific investigations.">
 <title>PTA: Periodic Table Auto</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css?v=5.3.0">
+<link rel="stylesheet" href="style.css?v=5.3.1">
 </head>
 <body>
 <canvas id="world" aria-label="Element City game world. Use the controls guide for keyboard and touch instructions."></canvas>
@@ -54,7 +54,7 @@
     <span class="stick-caption">MOVE · STEER</span>
   </div>
   <div class="dpad" aria-label="Movement buttons"><button data-key="up" class="up" aria-label="Forward">▲</button><button data-key="left" class="left" aria-label="Left">◀</button><button data-key="down" class="down" aria-label="Backward">▼</button><button data-key="right" class="right" aria-label="Right">▶</button></div>
-  <div class="pedals"><button data-key="down" class="brake" aria-label="Brake, then reverse">BRAKE<small>hold to reverse</small></button><button data-key="up" class="accelerator" aria-label="Accelerate">GAS</button></div>
+  <div class="pedals"><div class="pedal-col"><button id="horn-btn" class="horn" aria-label="Horn">HORN</button><button data-key="down" class="brake" aria-label="Brake, then reverse">BRAKE<small>hold to reverse</small></button></div><button data-key="up" class="accelerator" aria-label="Accelerate">GAS</button></div>
 </div>
 
 <div id="banner" class="banner hidden" role="status" aria-live="polite"><small id="banner-kicker"></small><strong id="banner-title"></strong><span id="banner-sub"></span></div>
@@ -64,6 +64,6 @@
 <div id="modal-root"></div>
 <div id="boot-error" class="hidden" role="alert"></div>
 <noscript><p style="padding:2rem;color:#fff">PTA: Periodic Table Auto needs JavaScript enabled.</p></noscript>
-<script type="module" src="app.js?v=5.3.0"></script>
+<script type="module" src="app.js?v=5.3.1"></script>
 </body>
 </html>
