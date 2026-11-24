@@ -3,7 +3,7 @@
  * acid/base OH compounds → ions and formulas. Pure data and validators (no DOM).
  * All observations are virtual. No procedures are described. Hints never state an answer:
  * the last hint is always a worked example that uses different elements. */
-import {ELEMENTS} from './elements.js?v=5.1.1';
+import {ELEMENTS} from './elements.js?v=5.2.0';
 
 export const el=s=>ELEMENTS.find(e=>e.symbol===s);
 /** Main-group valence electrons (He has 2). Null for transition metals. */

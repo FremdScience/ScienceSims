@@ -291,3 +291,14 @@ select{background:#1b333b;color:var(--ink);border:1px solid #7f9a9d;padding:10px
 .touch-mode.driving .district-pop{bottom:calc(136px + var(--sab))}
 body:not(.touch-mode) .radio-chip{left:auto;right:calc(190px + var(--sar));bottom:calc(30px + var(--sab))}
 @media(prefers-reduced-motion:reduce){.radio-chip.on .eq i{animation:none;height:9px}}
+
+/* 5.2 phone layouts. Portrait phones: radio chip and speedometer sit under the radar, clear of the pedals.
+   Landscape phones: Maya's workshop panel sits between the joystick and the pedals instead of on top of GAS. */
+@media(max-width:600px){.touch-mode .radio-chip{left:calc(18px + var(--sal));top:calc(150px + var(--sat));bottom:auto;transform:none;padding:6px 11px;min-height:36px;font-size:11px}
+  .touch-mode.driving .speedo{left:calc(20px + var(--sal));right:auto;transform:none;top:calc(192px + var(--sat));bottom:auto}.speedo b{font-size:34px}}
+@media(max-height:620px) and (min-width:601px){#field-workshop{left:calc(150px + var(--sal));right:calc(262px + var(--sar));width:auto;top:calc(12px + var(--sat));bottom:auto;max-height:calc(100dvh - 84px)}}
+/* 5.2 title: PTA wordmark with the full name underneath */
+.title-card h1{font-size:clamp(84px,14vw,168px);margin:14px 0 10px}
+.title-card h1 span{font-size:.25em;letter-spacing:.04em;line-height:1.15;margin-top:.25em;font-style:italic}
+@media(max-width:600px){.title-card h1{font-size:96px}}
+@media(max-width:600px){.title-card .subtitle{letter-spacing:.16em}}
