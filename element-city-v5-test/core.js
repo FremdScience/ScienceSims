@@ -1,11 +1,11 @@
 /** Progress, saving and shared helpers. Campaign content lives in campaign.js. */
-import {MISSIONS,MISSION_IDS,MATERIALS,validatePower} from './campaign.js?v=5.3.1';
+import {MISSIONS,MISSION_IDS,MATERIALS,validatePower} from './campaign.js?v=5.3.2';
 export {MISSIONS,MATERIALS,validatePower};
 export const SAVE_KEY='element-city-v1';
 /** campaign 2 = the six-investigation storyline introduced in 5.1. */
 export const CAMPAIGN=2;
 export const freshState=()=>({version:1,campaign:CAMPAIGN,started:false,tutorial:0,completed:[],active:null,step:0,journal:[],revisions:0,firstTry:0,hints:{},discoveries:[],walked:0,driven:0,challenge:false,position:null,
- settings:{volume:.6,sfxChosen:false,reducedMotion:false,touch:"auto",timer:false,controlStyle:"stick",controlSize:1,cameraSensitivity:1,autoCamera:true,quality:"auto",guideLine:true,station:-1,musicVolume:.6,radioOnFoot:false,timeOfDay:"auto",units:"mph"},work:{},practice:[],practiceDrafts:{},stats:{},express:null,sideRep:0,sideJobs:0,waypoint:null,rankSeen:null});
+ settings:{volume:.6,sfxChosen:false,engineSound:true,reducedMotion:false,touch:"auto",timer:false,controlStyle:"stick",controlSize:1,cameraSensitivity:1,autoCamera:true,quality:"auto",guideLine:true,station:-1,musicVolume:.6,radioOnFoot:false,timeOfDay:"auto",units:"mph"},work:{},practice:[],practiceDrafts:{},stats:{},express:null,sideRep:0,sideJobs:0,waypoint:null,rankSeen:null});
 const obj=v=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
 export function readSave(storage){try{const s=JSON.parse(storage.getItem(SAVE_KEY));if(!s||s.version!==1)return freshState();const b=freshState();
  const out={...b,...s,settings:{...b.settings,...obj(s.settings)},journal:Array.isArray(s.journal)?s.journal:[],discoveries:Array.isArray(s.discoveries)?s.discoveries:[],hints:obj(s.hints),work:obj(s.work),stats:obj(s.stats),

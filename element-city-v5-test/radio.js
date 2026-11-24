@@ -98,10 +98,35 @@ export class Sfx{
    [[72,0],[76,.14],[79,.28],[77,.46],[81,.6],[79,.8],[83,.94]].forEach(([m,dt])=>this.osc(c,t+dt,'sawtooth',mt(m),.22,.07,{cut:2000}));
    [60,64,67,72].forEach(m=>this.osc(c,t+1.12,'triangle',mt(m),.7,.08,{a:.02}))}
  /** Engine drone with four "gears": pitch rises through each gear and drops at every shift. */
+ /** Engine: a small 4-cylinder car with an automatic gearbox, heard softly from inside the cabin.
+  * engineRpm() maps speed to rpm (gear shifts glide like an automatic); the tone is the firing
+  * frequency (2 pulses per revolution) with rounded harmonics, a crank-rate sub for a gentle lope,
+  * a muffled exhaust filter that opens with rpm and throttle, and quiet road noise that grows with speed. */
  engine(live,speed=0){const c=live?this.ctx():this.radio.ctx;if(!c)return;
-   if(!this.eng){if(!live||!this.bus)return;const o=c.createOscillator(),sub=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain(),sg=c.createGain();o.type='sawtooth';sub.type='sine';lp.type='lowpass';lp.frequency.value=380;g.gain.value=0;sg.gain.value=.5;
-     o.connect(lp);sub.connect(sg);sg.connect(lp);lp.connect(g);g.connect(this.bus);o.start();sub.start();this.eng={o,sub,g}}
-   const e=this.eng,t=c.currentTime;if(!live){e.g.gain.setTargetAtTime(0,t,.12);return}
-   const v=Math.abs(speed),gear=Math.min(3,Math.floor(v/85)),rpm=Math.min(1,(v-gear*85)/85),f=48+rpm*70+gear*6;
-   e.o.frequency.setTargetAtTime(f,t,.08);e.sub.frequency.setTargetAtTime(f/2,t,.08);e.g.gain.setTargetAtTime(.05+rpm*.03,t,.1)}
+   if(!this.eng){if(!live||!this.bus)return;
+     const amps=[0,1,.55,.32,.2,.12,.07,.045,.03],re=new Float32Array(amps.length),im=new Float32Array(amps.length);amps.forEach((a,i)=>im[i]=a);
+     const o=c.createOscillator();o.setPeriodicWave(c.createPeriodicWave(re,im));
+     const sub=c.createOscillator();sub.type='sine';const sg=c.createGain();sg.gain.value=.3;
+     const lp=c.createBiquadFilter();lp.type='lowpass';lp.Q.value=.5;lp.frequency.value=420;
+     const body=c.createBiquadFilter();body.type='peaking';body.frequency.value=140;body.Q.value=.9;body.gain.value=3;
+     const g=c.createGain();g.gain.value=0;
+     o.connect(lp);sub.connect(sg);sg.connect(lp);lp.connect(body);body.connect(g);g.connect(this.bus);
+     let ng=null,ns=null;if(this.radio.noise){ns=c.createBufferSource();ns.buffer=this.radio.noise;ns.loop=true;const nf=c.createBiquadFilter();nf.type='lowpass';nf.frequency.value=300;ng=c.createGain();ng.gain.value=0;ns.connect(nf);nf.connect(ng);ng.connect(this.bus);ns.start()}
+     o.start();sub.start();this.eng={o,sub,lp,g,ng,last:c.currentTime,v:0,load:0}}
+   const e=this.eng,t=c.currentTime;if(!live){e.g.gain.setTargetAtTime(0,t,.2);e.ng?.gain.setTargetAtTime(0,t,.2);e.v=0;e.load=0;return}
+   const v=Math.abs(speed),dt=Math.max(.016,t-e.last),accel=(v-e.v)/dt;e.last=t;e.v=v;
+   e.load+=((accel>8?Math.min(1,accel/220):0)-e.load)*Math.min(1,dt*6);
+   const rpm=engineRpm(speed),f=rpm/30,n=(rpm-800)/2800,k=this.radio.playing?.7:1;
+   e.o.frequency.setTargetAtTime(f,t,.09);e.sub.frequency.setTargetAtTime(f/2,t,.09);
+   e.lp.frequency.setTargetAtTime(340+rpm*.16+e.load*260,t,.12);
+   e.g.gain.setTargetAtTime((.006+.008*n+.008*e.load)*k,t,.12);
+   e.ng?.gain.setTargetAtTime(Math.min(.007,v*.00002)*k,t,.25)}
+
 }
+
+/** Engine speed for a road speed in world units per second (15 units = 1 m), like a small automatic car:
+ * about 800 rpm at idle, upshifts near 2,800–3,200 rpm, five gears, reverse in its own low gear. */
+export function engineRpm(speed){const kmh=Math.abs(speed)/15*3.6;if(kmh<2)return 800;
+ if(speed<0)return Math.min(3000,900+kmh*95);
+ const up=[0,20,38,60,85,1e9];let g=0;while(kmh>=up[g+1])g++;const lo=up[g],hi=g<4?up[g+1]:160,x=Math.min(1,(kmh-lo)/(hi-lo));
+ return Math.round(g===0?800+x*2200:1500+x*1600)}
