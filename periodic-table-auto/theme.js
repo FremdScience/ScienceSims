@@ -1,7 +1,7 @@
 /** PTA I title theme: an original instrumental hip-hop beat (no vocals), composed live with Web Audio.
  * No recordings or samples are used. It borrows the car radio's drum, bass and keyboard voices and
  * routes them to its own output, so it never interferes with the radio. */
-import {Radio} from './radio.js?v=5.3.9';
+import {Radio} from './radio.js?v=5.3.10';
 
 export const THEME_BPM=92;
 export const THEME_TITLE='PTA I theme';

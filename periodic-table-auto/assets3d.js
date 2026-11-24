@@ -145,10 +145,10 @@ export const VEHICLES={
   sedan:{L:68,W:28,body:[[-34,4],[34,4],[34.6,8.4],[32,11],[16,12.6],[-27,13],[-33,12.6],[-34.4,9]],cabin:[[15.6,12.6],[6,19.8],[-14,20.1],[-24.6,13]],wx:22,r:5.2},
   suv:{L:70,W:30,body:[[-35,5.5],[35,5.5],[35.6,12],[33,15],[18,16.6],[-34,17.2],[-35.4,13]],cabin:[[17.5,16.6],[9,26],[-31,26.6],[-34,17.2]],wx:23,r:6.4},
   van:{L:76,W:31,body:[[-38,5],[38,5],[38.6,13],[35.5,17.5],[27,19.5],[-37.6,20],[-38.2,12]],cabin:[[26.8,19.5],[19,30],[-36.5,31],[-37.6,20]],wx:26,r:6},
-  // sports sedan in the style of a 2019 Audi S6: long hood, low roof, big single-frame grille, quad exhaust (no badges)
-  s6:{L:70,W:28.6,body:[[-35,4],[35,4],[35.6,8.2],[33.4,10.9],[15,12.3],[-27,12.7],[-33.6,12.1],[-35.4,8.4]],cabin:[[15,12.3],[5.2,19],[-12.5,19.3],[-26,12.7]],wx:22.4,r:5.5},
-  // rear-engine track coupe in the style of a Porsche 911 GT2 RS: low and wide, sloping fastback, big rear wing (no badges)
-  gt2:{L:64,W:30,body:[[-32,4],[32,4],[32.6,7.2],[29.6,9.2],[9.5,12],[-23,12.4],[-30.6,11.8],[-32.4,8.4]],cabin:[[9.5,12],[1.5,16.8],[-8.5,17],[-23.5,12.4]],wx:20.5,r:5.6}
+  // the Carbon C6 sports sedan: long hood, low roof, big single-frame grille, quad exhaust (no badges)
+  c6:{L:70,W:28.6,body:[[-35,4],[35,4],[35.6,8.2],[33.4,10.9],[15,12.3],[-27,12.7],[-33.6,12.1],[-35.4,8.4]],cabin:[[15,12.3],[5.2,19],[-12.5,19.3],[-26,12.7]],wx:22.4,r:5.5},
+  // rear-engine track coupe in the style of a Cesium Cs-55: low and wide, sloping fastback, big rear wing (no badges)
+  cs55:{L:64,W:30,body:[[-32,4],[32,4],[32.6,7.2],[29.6,9.2],[9.5,12],[-23,12.4],[-30.6,11.8],[-32.4,8.4]],cabin:[[9.5,12],[1.5,16.8],[-8.5,17],[-23.5,12.4]],wx:20.5,r:5.6}
 };
 const shared={};
 function sharedMats(){if(shared.glass)return shared;
@@ -169,13 +169,13 @@ function extrude(points,depth,bevel){const s=new THREE.Shape();points.forEach(([
 function sportParts(type,v,add,m,fx,bx){const dark=sportParts.dark||(sportParts.dark=new THREE.MeshStandardMaterial({color:'#15181c',metalness:.5,roughness:.3})),
   metal=sportParts.metal||(sportParts.metal=new THREE.MeshStandardMaterial({color:'#b9bec4',metalness:.95,roughness:.2})),box=(w,h,d,x,y,z,mat)=>{const g=new THREE.BoxGeometry(w,h,d);g.translate(x,y,z);add(g,mat,false)};
   const W=v.W;
-  if(type==='s6'){box(.5,6.2,W*.52,fx+.15,7.2,0,metal);box(.6,5.4,W*.47,fx+.35,7.2,0,dark);                       // single-frame grille: silver frame, dark mesh
+  if(type==='c6'){box(.5,6.2,W*.52,fx+.15,7.2,0,metal);box(.6,5.4,W*.47,fx+.35,7.2,0,dark);                       // single-frame grille: silver frame, dark mesh
     for(let k=0;k<4;k++)box(.2,.3,W*.44,fx+.7,5.3+k*1.25,0,metal);                                                  // grille slats
     for(const z of [-1,1]){box(.8,1.1,6.4,fx-.1,9,z*(W/2-4.6),m.head);                                              // slim LED headlights
       box(.6,2.2,3.8,fx+.1,5,z*(W/2-3.4),dark);                                                                      // lower intakes
       for(const k of [0,1]){const t=new THREE.CylinderGeometry(.9,.9,1.6,12);t.rotateZ(Math.PI/2);t.translate(bx-.5,4.6,z*(4.6+k*2.6));add(t,metal,false)}}   // quad exhaust
     box(.6,.5,W-6,fx+.1,3.8,0,dark)}                                                                                 // front lip
-  if(type==='gt2'){for(const z of [-1,1]){const h=new THREE.SphereGeometry(2.3,16,10);h.scale(1.15,.8,1);h.translate(28.6,10.3,z*(W/2-5.4));add(h,m.head,false);   // round headlights
+  if(type==='cs55'){for(const z of [-1,1]){const h=new THREE.SphereGeometry(2.3,16,10);h.scale(1.15,.8,1);h.translate(28.6,10.3,z*(W/2-5.4));add(h,m.head,false);   // round headlights
       box(5,.4,2.2,19,11.4,z*3.6,dark);                                                                             // hood ducts
       box(5.5,3,.6,-12,9.6,z*(W/2-.15),dark);                                                                       // side intakes
       box(1.4,6.4,.9,-28.2,15.6,z*6.5,dark);box(6.6,3.4,.6,-29,19,z*(W/2-.9),dark);                                // wing struts and end plates
@@ -196,7 +196,7 @@ export function makeVehicle(type='sedan',{paint='#c8ccd0',fleet=false,stripe='#1
   const bumperF=new THREE.BoxGeometry(2.4,3.4,v.W-2);bumperF.translate(v.L/2+.2,5.6,0);add(bumperF,m.trim);
   const bumperR=bumperF.clone();bumperR.translate(-v.L-.4,0,0);add(bumperR,m.trim);
   const rocker=new THREE.BoxGeometry(v.L-2*v.r-14,2.6,v.W-1.2);rocker.translate(0,4.6,0);add(rocker,m.trim,false);
-  const sport=type==='s6'||type==='gt2';
+  const sport=type==='c6'||type==='cs55';
   if(!sport){const grill=new THREE.BoxGeometry(1,2.6,v.W*.45);grill.translate(v.L/2+.6,9.2,0);add(grill,m.trim,false)}
   const tailMat=ownTail?m.tail.clone():m.tail,reverseMat=ownTail?m.reverse.clone():m.reverse,rx=v.body.at(-1)[0]+.2,ry=v.body.at(-1)[1];
   // full-width rear light bar, reverse lamps and wheel arches (the view players see most)
@@ -215,7 +215,7 @@ export function makeVehicle(type='sedan',{paint='#c8ccd0',fleet=false,stripe='#1
   if(sport)sportParts(type,v,add,m,fx,bx);
   if(fleet){
     const stripeMat=new THREE.MeshStandardMaterial({color:stripe,metalness:.4,roughness:.35});
-    if(type!=='gt2')for(const z of [-1,1]){const s=new THREE.BoxGeometry(v.L-8,type==='s6'?.8:2.2,.6);s.translate(0,type==='s6'?10:9.4,z*(v.W/2-.1));add(s,stripeMat,false)}
+    if(type!=='cs55')for(const z of [-1,1]){const s=new THREE.BoxGeometry(v.L-8,type==='c6'?.8:2.2,.6);s.translate(0,type==='c6'?10:9.4,z*(v.W/2-.1));add(s,stripeMat,false)}
     if(!sport){
     const signTex=canvasTexture(256,96,(c,w,h)=>{c.fillStyle='#f6f3ea';c.fillRect(0,0,w,h);c.fillStyle='#0f5c55';c.font='900 52px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('EC FLEET',w/2,h/2+2)});
     const signMat=new THREE.MeshStandardMaterial({map:signTex,emissive:'#ffffff',emissiveMap:signTex,emissiveIntensity:.25});
@@ -223,7 +223,7 @@ export function makeVehicle(type='sedan',{paint='#c8ccd0',fleet=false,stripe='#1
     const ink=new THREE.Color(paint).getHSL({}).l<.55?'#eef7f4':'#0f5c55';
     const doorTex=canvasTexture(256,64,(c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle=ink;c.font='800 30px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('ELEMENT CITY · FLEET',w/2,h/2,w-14)});
     const doorMat=new THREE.MeshStandardMaterial({map:doorTex,transparent:true,roughness:.4,polygonOffset:true,polygonOffsetFactor:-2});
-    for(const z of [-1,1]){const p=new THREE.PlaneGeometry(sport?20:26,sport?5:6.5);if(z<0)p.rotateY(Math.PI);p.translate(type==='gt2'?-1:-2,type==='gt2'?8.2:type==='s6'?7.4:12.6,z*(v.W/2+.05));add(p,doorMat,false)}
+    for(const z of [-1,1]){const p=new THREE.PlaneGeometry(sport?20:26,sport?5:6.5);if(z<0)p.rotateY(Math.PI);p.translate(type==='cs55'?-1:-2,type==='cs55'?8.2:type==='c6'?7.4:12.6,z*(v.W/2+.05));add(p,doorMat,false)}
     g.userData.stripe=stripeMat;
   }
   g.userData.paint=paintMat;g.userData.tail=tailMat;g.userData.reverse=reverseMat;g.userData.length=v.L;g.userData.width=v.W;

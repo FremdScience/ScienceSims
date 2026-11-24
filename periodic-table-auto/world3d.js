@@ -1,16 +1,16 @@
 /** Element City v5 — real-time 3D city. Original procedural art; physics and map data are
  * shared with the tested 2D fallback (world.js). Public API is unchanged from v4. */
-import {driveStep,cameraSafePosition,CAR_PERF} from './driving.js?v=5.3.9';
-import {POWER_POINTS,powerStep,cableState,benchDone} from './power-scene.js?v=5.3.9';
-import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.9';
-import {routeTo,snapToRoad} from './navigation.js?v=5.3.9';
-import {ELEMENTS} from './elements.js?v=5.3.9';
+import {driveStep,cameraSafePosition,CAR_PERF} from './driving.js?v=5.3.10';
+import {POWER_POINTS,powerStep,cableState,benchDone} from './power-scene.js?v=5.3.10';
+import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.10';
+import {routeTo,snapToRoad} from './navigation.js?v=5.3.10';
+import {ELEMENTS} from './elements.js?v=5.3.10';
 import * as THREE from './vendor/three.module.js';
-import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.9';
+import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.10';
 import {FLOOR,GROUND,BAY,CURB,rng,canvasTexture,mergeGeometries,tint,Batch,facadeBox,splitBox,asphaltTexture,paverTexture,grassTexture,roofTexture,chevronTexture,
   STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries,
-  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.9';
-import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.9';
+  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.10';
+import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.10';
 export {WORLD,stations,buildings,circleCollides,moveWithCollisions,ELEMENT_COINS};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -38,11 +38,11 @@ export const LAWNS=[[700,1270,860,1405],[1380,1270,1560,1405],[90,800,330,850],[
 export const DROP_ZONES=buildings.map(b=>{const c=[{x:b.x+b.w/2,y:b.y-24},{x:b.x+b.w/2,y:b.y+b.h+24},{x:b.x-24,y:b.y+b.h/2},{x:b.x+b.w+24,y:b.y+b.h/2}].filter(q=>!circleCollides(q.x,q.y,12));
   const roadDist=q=>Math.min(...ROAD_X.map(r=>Math.abs(q.x-r)),...ROAD_Y.map(r=>Math.abs(q.y-r)));c.sort((a,b2)=>roadDist(a)-roadDist(b2));const q=c[0]||{x:b.x+b.w/2,y:b.y+b.h+24};return {id:'drop-'+b.mark,kind:'drop',symbol:b.mark,name:b.name,x:q.x,y:q.y}});
 /** City Share cars: authorized fleet vehicles parked off the street that anyone on the response team may borrow. */
-/** The starting fleet car: a black sports sedan in the style of a 2019 Audi S6. */
-export const FLEET_SPEC={id:'fleet',type:'s6',paint:'#0c0e11',stripe:'#14a38f'};
+/** The starting fleet car: a black sports sedan, the Carbon C6 (carbon: element 6, black as graphite). */
+export const FLEET_SPEC={id:'fleet',type:'c6',paint:'#0c0e11',stripe:'#14a38f'};
 /** Hidden reward car: unlocked by Investigation 01, parked at the far south end of the Halogen Harbor seawall. */
-export const GT2_SPEC={id:'gt2',type:'gt2',paint:'#1f87e8',stripe:'#ffffff'};
-export const gt2Unlocked=completed=>Array.isArray(completed)&&completed.includes('courier');
+export const CS55_SPEC={id:'cs55',type:'cs55',paint:'#1f87e8',stripe:'#ffffff'};
+export const cs55Unlocked=completed=>Array.isArray(completed)&&completed.includes('courier');
 export const PARKED_SPOTS=[
  {id:'share-1',x:575,y:1300,angle:Math.PI/2,type:'sedan',paint:'#b3262e',stripe:'#ffffff'},
  {id:'share-2',x:1580,y:1064,angle:Math.PI,type:'suv',paint:'#1d3557',stripe:'#ffcc33'},
@@ -50,8 +50,8 @@ export const PARKED_SPOTS=[
  {id:'share-4',x:1780,y:790,angle:0,type:'compact',paint:'#f2c14e',stripe:'#1d3557'},
  {id:'share-5',x:348,y:1655,angle:-Math.PI/2,type:'sedan',paint:'#9aa3a8',stripe:'#d24d57'},
  {id:'share-6',x:860,y:1242,angle:0,type:'suv',paint:'#2e6b4f',stripe:'#ffffff'},
- {id:'gt2',x:2160,y:1712,angle:Math.PI,type:'gt2',paint:'#1f87e8',stripe:'#ffffff'}];
-const CAR_DIMS={compact:[58,27],sedan:[68,28],suv:[70,30],van:[76,31],s6:[70,28.6],gt2:[64,30]};
+ {id:'cs55',x:2160,y:1712,angle:Math.PI,type:'cs55',paint:'#1f87e8',stripe:'#ffffff'}];
+const CAR_DIMS={compact:[58,27],sedan:[68,28],suv:[70,30],van:[76,31],c6:[70,28.6],cs55:[64,30]};
 /** Axis-aligned box around a parked car (rotated footprint), for collisions. */
 export function carBox(c){const [L,W]=CAR_DIMS[c.spec?.type||c.type]||[64,28],ca=Math.abs(Math.cos(c.angle||0)),sa=Math.abs(Math.sin(c.angle||0)),hw=(L*ca+W*sa)/2,hh=(L*sa+W*ca)/2;return {x:c.x-hw,y:c.y-hh,w:hw*2,h:hh*2}}
 export const QUALITY={high:{dpr:1.6,shadow:2048,shadows:true},balanced:{dpr:1.3,shadow:1024,shadows:true},low:{dpr:1,shadow:0,shadows:false}};
@@ -562,8 +562,8 @@ export class CityWorld extends FlatWorld{
   makeDriven(spec){if(this.fleet){this.scene.remove(this.fleet);this.fleet.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()})}const m=compactDriven(makeVehicle(spec.type,{paint:spec.paint,fleet:true,stripe:spec.stripe,ownTail:true}));this.scene.add(m);return m}
   resetCars(){if(!this.parked)return;this.carSpec={...FLEET_SPEC};PARKED_SPOTS.forEach((p,i)=>{Object.assign(this.parked[i],{x:p.x,y:p.y,angle:p.angle,spec:{id:p.id,type:p.type,paint:p.paint,stripe:p.stripe}});this.meshParked(this.parked[i])});this.fleet=this.makeDriven(this.carSpec);this.refreshProgress()}
   meshParked(c){if(c.mesh){this.scene.remove(c.mesh);c.mesh.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()})}c.mesh=compactGroup(makeVehicle(c.spec.type,{paint:c.spec.paint,fleet:true,stripe:c.spec.stripe}));c.mesh.position.set(c.x,groundHeight(c.x,c.y),c.y);c.mesh.rotation.y=-c.angle;c.mesh.visible=!this.lockedCar(c);this.scene.add(c.mesh)}
-  /** The GT2 stays hidden (and out of reach) until Investigation 01 is complete. */
-  lockedCar(c){return c?.spec?.id==='gt2'&&!gt2Unlocked(this.config?.completed)}
+  /** The Cs-55 stays hidden (and out of reach) until Investigation 01 is complete. */
+  lockedCar(c){return c?.spec?.id==='cs55'&&!cs55Unlocked(this.config?.completed)}
   /** Obstacles for movement: buildings plus parked cars (and your own car while you are on foot). */
   obstacles(){if(!this.parked)return buildings;const list=this.parked.filter(c=>!this.lockedCar(c)).map(carBox);if(!this.player.inVehicle&&this.carSpec)list.push(carBox({...this.car,spec:this.carSpec}));
     // traffic is solid nearby (never a box you are already inside, so nobody gets trapped)
@@ -667,10 +667,10 @@ export class CityWorld extends FlatWorld{
   recover(){super.recover();this.viewMode='chase';this.cameraYaw=-Math.PI/2;this.orbitOffset=0;this.pitchOffset=0;this.snapCamera=true;this.setStick(0,0);this.player.steer=0;this.carYaw=null}
   getState(){return {...super.getState(),carSpec:this.carSpec,parked:this.parked?.map(({x,y,angle,spec})=>({x,y,angle,spec}))}}
   loadPosition(position){super.loadPosition(position);
-    const fresh=s=>s?.id==='fleet'?{...FLEET_SPEC}:s?.id==='gt2'?{...GT2_SPEC}:s;
+    const fresh=s=>s?.id==='fleet'?{...FLEET_SPEC}:s?.id==='cs55'||s?.id==='gt2'?{...CS55_SPEC}:s;   // 'gt2' = the id used in 5.3.9
     if(this.parked&&Array.isArray(position?.parked)&&position.parked.length>=this.parked.length-1&&position.parked.length<=this.parked.length&&position.carSpec?.type&&position.parked.every(c=>Number.isFinite(c?.x)&&Number.isFinite(c?.y)&&c?.spec?.type)){this.carSpec=fresh(position.carSpec);position.parked.forEach((c,i)=>{Object.assign(this.parked[i],{x:c.x,y:c.y,angle:c.angle||0,spec:fresh(c.spec)});this.meshParked(this.parked[i])});
-      // saves from before the GT2 existed: it waits at its harbor spot
-      if(position.parked.length<this.parked.length){const P=PARKED_SPOTS.at(-1),slot=this.parked.at(-1);Object.assign(slot,{x:P.x,y:P.y,angle:P.angle,spec:{...GT2_SPEC}});this.meshParked(slot)}
+      // saves from before the Cs-55 existed: it waits at its harbor spot
+      if(position.parked.length<this.parked.length){const P=PARKED_SPOTS.at(-1),slot=this.parked.at(-1);Object.assign(slot,{x:P.x,y:P.y,angle:P.angle,spec:{...CS55_SPEC}});this.meshParked(slot)}
       this.fleet=this.makeDriven(this.carSpec)}this.cameraYaw=this.player.angle;this.snapCamera=true;this.carYaw=null}
   updateConfig(config){super.updateConfig(config);if(config.paused){this.setStick(0,0);this.drag=null}if(config.touchMode!==undefined)this.touchMode=!!config.touchMode;
     if(config.quality&&config.quality!=='auto'&&config.quality!==this.quality&&this.renderer)this.applyQuality(config.quality);

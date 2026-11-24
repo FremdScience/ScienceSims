@@ -3,7 +3,7 @@
  * reactivity → acid/base OH compounds (hydroxides and oxyacids) → ions and formulas. Pure data and validators (no DOM).
  * All observations are virtual. No procedures are described. Hints never state an answer:
  * the last hint is always a worked example that uses different elements. */
-import {ELEMENTS,EN_ALL} from './elements.js?v=5.3.9';
+import {ELEMENTS,EN_ALL} from './elements.js?v=5.3.10';
 /** Pauling electronegativity (RSC values; see elements.js and SOURCES.md). */
 export const EN=EN_ALL;
 

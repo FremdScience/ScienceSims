@@ -6,7 +6,7 @@ const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
  * speed (> 140 units/s) the rear lets go, so the car rotates faster than it travels (p.slip, p.sliding).
  * Without the handbrake the travel direction snaps to the body heading, exactly as before. */
 /** Per-car performance multipliers (1 = the original fleet car): top speed, acceleration, braking, grip. */
-export const CAR_PERF={compact:{},sedan:{},suv:{},van:{},s6:{top:1.12,accel:1.3,brake:1.1,grip:1.05},gt2:{top:1.6,accel:2,brake:1.35,grip:1.25}};
+export const CAR_PERF={compact:{},sedan:{},suv:{},van:{},c6:{top:1.12,accel:1.3,brake:1.1,grip:1.05},cs55:{top:1.6,accel:2,brake:1.35,grip:1.25}};
 export function driveStep(p,input,steering,dt,touch=true,perf){const k=perf||{},top=k.top||1,acc=k.accel||1,brk=k.brake||1,grip=k.grip||1;
  const throttle=(input.up?1:0)-(input.down?1:0),hand=!!(input.handbrake||input.space||input[' ']);
  const target=clamp(steering,-1,1);p.steer=approach(p.steer||0,target,dt*4.2);
