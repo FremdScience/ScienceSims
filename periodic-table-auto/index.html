@@ -10,7 +10,7 @@
 <meta name="description" content="PTA: Periodic Table Auto — an original open-world chemistry adventure. Explore Element City, borrow an authorized fleet car, and restore the city through scientific investigations.">
 <title>PTA: Periodic Table Auto</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css?v=5.3.5">
+<link rel="stylesheet" href="style.css?v=5.3.6">
 </head>
 <body>
 <canvas id="world" aria-label="Element City game world. Use the controls guide for keyboard and touch instructions."></canvas>
@@ -64,6 +64,7 @@
 <div id="modal-root"></div>
 <div id="boot-error" class="hidden" role="alert"></div>
 <noscript><p style="padding:2rem;color:#fff">PTA: Periodic Table Auto needs JavaScript enabled.</p></noscript>
-<script type="module" src="app.js?v=5.3.5"></script>
+<script type="module" src="app.js?v=5.3.6"></script>
+<script>setTimeout(function(){if(window.__ptaBooted)return;var b=document.getElementById('boot-error');if(!b)return;b.innerHTML='<span>The game didn’t finish loading. Check the Wi-Fi connection, then reload.</span><button onclick="location.reload()">Reload</button>';b.classList.remove('hidden')},20000)</script>
 </body>
 </html>

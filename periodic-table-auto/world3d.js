@@ -1,16 +1,16 @@
 /** Element City v5 — real-time 3D city. Original procedural art; physics and map data are
  * shared with the tested 2D fallback (world.js). Public API is unchanged from v4. */
-import {driveStep,cameraSafePosition} from './driving.js?v=5.3.5';
-import {POWER_POINTS,powerStep,cableState,benchDone} from './power-scene.js?v=5.3.5';
-import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.5';
-import {routeTo,snapToRoad} from './navigation.js?v=5.3.5';
-import {ELEMENTS} from './elements.js?v=5.3.5';
+import {driveStep,cameraSafePosition} from './driving.js?v=5.3.6';
+import {POWER_POINTS,powerStep,cableState,benchDone} from './power-scene.js?v=5.3.6';
+import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.6';
+import {routeTo,snapToRoad} from './navigation.js?v=5.3.6';
+import {ELEMENTS} from './elements.js?v=5.3.6';
 import * as THREE from './vendor/three.module.js';
-import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.5';
+import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.6';
 import {FLOOR,GROUND,BAY,CURB,rng,canvasTexture,mergeGeometries,tint,Batch,facadeBox,splitBox,asphaltTexture,paverTexture,grassTexture,roofTexture,chevronTexture,
   STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries,
-  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.5';
-import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.5';
+  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.6';
+import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.6';
 export {WORLD,stations,buildings,circleCollides,moveWithCollisions,ELEMENT_COINS};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -525,10 +525,13 @@ export class CityWorld extends FlatWorld{
     f.duration=1.1*entries.length+2.6;this.lastRender=0}
   resetShow(){const f=this.fountain;if(!f)return;f.running=false;f.nozzles.forEach(n=>{n.h=0;n.target=0;n.label.visible=false})}
   updateFountains(realDt,reduced){const f=this.fountain;if(!f)return;const el=f.running?(performance.now()-f.t0)/1000:0,secs=performance.now()/1000*(reduced?.4:1),scale=(this.height||600)*(this.dpr||1)*.5;
-    f.nozzles.forEach(n=>{const active=f.running?el>n.start:false;const goal=active?n.target:(f.running?0:n.h);n.h+=(goal-n.h)*Math.min(1,realDt*(reduced?20:3));const H=Math.max(.01,n.h*165),on=Math.min(1,n.h*40),show=n.h>.004;
+    const fin=!!this.finaleOn,ft=performance.now()/1000;
+    f.nozzles.forEach((n,i)=>{const active=f.running?el>n.start:false;
+      if(fin){n.h=reduced?.55:.45+.28*Math.sin(ft*1.1+i*1.3)+.1*Math.sin(ft*2.3+i);n.u.uTint.value.setHSL((ft*.04+i*.21)%1,.75,.6);n.led.material.color.copy(n.u.uTint.value);n.pool.material.emissive.copy(n.u.uTint.value)}
+      else{const goal=active?n.target:(f.running?0:n.h);n.h+=(goal-n.h)*Math.min(1,realDt*(reduced?20:3))}const H=Math.max(.01,n.h*165),on=Math.min(1,n.h*40),show=n.h>.004;
       n.u.uTime.value=secs;n.u.uH.value=H;n.u.uOn.value=on;n.u.uScale.value=scale;n.core.visible=n.spray.visible=n.splash.visible=n.led.visible=show;
       n.core.scale.set(1,H*.9,1);n.core.position.y=8+H*.45;n.splash.scale.setScalar(.35+Math.min(1,H/110)*.75);n.pool.material.emissiveIntensity=on*.55;
-      n.label.visible=f.running&&active||(!f.running&&n.target>0);n.label.position.y=8+H+18});
+      n.label.visible=!fin&&(f.running&&active||(!f.running&&n.target>0));n.label.position.y=8+H+18});
     if(f.running&&el>f.duration){f.running=false;const cb=f.done;f.done=null;this.viewMode='chase';this.snapCamera=true;cb?.()}}
   buildDropZones(){this.dropRings=new THREE.Group();this.scene.add(this.dropRings);this.dropRings.visible=false;const mat=new THREE.MeshBasicMaterial({color:'#ffc46a',transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
     for(const d of DROP_ZONES){const r=new THREE.Mesh(new THREE.RingGeometry(13,16,32),mat);r.rotation.x=-Math.PI/2;r.position.set(d.x,groundHeight(d.x,d.y)+.45,d.y);this.dropRings.add(r)}}
@@ -627,6 +630,10 @@ export class CityWorld extends FlatWorld{
     const tail=this.fleet.userData.tail?.emissiveIntensity||.35,driving=this.player.inVehicle;put(this.fleet,0,driving?(tail>1.5?1.3:.75):0,driving);this.trafficMeshes.forEach((m,i)=>put(m,i+1,.75));
     pos.needsUpdate=true;col.needsUpdate=true;this.beams.instanceMatrix.needsUpdate=true}
   /** 'auto' (slow day/night cycle starting at golden hour) or a fixed 'day' | 'golden' | 'night'. */
+  /** Grand finale after all six investigations: night city, every station beam on, fountains dance in changing
+   * colors, slow aerial orbit. Remembers the time of day and puts it back afterwards. */
+  startFinale(){if(this.finaleOn)return true;this.finaleOn={mode:this.timeMode,hour:this.dayHour,t0:performance.now()};this.setTimeMode('night');this.snapCamera=true;this.lastRender=0;return true}
+  endFinale(){const f=this.finaleOn;if(!f)return false;this.finaleOn=null;this.timeMode=f.mode;this.dayHour=f.hour;this.dayAt=-1;this.resetShow();this.viewMode='chase';this.snapCamera=true;this.lastRender=0;this.refreshProgress?.();return true}
   setTimeMode(mode){const m=['auto','day','golden','night'].includes(mode)?mode:'auto';if(m!=='auto')this.dayHour=TIME_MODES[m];this.timeMode=m;this.dayAt=-1;this.lastRender=0;return m}
   /** n = completed investigations (0..6): more windows and street lamps light up at night. */
   setCityProgress(n){this.progressSet=true;this.cityProgressTo(n)}
@@ -725,7 +732,7 @@ export class CityWorld extends FlatWorld{
   render(){
     if(!this.renderer||!this.scene)return;const now=performance.now(),realDt=Math.min(.1,(now-this.clockLast)/1000);this.clockLast=now;
     // While a panel is open the city is behind a scrim: redraw ~8×/s to save battery.
-    if(this.config.paused&&!this.config.titleCam&&now-this.lastRender<125)return;this.lastRender=now;
+    if(this.config.paused&&!this.config.titleCam&&!this.finaleOn&&now-this.lastRender<125)return;this.lastRender=now;
     const p=this.player,dt=this.config.paused?0:realDt,reduced=!!this.config.reducedMotion,t=this.time;
     if(this.timeMode==='auto'&&dt>0)this.dayHour=(this.dayHour+dt*HOURS_PER_SECOND)%24;
     if(this.dayAt<0||now-this.dayAt>500){this.dayAt=now;this.applyDay(this.dayHour)}
@@ -772,7 +779,8 @@ export class CityWorld extends FlatWorld{
     // markers
     for(const [id,m] of this.markerGroups){const s=stations.find(x=>x.id===id),d=Math.hypot(s.x-p.x,s.y-p.y);const inWork=id==='power'&&this.config.powerState?.enabled;
       m.group.visible=!inWork;const pulse=reduced?1:1+Math.sin(t*3)*.06;m.ring.scale.setScalar(pulse);m.icon.position.y=48+(reduced?0:Math.sin(t*2+s.x)*2.2);
-      m.text.visible=(d<650||m.active)&&d>60&&this.viewMode!=='overhead';m.beam.visible=(m.active||id==='hq')&&d>40}
+      m.text.visible=!this.finaleOn&&(d<650||m.active)&&d>60&&this.viewMode!=='overhead';m.beam.visible=this.finaleOn?true:(m.active||id==='hq')&&d>40;
+      if(this.finaleOn)m.beam.material.uniforms.uOpacity.value=reduced?.6:.5+.25*Math.sin(performance.now()/1000*2+s.x*.01)}
     const powerOn=!!this.config.powerState?.enabled;for(const l of this.workshopLabels||[])l.sign.visible=powerOn&&!p.inVehicle&&Math.hypot(l.point.x-p.x,l.point.y-p.y)<420;
     this.updateWorkshopGuide(t,reduced);
     for(const s of this.secretModels){s.g.visible=!this.discovered.has(s.id)&&Math.abs(s.x-p.x)<700&&Math.abs(s.y-p.y)<700&&Math.hypot(s.x-p.x,s.y-p.y)<700;if(s.g.visible&&!reduced)s.g.rotation.y=t*1.6}
@@ -825,6 +833,7 @@ export class CityWorld extends FlatWorld{
     if(!this.drag&&this.config.autoCamera!==false&&this.time-(this.lastLookAt||0)>2.5){this.pitchOffset*=Math.exp(-dt*1.2);
       if(p.inVehicle)this.orbitOffset*=Math.exp(-dt*1.6);else if(p.speed>30&&!this.stick?.x&&!this.input.left&&!this.input.right)this.cameraYaw+=wrap(p.angle-this.cameraYaw)*(1-Math.exp(-dt*.8))}
     const base=this.camTarget;
+    if(this.finaleOn){const el=(now()-this.finaleOn.t0)/1000,a=(reduced?0:el*.035)+2.3;base.set(1200,40,950);this.desiredCamera.set(1200+Math.cos(a)*780,820,950+Math.sin(a)*780);this.lookTarget.set(1250,120,950);cam.position.copy(this.desiredCamera);cam.lookAt(this.lookTarget);this.smoothLook=this.lookTarget.clone();if(cam.fov!==55){cam.fov=55;cam.updateProjectionMatrix()}this.snapCamera=true;return}
     if(this.config.titleCam){const a=(reduced?0:now()/1000*.045)+2.3;base.set(1200,40,950);this.desiredCamera.set(1200+Math.cos(a)*780,820,950+Math.sin(a)*780);this.lookTarget.set(1250,120,950);cam.position.copy(this.desiredCamera);cam.lookAt(this.lookTarget);this.smoothLook=this.lookTarget.clone();if(cam.fov!==55){cam.fov=55;cam.updateProjectionMatrix()}this.snapCamera=true;return}
     if(this.viewMode==='show'){base.set(2470,30,950);this.desiredCamera.set(2236,95,1150);this.lookTarget.set(2470,70,950);fov=55}
     else if(this.viewMode==='workshop'&&!p.inVehicle){base.set(940,10,940);this.desiredCamera.set(620,175,962);this.lookTarget.set(960,8,935);fov=55}

@@ -1,5 +1,5 @@
 /** Progress, saving and shared helpers. Campaign content lives in campaign.js. */
-import {MISSIONS,MISSION_IDS,MATERIALS,validatePower} from './campaign.js?v=5.3.5';
+import {MISSIONS,MISSION_IDS,MATERIALS,validatePower} from './campaign.js?v=5.3.6';
 export {MISSIONS,MATERIALS,validatePower};
 export const SAVE_KEY='element-city-v1';
 /** campaign 2 = the six-investigation storyline introduced in 5.1. */
@@ -16,7 +16,7 @@ export function readSave(storage){try{const s=JSON.parse(storage.getItem(SAVE_KE
  // Saves from the older five-investigation campaign keep settings, exploration and practice, but restart the new investigations.
  if(s.campaign!==CAMPAIGN)Object.assign(out,{campaign:CAMPAIGN,completed:[],active:null,step:0,work:{},hints:{},stats:{},firstTry:0,revisions:0,upgradedCampaign:!!s.started});
  if(!out.settings.sfxChosen&&!(Number(out.settings.volume)>0))out.settings.volume=.6;delete out.water;delete out.trackWater;return out}catch{return freshState()}}
-export function writeSave(storage,state){try{storage.setItem(SAVE_KEY,JSON.stringify(state));return true}catch{return false}}
+export function writeSave(storage,state){try{if(state.started)state.savedAt=new Date().toISOString();storage.setItem(SAVE_KEY,JSON.stringify(state));return true}catch{return false}}
 export function neutralFormula(cation,anion,c,a){const gcd=(x,y)=>y?gcd(y,x%y):x;const net=cation.charge*c+anion.charge*a;return {net,neutral:c>0&&a>0&&net===0,simplest:c>0&&a>0&&gcd(c,a)===1,formula:cation.symbol+(c>1?c:'')+anion.symbol+(a>1?a:'')}}
 /** Touch layout: an explicit setting wins; otherwise follow the input the student used last ('touch' or 'keys'). */
 export function pickTouch(setting,lastInput){return setting===true||setting===false?setting:lastInput==='touch'}

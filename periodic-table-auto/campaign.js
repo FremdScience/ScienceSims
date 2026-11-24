@@ -3,7 +3,7 @@
  * reactivity → acid/base OH compounds (hydroxides and oxyacids) → ions and formulas. Pure data and validators (no DOM).
  * All observations are virtual. No procedures are described. Hints never state an answer:
  * the last hint is always a worked example that uses different elements. */
-import {ELEMENTS,EN_ALL} from './elements.js?v=5.3.5';
+import {ELEMENTS,EN_ALL} from './elements.js?v=5.3.6';
 /** Pauling electronegativity (RSC values; see elements.js and SOURCES.md). */
 export const EN=EN_ALL;
 
@@ -135,7 +135,7 @@ export function validateClass(material,choice){const m=MATERIALS.find(x=>x.id===
  if(choice===m.category)return {ok:true,text:`✓ ${m.why}`};
  if(material==='graphite'&&choice==='metalloid')return {ok:false,text:'Its properties do look in-between, which is a good observation. But classify by position: find carbon (C) on the table. Which side of the staircase is it on?'};
  if(material==='silicon'&&choice==='metal')return {ok:false,text:'It is shiny, but did it bend? Find silicon (Si) on the table. Where is it compared with the staircase?'};
- return {ok:false,text:`Recheck your bench evidence and find ${m.symbol} on the table. Which side of the staircase is it on?`}}
+ return {ok:false,text:`Recheck your bench evidence and find ${m.symbol} on the table. Is it left of the staircase, right of it, or on it?`}}
 /** reason: the evidence the student selected (array of 'conducts' | 'bends' | 'shiny'); 'both' is accepted as shorthand for conducts + bends. */
 export function validatePower(material,reason){
  if(material!=='copper'){const t={graphite:'Graphite conducts, but it snapped in the flex cycle. The cable must bend without breaking.',silicon:'Silicon only conducts a little, and it is brittle, so it snapped in the flex cycle.',sulfur:'Sulfur does not conduct and it crumbles. The circuit never closed.'};return {ok:false,text:t[material]||'Choose a sample first.'}}
@@ -206,9 +206,9 @@ export function validateSurvey(qid,choice){const q=SURVEY_QUESTIONS.find(x=>x.id
 
 // ------------------------------------------------------------------ 6 · ion relay towers
 export const RELAYS=[
- {id:'t1',name:'Library relay',x:1272,y:1250,cation:'Mg',anion:'F',hints:['Find each element’s group. Metals lose valence electrons; nonmetals gain enough to fill the outer level.','Losing 2 negative electrons leaves +2. Gaining 1 electron gives −1.','Worked example: Na and Cl → Na⁺ and Cl⁻ → one of each → NaCl.']},
+ {id:'t1',name:'Library relay',x:1272,y:1250,cation:'Mg',anion:'F',hints:['Find each element’s group. Metals lose valence electrons; nonmetals gain enough to fill the outer level.','Count how many electrons each atom must lose or gain to match the nearest noble gas. Each electron lost adds +1 to the charge; each one gained adds −1.','Worked example: Na and Cl → Na⁺ and Cl⁻ → one of each → NaCl.']},
  {id:'t2',name:'Garden relay',x:628,y:1572,cation:'Al',anion:'O',hints:['Al is in Group 13; O is in Group 16.','Find the smallest numbers that make the total charge zero. Try listing multiples of each charge.','Worked example: Ca²⁺ and N³⁻ → 3 × (+2) = +6 and 2 × (−3) = −6 → Ca₃N₂.']},
- {id:'t3',name:'Harbor relay',x:1878,y:700,cation:'K',anion:'S',analogy:true,hints:['K is in Group 1; S is in Group 16.','How many +1 ions cancel one −2 ion?','Worked example: Li⁺ and O²⁻ → two Li⁺ per O²⁻ → Li₂O.']}
+ {id:'t3',name:'Harbor relay',x:1878,y:700,cation:'K',anion:'S',analogy:true,hints:['K is in Group 1; S is in Group 16.','Work out each charge from its group first. Then: how many cations does it take to cancel one anion?','Worked example: Li⁺ and O²⁻ → two Li⁺ per O²⁻ → Li₂O.']}
 ];
 export function validateCharge(sym,value){const want=ionCharge(sym),e=el(sym);if(want===null)return {ok:false,text:'No simple main-group charge.'};
  if(Number(value)===want)return {ok:true,text:`✓ ${sym} ${want>0?`loses ${want}`:`gains ${-want}`} electron${Math.abs(want)>1?'s':''} → ${want>0?'+':'−'}${Math.abs(want)}`};

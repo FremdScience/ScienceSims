@@ -97,6 +97,12 @@ export class Sfx{
    try{r.setDuck(.25);setTimeout(()=>r.setDuck(1),2000)}catch{}
    [[72,0],[76,.14],[79,.28],[77,.46],[81,.6],[79,.8],[83,.94]].forEach(([m,dt])=>this.osc(c,t+dt,'sawtooth',mt(m),.22,.07,{cut:2000}));
    [60,64,67,72].forEach(m=>this.osc(c,t+1.12,'triangle',mt(m),.7,.08,{a:.02}))}
+ /** Finale fanfare (about 3.5 s): a rising arpeggio, then IV → V → I chords with a low root under the last one. */
+ fanfare(){const c=this.ctx();if(!c)return;const t=c.currentTime+.05,r=this.radio,mt=m=>440*Math.pow(2,(m-69)/12);
+   try{r.setDuck(.2);setTimeout(()=>r.setDuck(1),4200)}catch{}
+   [[60,0],[64,.11],[67,.22],[72,.33],[76,.44],[79,.55]].forEach(([m,dt])=>this.osc(c,t+dt,'triangle',mt(m),.45,.08,{a:.01}));
+   [[[65,69,72,77],.85,.42],[[67,71,74,79],1.3,.42],[[60,64,67,72,76],1.78,1.7]].forEach(([ch,dt,d])=>ch.forEach(m=>this.osc(c,t+dt,'sawtooth',mt(m),d,.038,{cut:2200,a:.02})));
+   [36,48].forEach(m=>this.osc(c,t+1.78,'triangle',mt(m),1.8,.1,{a:.02}))}
  /** Engine drone with four "gears": pitch rises through each gear and drops at every shift. */
  /** Engine: a small 4-cylinder car with an automatic gearbox, heard softly from inside the cabin.
   * engineRpm() maps speed to rpm (gear shifts glide like an automatic); the tone is the firing
