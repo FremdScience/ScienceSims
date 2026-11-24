@@ -1,16 +1,16 @@
 /** Element City v5 — real-time 3D city. Original procedural art; physics and map data are
  * shared with the tested 2D fallback (world.js). Public API is unchanged from v4. */
-import {driveStep,cameraSafePosition} from './driving.js?v=5.3.2';
-import {POWER_POINTS} from './power-scene.js?v=5.3.2';
-import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.2';
-import {routeTo,snapToRoad} from './navigation.js?v=5.3.2';
-import {ELEMENTS} from './elements.js?v=5.3.2';
+import {driveStep,cameraSafePosition} from './driving.js?v=5.3.3';
+import {POWER_POINTS,powerStep,cableState,benchDone} from './power-scene.js?v=5.3.3';
+import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.3';
+import {routeTo,snapToRoad} from './navigation.js?v=5.3.3';
+import {ELEMENTS} from './elements.js?v=5.3.3';
 import * as THREE from './vendor/three.module.js';
-import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.2';
+import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.3';
 import {FLOOR,GROUND,BAY,CURB,rng,canvasTexture,mergeGeometries,tint,Batch,facadeBox,splitBox,asphaltTexture,paverTexture,grassTexture,roofTexture,chevronTexture,
   STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries,
-  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.2';
-import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.2';
+  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.3';
+import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.3';
 export {WORLD,stations,buildings,circleCollides,moveWithCollisions,ELEMENT_COINS};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -392,7 +392,7 @@ export class CityWorld extends FlatWorld{
     this.workshop=new THREE.Group();this.workshopTargets=[];this.sampleModels=new Map();this.socketModels=new Map();this.scene.add(this.workshop);
     const steel=new THREE.MeshStandardMaterial({color:'#9aa3a8',metalness:.7,roughness:.35}),cab=new THREE.MeshStandardMaterial({color:'#5b6a70',metalness:.3,roughness:.6}),top=new THREE.MeshStandardMaterial({color:'#e9ecec',roughness:.5});
     for(const point of POWER_POINTS){const group=new THREE.Group(),y=groundHeight(point.x,point.y);group.position.set(point.x,y,point.y);group.userData.pointId=point.id;this.workshop.add(group);this.workshopTargets.push(group);
-      const ring=new THREE.Mesh(new THREE.RingGeometry(24,26.5,40),new THREE.MeshBasicMaterial({color:'#ffc46a',side:THREE.DoubleSide,transparent:true,opacity:.8,depthWrite:false,toneMapped:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.3;group.add(ring);
+      const ring=new THREE.Mesh(new THREE.RingGeometry(24,26.5,40),new THREE.MeshBasicMaterial({color:'#ffc46a',side:THREE.DoubleSide,transparent:true,opacity:.8,depthWrite:false,toneMapped:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.3;group.add(ring);(this.workshopRings||=new Map()).set(point.id,ring);
       const mk=(geo,mat,x,yy,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,yy,z);m.castShadow=true;group.add(m);return m};
       if(point.kind==='sample'){for(const [dx,dz] of [[-14,-8],[14,-8],[-14,8],[14,8]])mk(new THREE.CylinderGeometry(.8,.8,13,6),steel,dx,6.5,dz);mk(new THREE.BoxGeometry(34,1.6,22),top,0,13.5,0);mk(new THREE.BoxGeometry(30,1,18),cab,0,4,0);
         const paint=new THREE.MeshStandardMaterial({color:{copper:'#c4733f',graphite:'#3b3f42',sulfur:'#e2c445',silicon:'#7d8790'}[point.material],metalness:{copper:.85,silicon:.6}[point.material]||0,roughness:{copper:.3,silicon:.35}[point.material]||.75});
@@ -406,7 +406,29 @@ export class CityWorld extends FlatWorld{
     this.cable=new THREE.Mesh(new THREE.TubeGeometry(this.cableCurve,28,1.1,6,false),new THREE.MeshStandardMaterial({color:'#b97545',metalness:.6,roughness:.4}));this.workshop.add(this.cable);
     this.currentBeads=[];const beadMat=new THREE.MeshStandardMaterial({color:'#a0ffe5',emissive:'#72e3c1',emissiveIntensity:1.4});
     for(let i=0;i<5;i++){const bead=new THREE.Mesh(new THREE.SphereGeometry(1.8,8,6),beadMat);this.workshop.add(bead);this.currentBeads.push(bead)}
+    // "go here next" arrow (bobs over the station the step strip names)
+    this.workArrow=new THREE.Mesh(new THREE.ConeGeometry(9,17,4),new THREE.MeshBasicMaterial({color:'#ffc46a',toneMapped:false}));this.workArrow.rotation.x=Math.PI;this.workArrow.visible=false;this.workshop.add(this.workArrow);
+    // a cable that trails from terminal A to the sample in your hand until terminal B is connected
+    this.trailSegs=18;this.trail=new THREE.InstancedMesh(new THREE.CylinderGeometry(1.1,1.1,1,6,1,true),new THREE.MeshStandardMaterial({color:'#b97545',metalness:.6,roughness:.4}),this.trailSegs);
+    this.trail.frustumCulled=false;this.trail.visible=false;this.workshop.add(this.trail);
+    this.trailCurve=new THREE.CatmullRomCurve3([0,1,2,3].map(()=>new THREE.Vector3()),false,'centripetal');this.trailPts=Array.from({length:this.trailSegs+1},()=>new THREE.Vector3());
   }
+  /** Per frame: glow the station(s) for the current step, bob the arrow, and drape the trailing cable. */
+  updateWorkshopGuide(t,reduced){if(!this.workshopRings)return;const work=this.config.powerState||{},p=this.player,on=!!work.enabled&&!this.config.completed?.includes('power');
+    const st=on?powerStep(work,p):null,hi=new Set(st?.highlight||[]),pulse=reduced?1.1:1.1+Math.sin(t*4)*.09;
+    for(const [id,ring] of this.workshopRings){const pt=POWER_POINTS.find(q=>q.id===id),lit=hi.has(id),ok=pt.kind==='sample'?benchDone(work,pt.material):work.connections?.includes(id.at(-1));
+      ring.visible=on;ring.material.color.set(lit?'#ffc46a':ok?'#3fd6a5':'#8a8f94');ring.material.opacity=lit?.95:.5;ring.scale.setScalar(lit?pulse:1)}
+    const a=st?.arrow&&!p.inVehicle?POWER_POINTS.find(q=>q.id===st.arrow):null;this.workArrow.visible=!!a;
+    if(a){this.workArrow.position.set(a.x,groundHeight(a.x,a.y)+(a.kind==='sample'?54:58)+(reduced?0:Math.sin(t*3)*3),a.y);this.workArrow.rotation.y=reduced?0:t*1.4}
+    const A=POWER_POINTS.find(q=>q.id==='socket-a'),trail=on&&!p.inVehicle&&cableState(work)==='trailing'&&Math.hypot(p.x-A.x,p.y-A.y)<450;this.trail.visible=trail;if(!trail)return;
+    this.trail.material.color.set({copper:'#b97545',graphite:'#3d4245',sulfur:'#d9c04a',silicon:'#7d8790'}[work.material]||'#b97545');
+    const hand=this.carriedSample.getWorldPosition(this.trailHand||(this.trailHand=new THREE.Vector3())),[c0,c1,c2,c3]=this.trailCurve.points,dx=hand.x-A.x,dz=hand.z-(A.y+7),d=Math.hypot(dx,dz)||1,ux=dx/d,uz=dz/d;
+    c0.set(A.x,groundHeight(A.x,A.y)+17,A.y+7);c3.copy(hand);
+    if(d<40){c1.lerpVectors(c0,c3,1/3);c2.lerpVectors(c0,c3,2/3)}else{const k=Math.min(14,d*.25);c1.set(A.x+ux*k,groundHeight(A.x+ux*k,A.y+7+uz*k)+1.3,A.y+7+uz*k);c2.set(hand.x-ux*k,groundHeight(hand.x-ux*k,hand.z-uz*k)+1.3,hand.z-uz*k)}
+    const P=this.trailPts,m=this.trailM||(this.trailM=new THREE.Matrix4()),q=this.trailQ||(this.trailQ=new THREE.Quaternion()),up=this.trailUp||(this.trailUp=new THREE.Vector3(0,1,0)),dir=this.trailDir||(this.trailDir=new THREE.Vector3()),mid=this.trailMid||(this.trailMid=new THREE.Vector3()),sc=this.trailSc||(this.trailSc=new THREE.Vector3());
+    for(let i=0;i<=this.trailSegs;i++)this.trailCurve.getPoint(i/this.trailSegs,P[i]);
+    for(let i=0;i<this.trailSegs;i++){dir.subVectors(P[i+1],P[i]);const len=dir.length()||.001;dir.multiplyScalar(1/len);q.setFromUnitVectors(up,dir);mid.addVectors(P[i],P[i+1]).multiplyScalar(.5);sc.set(1,len+.6,1);m.compose(mid,q,sc);this.trail.setMatrixAt(i,m)}
+    this.trail.instanceMatrix.needsUpdate=true}
   updateWorkshop(){const work=this.config.powerState||{},done=this.config.completed?.includes('power');
     for(const [id,m] of this.sampleModels){const scanned=work.measurements?.[id]||[],last=work.lastTest;
       m.light.material.color.set(scanned.length>=3?'#77e5c1':'#dca768');m.light.material.emissive.set(scanned.length>=3?'#3fd6a5':'#dca768');
@@ -415,7 +437,7 @@ export class CityWorld extends FlatWorld{
       for(const part of m.parts){part.scale.y=compressed&&id==='copper'?.4:1;part.scale.z=compressed&&id==='copper'?1.8:1}
       if(last?.material===id&&last?.test==='conduct'){m.light.material.color.set(id==='sulfur'?'#6a6f73':id==='silicon'?'#c9b46a':'#7ce7c8');m.light.material.emissive.set(id==='sulfur'?'#222':id==='silicon'?'#5a4a1a':'#3fd6a5')}}
     for(const [id,m] of this.socketModels){const on=done||work.connections?.includes(id.at(-1));m.material.color.set(on?'#78e3c1':'#dca768');m.material.emissive.set(on?'#2fbf8f':'#7d4b20')}
-    this.cable.visible=!!(done||work.connections?.includes('a'));const mat={copper:'#b97545',graphite:'#3d4245',sulfur:'#d9c04a',silicon:'#7d8790'}[work.material]||'#b97545';
+    this.cable.visible=cableState(work,done)==='full';const mat={copper:'#b97545',graphite:'#3d4245',sulfur:'#d9c04a',silicon:'#7d8790'}[work.material]||'#b97545';
     this.cable.material.color.set(done||work.success?'#c4733f':work.failed?'#9a4a3a':mat);
     }
   kiosk(x,y,id,screenMat){const metal=this.kioskMetal||(this.kioskMetal=new THREE.MeshStandardMaterial({color:'#2f3c44',metalness:.5,roughness:.45})),glass=this.kioskGlass||(this.kioskGlass=new THREE.MeshStandardMaterial({color:'#dff3ff',transparent:true,opacity:.35,roughness:.05}));
@@ -715,6 +737,7 @@ export class CityWorld extends FlatWorld{
       m.group.visible=!inWork;const pulse=reduced?1:1+Math.sin(t*3)*.06;m.ring.scale.setScalar(pulse);m.icon.position.y=48+(reduced?0:Math.sin(t*2+s.x)*2.2);
       m.text.visible=(d<650||m.active)&&d>60&&this.viewMode!=='overhead';m.beam.visible=(m.active||id==='hq')&&d>40}
     const powerOn=!!this.config.powerState?.enabled;for(const l of this.workshopLabels||[])l.sign.visible=powerOn&&!p.inVehicle&&Math.hypot(l.point.x-p.x,l.point.y-p.y)<420;
+    this.updateWorkshopGuide(t,reduced);
     for(const s of this.secretModels){s.g.visible=!this.discovered.has(s.id)&&Math.abs(s.x-p.x)<700&&Math.abs(s.y-p.y)<700&&Math.hypot(s.x-p.x,s.y-p.y)<700;if(s.g.visible&&!reduced)s.g.rotation.y=t*1.6}
     this.updateWaypointMarker(t,reduced);
     for(const [,mm] of this.surveyModels)if(mm.ring.visible&&!reduced)mm.ring.scale.setScalar(1+Math.sin(t*3)*.07);

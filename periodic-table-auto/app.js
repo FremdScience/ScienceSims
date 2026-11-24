@@ -1,21 +1,21 @@
 /** Element City v5.1 — app shell: HUD, saving, input wiring and the six-investigation campaign. */
-import {attachTabletControls,InputMixer} from './controls.js?v=5.3.2';
-import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStage,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.3.2';
-import {PRACTICE,checkPractice} from './practice.js?v=5.3.2';
-import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.3.2';
-import * as worldMod from './world.js?v=5.3.2';
-import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.3.2';
-import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS,MASS,EN_ALL,configOf,fullConfigOf,shellsOf} from './elements.js?v=5.3.2';
-import {Radio,STATIONS,Sfx} from './radio.js?v=5.3.2';
-import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS,pickTouch,toastMs,pushBrief} from './core.js?v=5.3.2';
+import {attachTabletControls,InputMixer} from './controls.js?v=5.3.3';
+import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStep,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.3.3';
+import {PRACTICE,checkPractice} from './practice.js?v=5.3.3';
+import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.3.3';
+import * as worldMod from './world.js?v=5.3.3';
+import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.3.3';
+import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS,MASS,EN_ALL,configOf,fullConfigOf,shellsOf} from './elements.js?v=5.3.3';
+import {Radio,STATIONS,Sfx} from './radio.js?v=5.3.3';
+import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS,pickTouch,toastMs,pushBrief} from './core.js?v=5.3.3';
 import {COURIER,validateDelivery,describe,GATES,GATE_SLOTS,gateCrossing,validateGate,MATERIALS,validateClass,validatePower,
   BEHAVIOR,SHOW_ROUNDS,WHY_OPTIONS,validateShow,validateWhy,UI_SCALE,READINGS,uiOf,validateSort,SURVEY_QUESTIONS,validateSurvey,
-  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el,valence,missionStats,checkWant,makeExpressJob,coinCard,rankFor,expressReward,SIDE_REP_CAP} from './campaign.js?v=5.3.2';
+  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el,valence,missionStats,checkWant,makeExpressJob,coinCard,rankFor,expressReward,SIDE_REP_CAP} from './campaign.js?v=5.3.3';
 
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const DEBUG=new URLSearchParams(location.search).has('debug');
 let storage;try{storage=window.localStorage}catch{}
-let state=readSave(storage),modal=null,returnTo=null,worldInfo={},lastSave=0,toastTimer,selectedElement=29,tabletControls=null,allInputs=null,streetPoint=null,streetMessage='',streetStamp='',practiceId=null,nearPoint=null,lastPos=null,bannerTimer,popTimer,
+let state=readSave(storage),modal=null,returnTo=null,worldInfo={},lastSave=0,toastTimer,selectedElement=29,tabletControls=null,allInputs=null,streetPoint=null,streetMessage='',streetStamp='',autoNear=null,practiceId=null,nearPoint=null,lastPos=null,bannerTimer,popTimer,
   lastInput=matchMedia('(pointer:coarse)').matches?'touch':'keys',brief=[],toastHeld=null,toastEnd=0,expressClock=0;
 const esc=s=>String(s).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const colors={alkali:'#694f37',alkaline:'#655b34',transition:'#285264','post-transition':'#3d5162',metalloid:'#4b5269',nonmetal:'#2e6359',halogen:'#5f4663',noble:'#5a506d',lanthanide:'#4e5157',actinide:'#615150',unknown:'#38484f'};
@@ -39,7 +39,7 @@ const callbacks={
   onInteract:id=>interactStation(id),
   onChange:info=>{try{if(info.district&&worldInfo.district&&info.district!==worldInfo.district&&state.started&&!modal)districtPop(info.district);worldInfo=info;
     state.walked=Math.max(state.walked,info.walked||0);state.driven=Math.max(state.driven,info.driven||0);
-    if(state.started&&!modal){checkTutorial();checkRaceGate();checkSurveyPickup();tickExpress();nearPoint=findNearPoint()}lastPos={x:info.x,y:info.y};
+    if(state.started&&!modal){checkTutorial();checkRaceGate();checkSurveyPickup();tickExpress();nearPoint=findNearPoint();autoStreet()}lastPos={x:info.x,y:info.y};
     updateHUD();renderStreet();updateEngineSound();updateRadio();if(Date.now()-lastSave>7000&&state.started){save();lastSave=Date.now()}}catch(err){console.error(err)}},
   onDiscover:id=>{if(state.discoveries.includes(id))return;state.discoveries.push(id);const c=coinFor(id),card=c?coinCard(c.group):'',n=coinGroups().size;
     record(`Element coin: ${c?.label||id}`,`${card||'You found an element coin.'} Exploration is separate from the investigations.`);sfx.coin();
@@ -70,7 +70,7 @@ function radioWanted(){return state.started&&modal!=='title'&&(state.settings.st
 function updateRadio(){const st=state.settings.station??-1;radio.station=st;radio.setDuck(modal?.3:1);if(radioWanted()){if(!radio.playing&&radio.ctx)radio.start()}else if(radio.playing)radio.stop();
   const chip=$('#radio');chip.classList.toggle('hidden',!state.started||modal==='title'||!(worldInfo.inVehicle||state.settings.radioOnFoot));chip.classList.toggle('on',st>=0);chip.style.setProperty('--station',STATIONS[st]?.color||'#ffffff55');$('#radio-label').textContent=st>=0?STATIONS[st].name:'RADIO OFF'}
 function cycleRadio(){const s=state.settings;s.station=((s.station??-1)+2)%(STATIONS.length+1)-1;radio.volume=s.musicVolume??.6;radio.tune(s.station);if(!radioWanted())radio.stop();const st=STATIONS[s.station];toast(st?`📻 ${st.name} · ${st.tag}`:'📻 Radio off',2600);updateRadio();save()}
-function sync(){world.updateConfig({powerState:{...W(),enabled:state.active==='power'&&state.step>0},scene:scene(),cameraSensitivity:state.settings.cameraSensitivity||1,autoCamera:state.settings.autoCamera!==false,
+function sync(){if(state.active==='power'){const w=W();if(w.failed&&w.material&&!(w.connections||[]).length)w.material=null}world.updateConfig({powerState:{...W(),enabled:state.active==='power'&&state.step>0},scene:scene(),cameraSensitivity:state.settings.cameraSensitivity||1,autoCamera:state.settings.autoCamera!==false,
   paused:!!modal||!state.started,reducedMotion:state.settings.reducedMotion,completed:state.completed,activeMission:trackedTarget(),touchMode:touchUI(),skin:state.completed.length>=3?'amber':'teal',
   quality:state.settings.quality||'auto',guideLine:state.settings.guideLine!==false,titleCam:modal==='title'});
   document.body.classList.toggle('playing',state.started&&!modal);updateHUD();renderStreet();updateEngineSound();updateRadio()}
@@ -150,7 +150,7 @@ function objective(){const m=current(),n=next(),t=touchUI();
   const w=W(),eb=`INVESTIGATION ${missionNo(m)}`;
   if(m.id==='courier'){const c=COURIER[w.clue||0];if(!c)return [eb,m.title,'All packages delivered!'];return [`${eb} · DELIVERY ${(w.clue||0)+1}/${COURIER.length}`,`Who am I? ${c.clue}`,`Find the matching rooftop tile (${t?'tap Map':'press M'}) and drop the package at its gold doorstep ring.`]}
   if(m.id==='race'){const g=GATES[w.gate||0];if(!g)return [eb,m.title,'Race complete!'];return [`${eb} · CHECKPOINT ${(w.gate||0)+1}/${GATES.length}`,`${g.q}  ${g.a} or ${g.b}?`,'Drive (or walk) through the arch with your answer. Follow the gold route to the checkpoint.']}
-  if(m.id==='power')return [`${eb} · ON SCENE`,m.title,powerStage(w)];
+  if(m.id==='power'){const st=powerStep(w,world.player);return [`${eb} · STEP ${st.n} OF ${st.of}`,st.title,st.text]}
   if(m.id==='show'){const r=SHOW_ROUNDS[w.round||0];return [`${eb} · ${r?r.title.toUpperCase():'FINALE'}`,m.title,'Talk to Theo at the harbor console to program the next act.']}
   if(m.id==='survey'){const n2=READINGS.filter(r=>w.collected?.[r.sym]).length;return surveyCollected()?[`${eb} · ANALYZE`,m.title,'All readings collected. Return to Ari and put the evidence on the board.']:[`${eb} · ${n2}/${READINGS.length} READINGS`,'Collect the indicator readings','Drive through each blue monitor ring. The gold route leads to the nearest one.']}
   if(m.id==='ions'){const n3=RELAYS.filter(t=>w.solved?.[t.id]).length;return [`${eb} · ${n3}/${RELAYS.length} TOWERS`,'Light the relay towers','Drive to the next relay tower and balance its ionic code.']}
@@ -183,11 +183,11 @@ function intro(m){openModal('mission',`${closeButton()}<div class="eyebrow">INVE
 function accept(){const m=current();if(!m)return;if(state.express)endExpress(true);state.step=1;state.work={};save();setTimeout(()=>banner(`INVESTIGATION ${missionNo(m)}`,m.title,m.concept),60);
   if(m.id==='courier')return courierCard();
   if(m.id==='race'){state.work={gate:0,slot:0};closeModal();toast('Checkpoint 1 is marked on your radar. Drive through the arch with your answer.',5500);return}
-  if(m.id==='power'){closeModal();streetMessage='Maya: test every bench, then classify it. Everything here is virtual.';world.focusWorkshop?.();return}
+  if(m.id==='power'){closeModal();streetMessage='Maya: test every bench, then classify it. Everything here is virtual.';autoNear=findNearPoint()?.id||null;world.focusWorkshop?.();return}
   if(m.id==='show'){state.work={round:0};return showConsole()}
   if(m.id==='survey'){state.work={collected:{}};closeModal();toast('Drive through each blue monitor ring to log its reading.',5500);return}
   if(m.id==='ions'){state.work={solved:{}};closeModal();toast('Three relay towers are on your radar (⚡). Drive to the nearest one.',5500)}}
-function complete(){const m=current();if(!m)return;if(m.id==='power')world.setCamera?.('chase');streetPoint=null;streetMessage='';
+function complete(){const m=current();if(!m)return;if(m.id==='power')world.setCamera?.('chase');streetPoint=null;autoNear=null;streetMessage='';
   state.completed.push(m.id);(state.stats||={})[m.id]=missionStats(m.id,state.work,state.hints);state.active=null;state.step=0;state.work={};record(m.title,m.debrief);save();world.setCityProgress?.(state.completed.length);sfx.jingle();
   banner(next()?'INVESTIGATION PASSED':'ALL SYSTEMS ONLINE',m.title,'+100 REP','passed');modal='celebrate';clearInputs();sync();
   setTimeout(()=>{if(modal!=='celebrate')return;openModal('complete',`<div class="complete"><div class="badge">${String(state.completed.length).padStart(2,'0')}</div><div class="eyebrow">INVESTIGATION COMPLETE</div><h2>${m.title}</h2><p class="lead">${m.reward}</p><div class="panel"><p>${m.debrief}</p></div><div class="mission-meta" style="justify-content:center"><span class="pill teal">+100 REP</span><span class="pill">${state.firstTry||0} first-try answers so far (+10 each)</span></div><div class="actions" style="justify-content:center"><button class="primary" data-act="close">${next()?'Next investigation':'Explore your restored city'}</button><button data-act="summary">View progress</button></div></div>`,'narrow')},state.settings.reducedMotion?200:1800)}
@@ -211,20 +211,33 @@ function checkRaceGate(){const m=current();if(!m||m.id!=='race'||state.step<1||!
 
 // ------------------------------------------------------------------ 03 · street workshop (compact, no scrolling)
 function enterStreetPoint(point){if(state.active!=='power'||state.step<1)return;if(world.player.inVehicle){toast('Park and step out to use the workshop.');return}
-  if(Math.hypot(world.player.x-point.x,world.player.y-point.y)>160){toast('Walk closer to that station.');return}streetPoint=point;streetMessage='';streetStamp='';renderStreet()}
-function renderStreet(){const el2=$('#field-workshop');if(!el2)return;const enabled=state.started&&!modal&&state.active==='power'&&state.step>0;el2.classList.toggle('hidden',!enabled);document.body.classList.toggle('street-investigation',enabled);if(!enabled)return;
-  if(streetPoint&&Math.hypot(world.player.x-streetPoint.x,world.player.y-streetPoint.y)>170){streetPoint=null;streetMessage=''}
-  const w=W(),stamp=JSON.stringify([streetPoint?.id,w,streetMessage]);if(stamp===streetStamp)return;streetStamp=stamp;const p=streetPoint;let body;
-  if(p?.kind==='sample'){const m=MATERIALS.find(x=>x.id===p.material),done=w.measurements?.[m.id]||[],cls=w.classes?.[m.id];
-    body=`<h3>${m.name} bench <small>${done.length}/3 tests</small></h3><div class="street-actions">${POWER_TESTS.map(t=>`<button data-street-test="${t}" class="${done.includes(t)?'selected':''}">${{look:'Look',bend:'Bend',conduct:'Conduct'}[t]}</button>`).join('')}</div>
-    ${done.length?`<ul class="bench-results">${POWER_TESTS.filter(t=>done.includes(t)).map(t=>`<li><b>${{look:'Look',bend:'Bend',conduct:'Conduct'}[t]}:</b> ${m[t]}</li>`).join('')}</ul>`:'<p class="small-note">Run all three virtual tests.</p>'}
-    ${done.length===3?(cls?`<p class="ok-line">✓ Classified: ${cls}</p>`:`<div class="street-actions"><span class="mini-label">Classify:</span>${['metal','metalloid','nonmetal'].map(c=>`<button data-street-class="${c}">${c}</button>`).join('')}</div>`):''}
-    ${powerReady(w)?`<button class="primary" data-street="carry">${w.material===m.id?'✓ Carrying':'Pick up this sample'}</button>`:''}`}
-  else if(p?.kind==='socket'){const end=p.id.at(-1),con=w.connections?.includes(end),mat=MATERIALS.find(x=>x.id===w.material);
-    body=`<h3>${p.name}</h3><p>Carrying: <b>${mat?mat.name:'nothing yet'}</b></p><button data-street="connect" class="${con?'selected':''}">${con?'✓ Connected':'Connect terminal '+end.toUpperCase()}</button>
-    ${end==='b'&&w.connections?.includes('b')?`<p class="mini-label">The cable needs a material that…</p><div class="street-actions">${[['conducts','carries current'],['bends','bends without breaking'],['shiny','looks shiny']].map(([k,n])=>`<button data-street-evidence="${k}" class="${w.support?.includes(k)?'selected':''}" aria-pressed="${!!w.support?.includes(k)}">${n}</button>`).join('')}</div>${w.success?'<button class="primary" data-street="finish">Return signals to service</button>':'<button class="primary" data-street="run">Run flex cycle</button>'}`:''}`}
-  else body=`<h3>Restore the signals</h3><p>${powerStage(w)}</p><p class="small-note">Walk up to a bench or terminal and tap it (or press F).</p><div class="bench-grid">${SAMPLE_IDS.map(id=>`<span class="${benchDone(w,id)?'done':''}">${benchDone(w,id)?'✓':'○'} ${MATERIALS.find(x=>x.id===id).symbol}</span>`).join('')}</div>`;
-  el2.innerHTML=`<div class="eyebrow">MAYA’S STREET WORKSHOP · VIRTUAL TESTS</div>${body}<p class="street-feedback" role="status">${esc(streetMessage)}</p><div class="street-tools"><button data-street="hint">Hint</button><button data-street="table">Table</button><button data-street="overview">Overview</button><button data-street="roam">Follow cam</button></div>`}
+  if(Math.hypot(world.player.x-point.x,world.player.y-point.y)>160){toast('Walk closer to that station.');return}if(streetPoint?.id!==point.id)streetMessage='';streetPoint=point;streetStamp='';renderStreet()}
+/** Walking up to a bench or terminal opens its panel (no extra tap needed). */
+function autoStreet(){if(state.active!=='power'||state.step<1||worldInfo.inVehicle){autoNear=null;return}const id=nearPoint&&POWER_POINTS.some(x=>x.id===nearPoint.id)?nearPoint.id:null;
+  // only on arriving at a new station, so a station opened by tapping stays open and messages are kept
+  if(id&&id!==autoNear&&streetPoint?.id!==id){streetPoint=POWER_POINTS.find(x=>x.id===id);streetMessage='';streetStamp=''}autoNear=id}
+const BENCH_LABEL={look:'Look',bend:'Bend',conduct:'Conduct'};
+function renderStreet(){const el2=$('#field-workshop');if(!el2)return;const enabled=state.started&&!modal&&state.active==='power'&&state.step>0;el2.classList.toggle('hidden',!enabled);document.body.classList.toggle('street-investigation',enabled);
+  if(enabled&&streetPoint&&Math.hypot(world.player.x-streetPoint.x,world.player.y-streetPoint.y)>170){streetPoint=null;streetMessage=''}
+  // the context button only repeats the open station's action, so short screens can hide it and use the room
+  document.body.classList.toggle('street-panel-open',enabled&&!!streetPoint&&nearPoint?.id===streetPoint.id&&!worldInfo.inVehicle);if(!enabled)return;
+  const w=W(),g3=!!world.workshopRings,st=powerStep(w,world.player),stamp=JSON.stringify([streetPoint?.id,w,streetMessage,st.n,st.arrow]);if(stamp===streetStamp)return;streetStamp=stamp;const p=streetPoint,con=w.connections||[],ready=powerReady(w);let body;
+  const strip=`<div class="step-strip" role="status"><b>STEP ${st.n} OF ${st.of}</b><span>${st.title}</span><i aria-hidden="true">${[1,2,3,4,5].map(i=>`<em class="${i<st.n?'done':i===st.n?'now':''}"></em>`).join('')}</i></div>`;
+  if(p?.kind==='sample'){const m=MATERIALS.find(x=>x.id===p.material),done=w.measurements?.[m.id]||[],cls=w.classes?.[m.id],left=SAMPLE_IDS.filter(id=>!benchDone(w,id)).length;
+    body=`<h3>${m.name} bench <small>${done.length}/3 tests</small></h3>${done.length<3?`<div class="street-actions">${POWER_TESTS.map(t=>`<button data-street-test="${t}" class="${done.includes(t)?'selected':''}">${done.includes(t)?'✓ ':''}${BENCH_LABEL[t]}</button>`).join('')}</div>`:''}
+    ${done.length?`<ul class="bench-results">${POWER_TESTS.filter(t=>done.includes(t)).map(t=>`<li><b>${BENCH_LABEL[t]}:</b> ${m[t]}</li>`).join('')}</ul>`:'<p class="small-note">Tap Look, Bend and Conduct to test this sample.</p>'}
+    ${done.length===3?(cls?(streetMessage.startsWith('✓')?'':`<p class="ok-line">✓ Classified: ${cls}</p>`):`<div class="street-actions"><span class="mini-label">Classify:</span>${['metal','metalloid','nonmetal'].map(c=>`<button data-street-class="${c}">${c}</button>`).join('')}</div>`):''}
+    ${ready?(w.material===m.id&&!(w.failed&&!con.length)?'<p class="good-line">✓ You are carrying this sample.</p>':`${st.n===2?'<p class="small-note">Choose the sample that carries current and bends without breaking.</p>':''}<button class="primary" data-street="carry">${w.material?'Swap for this sample':'Pick up this sample'}</button>`):cls?`<p class="small-note">Next bench: ${left} left.${g3?' Follow the arrow.':''}</p>`:''}`}
+  else if(p?.kind==='socket'){const end=p.id.at(-1),mat=MATERIALS.find(x=>x.id===w.material);let inner;
+    if(!ready)inner='<p class="small-note">Test and classify all four benches first.</p>';
+    else if(!mat||(w.failed&&!con.length))inner='<p class="small-note">Pick up a sample at one of the benches first.</p>';
+    else if(end==='a')inner=con.includes('b')?'<p class="good-line">✓ Cable connected from A to B</p><p class="small-note">Finish at signal terminal B.</p>':con.includes('a')?'<p class="good-line">✓ Terminal A connected</p><p class="small-note">Now walk the cable over to signal terminal B and connect it there.</p>':'<button class="primary" data-street="connect">Connect terminal A</button>';
+    else if(!con.includes('a'))inner='<p class="small-note">Connect the cable at cabinet terminal A first, then bring it here.</p>';
+    else if(!con.includes('b'))inner='<p class="good-line">✓ Terminal A connected</p><button class="primary" data-street="connect">Connect terminal B</button>';
+    else{const sup=w.support||[];inner=`<p class="good-line both-connected">✓ Cable connected from A to B</p><p class="mini-label">What does a cable need? Select everything that applies:</p><div class="street-actions evidence">${[['conducts','carries current'],['bends','bends without breaking'],['shiny','looks shiny']].map(([k,n])=>`<button data-street-evidence="${k}" class="${sup.includes(k)?'selected':''}" aria-pressed="${sup.includes(k)}">${sup.includes(k)?'✓ ':''}${n}</button>`).join('')}</div>${w.success?'<button class="primary" data-street="finish">Return signals to service</button>':`<button class="primary" data-street="run" ${sup.length?'':'disabled'}>Run flex cycle</button>`}`}
+    body=`<h3>${p.name}<small>Carrying: ${mat&&!(w.failed&&!con.length)?mat.name:'nothing'}</small></h3>${inner}`}
+  else body=`<h3>Restore the signals</h3><p>${st.text}</p><div class="bench-grid">${SAMPLE_IDS.map(id=>`<span class="${benchDone(w,id)?'done':''}">${benchDone(w,id)?'✓':'○'} ${MATERIALS.find(x=>x.id===id).symbol}</span>`).join('')}</div><p class="small-note">${g3?'Walk into a glowing ring and its panel opens.':'Walk up to a bench or terminal and its panel opens.'}</p>`;
+  el2.innerHTML=`<div class="eyebrow">MAYA’S STREET WORKSHOP · VIRTUAL TESTS</div>${strip}${body}<p class="street-feedback" role="status">${esc(streetMessage)}</p><div class="street-tools"><button data-street="hint">Hint</button><button data-street="table">Table</button><button data-street="overview">Overview</button><button data-street="roam">Follow cam</button></div>`}
 const POWER_HINTS=['Run Look, Bend and Conduct at every bench. Then classify each one by where its element sits compared with the staircase.','A cable must carry current AND bend without breaking. Which bench passed both tests?','Worked example: a material that conducts but snaps when flexed (like a pencil lead) would break inside a flexible cable.'];
 
 // ------------------------------------------------------------------ 04 · fountain show
@@ -352,7 +365,7 @@ const actions={start,close:closeModal,guide,pause,table:()=>table(),notebook,sum
   'sound-toggle':()=>{state.settings.volume=sfx.volume>0?0:.6;state.settings.sfxChosen=true;if(sfx.volume>0){radio.ensure();sfx.chime(true)}const b=$('#sound-toggle');if(b){b.textContent=sfx.volume>0?'Sound: on':'Sound: off';b.setAttribute('aria-pressed',String(sfx.volume>0))}save()},
   'skip-tutorial':()=>{state.tutorial=3;closeModal();toast('Follow the gold route to Noor.');save()},
   recover:()=>{world.recover();closeModal();toast('Returned safely to HQ.');save()},
-  restart:()=>{const m=current();if(!m)return toast('No active investigation to restart.');state.work={};state.step=0;world.resetShow?.();world.setCamera?.('chase');streetPoint=null;save();closeModal();toast(`${m.title} restarted. Talk to ${m.person} to begin again.`)},
+  restart:()=>{const m=current();if(!m)return toast('No active investigation to restart.');state.work={};state.step=0;world.resetShow?.();world.setCamera?.('chase');streetPoint=null;autoNear=null;save();closeModal();toast(`${m.title} restarted. Talk to ${m.person} to begin again.`)},
   'reset-confirm':()=>openModal('reset',`${closeButton()}<h2>Start over?</h2><p>This clears investigations, evidence, coins and settings on this browser.</p><div class="actions"><button class="danger" data-act="reset">Reset all progress</button><button data-act="pause">Keep my progress</button></div>`,'narrow'),
   reset:()=>{state=freshState();setWaypoint(null);world.setTimeMode?.('auto');world.setCityProgress?.(0);world.resetCars?.();radio.tune(-1);world.loadPosition({x:520,y:1050,walked:0,driven:0,discovered:[]});world.recover();world.resetShow?.();writeSave(storage,state);title()},
   recenter:()=>{world.recenterCamera?.();toast('Camera centered behind you.');if(modal==='pause')closeModal()},
@@ -382,10 +395,10 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
     if(!p||world.player.inVehicle){toast('Walk up to a bench or terminal first.');return}
     if(d.streetTest&&p.kind==='sample'){const m=MATERIALS.find(x=>x.id===p.material);measureSample(w,m.id,d.streetTest);w.lastTest={material:m.id,test:d.streetTest};streetMessage='';record(`Bench · ${m.name} · ${d.streetTest}`,m[d.streetTest]);beep()}
     if(d.streetClass&&p.kind==='sample'){const r=validateClass(p.material,d.streetClass);attempt('class-'+p.material,r.ok);streetMessage=r.text;if(r.ok){w.classes||={};w.classes[p.material]=d.streetClass;record(`Classified ${p.material}`,r.text)}}
-    if(d.street==='carry'&&p.kind==='sample'&&powerReady(w)){Object.assign(w,{material:p.material,connections:[],success:false,failed:false});streetMessage=`Picked up ${MATERIALS.find(x=>x.id===p.material).name}. Carry it to cabinet terminal A.`}
+    if(d.street==='carry'&&p.kind==='sample'&&powerReady(w)&&(w.material!==p.material||w.failed)){Object.assign(w,{material:p.material,connections:[],support:[],success:false,failed:false});streetMessage=`Picked up ${MATERIALS.find(x=>x.id===p.material).name}. Carry it to cabinet terminal A${world.workshopRings?' (follow the arrow)':''}.`}
     if(d.street==='connect'&&p.kind==='socket'){const r=connectTerminal(w,p.id.at(-1));streetMessage=r.text;beep(r.ok?'tap':'wrong')}
     if(d.streetEvidence){w.support||=[];w.support=w.support.includes(d.streetEvidence)?w.support.filter(x=>x!==d.streetEvidence):[...w.support,d.streetEvidence];w.success=false}
-    if(d.street==='run'&&w.connections?.includes('b')){const s=w.support||[],reason=s.length===2&&s.includes('conducts')&&s.includes('bends')?'both':'other';const r=validatePower(w.material,reason);attempt('power-run',r.ok);w.success=r.ok;w.failed=!r.ok;streetMessage=r.text;record('Flex cycle',r.text);if(!r.ok&&w.material!=='copper')w.connections=[]}
+    if(d.street==='run'&&w.connections?.includes('b')&&(w.support||[]).length){const r=validatePower(w.material,w.support);attempt('power-run',r.ok);w.success=r.ok;w.failed=!r.ok;streetMessage=r.text;record('Flex cycle',r.text);if(!r.ok&&w.material!=='copper'){w.connections=[];w.material=null}}
     if(d.street==='finish'&&w.success)return complete();
     streetStamp='';sync();save();return}
   // fountain show

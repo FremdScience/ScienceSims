@@ -3,7 +3,7 @@
  * reactivity → acid/base OH compounds (hydroxides and oxyacids) → ions and formulas. Pure data and validators (no DOM).
  * All observations are virtual. No procedures are described. Hints never state an answer:
  * the last hint is always a worked example that uses different elements. */
-import {ELEMENTS,EN_ALL} from './elements.js?v=5.3.2';
+import {ELEMENTS,EN_ALL} from './elements.js?v=5.3.3';
 /** Pauling electronegativity (RSC values; see elements.js and SOURCES.md). */
 export const EN=EN_ALL;
 
@@ -136,10 +136,14 @@ export function validateClass(material,choice){const m=MATERIALS.find(x=>x.id===
  if(material==='graphite'&&choice==='metalloid')return {ok:false,text:'Its properties do look in-between, which is a good observation. But classify by position: find carbon (C) on the table. Which side of the staircase is it on?'};
  if(material==='silicon'&&choice==='metal')return {ok:false,text:'It is shiny, but did it bend? Find silicon (Si) on the table. Where is it compared with the staircase?'};
  return {ok:false,text:`Recheck your bench evidence and find ${m.symbol} on the table. Which side of the staircase is it on?`}}
+/** reason: the evidence the student selected (array of 'conducts' | 'bends' | 'shiny'); 'both' is accepted as shorthand for conducts + bends. */
 export function validatePower(material,reason){
  if(material!=='copper'){const t={graphite:'Graphite conducts, but it snapped in the flex cycle. The cable must bend without breaking.',silicon:'Silicon only conducts a little, and it is brittle, so it snapped in the flex cycle.',sulfur:'Sulfur does not conduct and it crumbles. The circuit never closed.'};return {ok:false,text:t[material]||'Choose a sample first.'}}
- if(reason!=='both')return {ok:false,text:'Copper works! Now back it up: the cable needs a material that conducts AND bends without breaking. Shine alone proves nothing.'};
- return {ok:true,text:'Circuit stable. Copper conducts and bends without breaking, so it makes a flexible cable.'}}
+ const s=Array.isArray(reason)?reason:reason==='both'?['conducts','bends']:[],c=s.includes('conducts'),b=s.includes('bends'),shiny=s.includes('shiny');
+ if(c&&b&&!shiny)return {ok:true,text:'Circuit stable. Copper conducts and bends without breaking, so it makes a flexible cable.'};
+ if(!s.length)return {ok:false,text:'Copper works! Now back it up: select what a cable needs, then run the flex cycle again.'};
+ const missing=[!c&&'carry current',!b&&'bend without breaking'].filter(Boolean);
+ return {ok:false,text:'Copper works! '+(missing.length?`But a cable also has to ${missing.join(' and ')}. `:'')+(shiny?'Shine doesn’t help a cable work, so unselect “looks shiny”. ':'')+'Then run the flex cycle again.'}}
 
 // ------------------------------------------------------------------ 4 · fountain show
 export const BEHAVIOR={Li:{h:.34,color:'#7d3cc8',seen:'steady fizzing; indicator turns purple'},Na:{h:.6,color:'#7d3cc8',seen:'fast fizzing, skates across the surface; purple'},K:{h:.95,color:'#8f4fe0',seen:'vigorous, with a violet flash; purple'},
