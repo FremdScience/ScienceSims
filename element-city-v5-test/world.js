@@ -50,20 +50,89 @@ export function moveWithCollisions(x,y,dx,dy,r=13,obstacles=buildings) {
  }
  return {x:nx,y:ny,hit};
 }
+/** How much of a blocked move survives (0 head-on … 1 grazing): probes which axis is blocked after the move. */
+export function collisionKeep(moved,dx,dy,r=13,obstacles=buildings){
+ const L=Math.hypot(dx,dy);if(!L)return {keep:1,dir:0,blocked:false};const ux=dx/L,uy=dy/L,px=Math.max(1.5,Math.min(7,Math.abs(dx))),py=Math.max(1.5,Math.min(7,Math.abs(dy)));
+ const bx=!!dx&&circleCollides(moved.x+Math.sign(dx)*px,moved.y,r,obstacles),by=!!dy&&circleCollides(moved.x,moved.y+Math.sign(dy)*py,r,obstacles);
+ return {keep:Math.hypot(bx?0:ux,by?0:uy),dir:Math.atan2(by?0:uy,bx?0:ux),blocked:bx||by};
+}
+/** Element coins: one per periodic-table group, hidden at ground level in alleys, gaps and dead ends.
+ * Ids 'hydrogen', 'graphite' and 'neon' are kept from earlier versions so old saves keep their finds. */
+export const ELEMENT_COINS=[
+ {id:'hydrogen',group:1,symbol:'H',x:130,y:92,label:'H / THE EXCEPTION'},
+ {id:'magnesium',group:2,symbol:'Mg',x:58,y:760,label:'WEST WALL, ALKALINE HEIGHTS'},
+ {id:'scandium',group:3,symbol:'Sc',x:838,y:740,label:'TRANSIT CONTROL BACK LOT'},
+ {id:'titanium',group:4,symbol:'Ti',x:1585,y:780,label:'BEHIND TRANSITION TOWER'},
+ {id:'vanadium',group:5,symbol:'V',x:1828,y:560,label:'CAFÉ SIDE PASSAGE'},
+ {id:'chromium',group:6,symbol:'Cr',x:1360,y:78,label:'FAMILY RESEARCH REAR YARD'},
+ {id:'manganese',group:7,symbol:'Mn',x:845,y:135,label:'ARCHIVES ALLEY'},
+ {id:'iron',group:8,symbol:'Fe',x:1092,y:515,label:'ALLOY + CO. LOADING DOCK'},
+ {id:'cobalt',group:9,symbol:'Co',x:1828,y:1130,label:'SIGNAL HOUSE SERVICE LANE'},
+ {id:'nickel',group:10,symbol:'Ni',x:1570,y:1330,label:'LIBRARY GARDEN GATE'},
+ {id:'copper',group:11,symbol:'Cu',x:560,y:590,label:'TRANSIT CONTROL WEST WALK'},
+ {id:'zinc',group:12,symbol:'Zn',x:2215,y:1392,label:'DEPOT SEAWALL'},
+ {id:'aluminum',group:13,symbol:'Al',x:1590,y:1748,label:'MUSEUM SOUTH STEPS'},
+ {id:'graphite',group:14,symbol:'C',x:1380,y:1370,label:'CARBON GARDEN'},
+ {id:'nitrogen',group:15,symbol:'N',x:1060,y:1405,label:'METALLOID JUNCTION YARD'},
+ {id:'oxygen',group:16,symbol:'O',x:2090,y:80,label:'ION GRID ROOF ACCESS LANE'},
+ {id:'chlorine',group:17,symbol:'Cl',x:2232,y:850,label:'HALOGEN HARBOR SEAWALL'},
+ {id:'neon',group:18,symbol:'Ne',x:1790,y:100,label:'NEON AFTER HOURS'},
+];
+export const COIN_PICKUP=55;
+/** Traffic signal cycle shared by the street lamps (3D) and the cars: 16 s, no all-red phase. */
+export function signalPhase(t){const c=((t%16)+16)%16;return c<6.5?{ns:'green',ew:'red'}:c<8?{ns:'amber',ew:'red'}:c<14.5?{ns:'red',ew:'green'}:{ns:'red',ew:'amber'}}
+// ---- ambient traffic: closed loops along the play grid, right-hand lanes 26 units off the centreline,
+// with curved turns inside each intersection. Route 0 is the original clockwise outer loop.
+const LANE=26,CORNER=60,STOP_LINE=92;
+const OUTER=[[450,400],[1200,400],[1950,400],[1950,950],[1950,1500],[1200,1500],[450,1500],[450,950]];
+const LOOPS=[OUTER,[...OUTER].reverse(),[[450,400],[1200,400],[1200,950],[450,950]],[[1200,400],[1950,400],[1950,950],[1200,950]],[[1200,950],[1950,950],[1950,1500],[1200,1500]],[[450,950],[1200,950],[1200,1500],[450,1500]]];
+function buildRoute(loop){
+ const n=loop.length,pts=[],nodes=[],dir=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy);return [dx/l,dy/l]};
+ for(let k=0;k<n;k++){const C=loop[k],d1=dir(loop[(k+n-1)%n],C),d2=dir(C,loop[(k+1)%n]),n1=[-d1[1],d1[0]],n2=[-d2[1],d2[0]];
+  const pin=[C[0]+LANE*n1[0]-d1[0]*CORNER,C[1]+LANE*n1[1]-d1[1]*CORNER],pout=[C[0]+LANE*n2[0]+d2[0]*CORNER,C[1]+LANE*n2[1]+d2[1]*CORNER],q=[C[0]+LANE*(n1[0]+n2[0]),C[1]+LANE*(n1[1]+n2[1])];
+  const turn=Math.abs(d1[0]*d2[0]+d1[1]*d2[1])<.5,i0=pts.length;
+  if(turn)for(let i=0;i<=6;i++){const t=i/6,a=(1-t)*(1-t),b=2*(1-t)*t,c=t*t;pts.push([a*pin[0]+b*q[0]+c*pout[0],a*pin[1]+b*q[1]+c*pout[1]])}else pts.push(pin,pout);
+  nodes.push({x:C[0],y:C[1],axis:Math.abs(d1[0])>.5?'ew':'ns',turn,i0,i1:pts.length-1});
+ }
+ const cum=[0];for(let i=1;i<=pts.length;i++){const a=pts[i-1],b=pts[i%pts.length];cum.push(cum[i-1]+Math.hypot(b[0]-a[0],b[1]-a[1]))}
+ for(const nd of nodes){nd.enter=cum[nd.i0];nd.exit=cum[nd.i1]}
+ return {pts,cum,len:cum[pts.length],nodes};
+}
+export const TRAFFIC_ROUTES=LOOPS.map(buildRoute);
+export function trafficAt(progress,route=0){
+ const R=TRAFFIC_ROUTES[route]||TRAFFIC_ROUTES[0],d=((progress%R.len)+R.len)%R.len,P=R.pts;let lo=0,hi=P.length-1;
+ while(lo<hi){const mid=(lo+hi+1)>>1;if(R.cum[mid]<=d)lo=mid;else hi=mid-1}
+ const a=P[lo],b=P[(lo+1)%P.length],f=(d-R.cum[lo])/((R.cum[lo+1]-R.cum[lo])||1);
+ return {x:a[0]+(b[0]-a[0])*f,y:a[1]+(b[1]-a[1])*f,angle:Math.atan2(b[1]-a[1],b[0]-a[0])};
+}
+const CAR_LEN={compact:58,sedan:68,suv:70,van:76};
+const TRAFFIC_TYPES=['sedan','compact','suv','sedan','van','compact','sedan','suv'];
+const TRAFFIC_PAINTS=['#f4f4f2','#1d3557','#a8adb3','#8b1e2b','#ffffff','#2f4f4f','#c9b28d','#111317','#5f8fb8','#7a1f1f','#d8d3c4','#3c5a78','#6b6f73','#b8862f','#e7e2d6','#4d2a3a'];
+/** 16 cars: 4 each way round the outer loop and 2 on each block loop, evenly spaced, 31–42 km/h. */
+export function spawnTraffic(){const out=[];[4,4,2,2,2,2].forEach((count,route)=>{const L=TRAFFIC_ROUTES[route].len;for(let k=0;k<count;k++){const i=out.length,cruise=130+(i*37)%46;
+ out.push({route,progress:((k+.15+route*.13)/count%1)*L,speed:cruise*.6,cruise,type:TRAFFIC_TYPES[i%TRAFFIC_TYPES.length],paint:TRAFFIC_PAINTS[i%TRAFFIC_PAINTS.length],color:TRAFFIC_PAINTS[i%TRAFFIC_PAINTS.length]})}});
+ // loops share lanes: nudge any car that would start on top of another one
+ for(let i=0;i<out.length;i++)for(let tries=0;tries<12;tries++){const a=trafficAt(out[i].progress,out[i].route);if(!out.some((o,j)=>j<i&&Math.hypot(trafficAt(o.progress,o.route).x-a.x,trafficAt(o.progress,o.route).y-a.y)<110))break;out[i].progress=(out[i].progress+120)%TRAFFIC_ROUTES[out[i].route].len}
+ return out}
+/** Sidewalk walkers: position is a pure function of time (shared by the 2D and 3D views and the traffic). */
+export function pedestrianAt(seed,t){const side=seed%2?1:-1;if(seed%3===0)return {x:roadX[seed%3]+side*75,y:160+((seed*113+t*(12+seed%9))%1500),angle:Math.PI/2};return {x:80+((seed*153+t*(10+seed%10))%2080),y:roadY[seed%3]+side*75,angle:0}}
 function rounded(ctx,x,y,w,h,r=5){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
 function ink(ctx,text,x,y,size=12,color='#d7eee9',align='left',weight=600){ctx.fillStyle=color;ctx.font=`${weight} ${size}px system-ui,sans-serif`;ctx.textAlign=align;ctx.fillText(text,x,y);}
 function seedRandom(seed){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
 
 export class CityWorld {
- constructor(canvas,minimap,{onChange=()=>{},onInteract=()=>{},onDiscover=()=>{}}={}) {
+ constructor(canvas,minimap,callbacks={}) {
+  const {onChange=()=>{},onInteract=()=>{},onDiscover=()=>{}}=callbacks||{};
   this.canvas=canvas;this.minimap=minimap;this.ctx=canvas.getContext('2d');this.mapCtx=minimap?.getContext('2d');
   this.onChange=onChange;this.onInteract=onInteract;this.onDiscover=onDiscover;
+  // optional feedback hooks (the app may also assign them later): onImpact(0..1), onHonk(), onWaypointReached()
+  if(callbacks?.onImpact)this.onImpact=callbacks.onImpact;if(callbacks?.onHonk)this.onHonk=callbacks.onHonk;if(callbacks?.onWaypointReached)this.onWaypointReached=callbacks.onWaypointReached;
   this.config={paused:true,reducedMotion:false,completed:[],activeMission:'power',skin:'teal'};
   this.player={x:520,y:1050,inVehicle:false,speed:0,angle:-Math.PI/2};
   this.car={x:580,y:1025,angle:0};this.camera={x:520,y:1050};this.input={};this.walked=0;this.driven=0;
   this.time=0;this.last=0;this.notifyAt=0;this.bumpAt=-20;this.discovered=new Set();this.destroyed=false;
-  this.secretPoints=[{id:'hydrogen',x:1015,y:775,label:'H / THE EXCEPTION'},{id:'graphite',x:1380,y:1370,label:'CARBON GARDEN'},{id:'neon',x:1770,y:285,label:'NEON AFTER HOURS'}];
-  this.traffic=Array.from({length:10},(_,i)=>({t:i*.1,offset:i%2?26:-26,progress:i*520,speed:50+i*5,color:['#dca66a','#77989e','#a9b5ab','#aab2c7'][i%4]}));
+  this.secretPoints=ELEMENT_COINS.map(c=>({...c}));
+  this.traffic=spawnTraffic();
   this.pedestrians=Array.from({length:30},(_,i)=>({x:0,y:0,seed:i,color:['#f3bd77','#7ad1be','#c3a2de','#d3e2d9'][i%4]}));
   this.surface=document.createElement('canvas');this.surface.width=WORLD.width;this.surface.height=WORLD.height;
   this.drawStatic();this.resize();this.resizeHandler=()=>this.resize();window.addEventListener('resize',this.resizeHandler);
@@ -81,7 +150,7 @@ export class CityWorld {
   if(config.paused)this.input={};
  }
  setInput(key,value){
-  const map={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right',Shift:'shift',' ':'space'};
+  const map={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right',Shift:'shift',' ':'handbrake'};
   this.input[map[key]||key.toLowerCase()]=value;
  }
  getState(){return {...this.player,walked:this.walked,driven:this.driven,car:{...this.car},discovered:[...this.discovered]};}
@@ -116,13 +185,13 @@ export class CityWorld {
   if(p.inVehicle){
    const throttle=(this.input.up?1:0)-(this.input.down?1:0);
    if(throttle)p.speed+=throttle*220*dt;else p.speed*=Math.exp(-2.2*dt);
-   if(this.input.space)p.speed*=Math.exp(-8*dt);
+   if(this.input.space||this.input.handbrake)p.speed*=Math.exp(-8*dt);
    p.speed=clamp(p.speed,-135,355);if(Math.abs(p.speed)<2)p.speed=0;
    const steer=(this.input.right?1:0)-(this.input.left?1:0);
    if(Math.abs(p.speed)>4)p.angle+=steer*2.15*clamp(Math.abs(p.speed)/100,.25,1)*Math.sign(p.speed)*dt;
    const moved=moveWithCollisions(p.x,p.y,Math.cos(p.angle)*p.speed*dt,Math.sin(p.angle)*p.speed*dt,19);
    p.x=moved.x;p.y=moved.y;
-   if(moved.hit){p.speed*=.35;this.bumpAt=this.time;}
+   if(moved.hit){const k=collisionKeep(moved,Math.cos(p.angle)*p.speed,Math.sin(p.angle)*p.speed,19),impact=Math.abs(p.speed)*(1-k.keep);p.speed*=.25+.7*k.keep;if(impact>40&&this.time-this.bumpAt>.25){this.bumpAt=this.time;this.impact=Math.min(1,impact/260);this.onImpact?.(this.impact);}}
    Object.assign(this.car,{x:p.x,y:p.y,angle:p.angle});this.driven+=dist(p,before);
   }else{
    let dx=(this.input.right?1:0)-(this.input.left?1:0),dy=(this.input.down?1:0)-(this.input.up?1:0),len=Math.hypot(dx,dy);
@@ -130,8 +199,8 @@ export class CityWorld {
    if(len){dx/=len;dy/=len;p.angle=Math.atan2(dy,dx);const moved=moveWithCollisions(p.x,p.y,dx*p.speed*dt,dy*p.speed*dt,12);p.x=moved.x;p.y=moved.y;}
    this.walked+=dist(p,before);
   }
-  for(const car of this.traffic){const next=this.trafficPosition(car.progress+car.speed*dt);if(dist(next,p)>100)car.progress=(car.progress+car.speed*dt)%5200;}
-  for(const secret of this.secretPoints)if(dist(secret,p)<85&&!this.discovered.has(secret.id)){this.discovered.add(secret.id);this.onDiscover(secret.id);}
+  this.advanceTraffic(dt);
+  for(const secret of this.secretPoints)if(dist(secret,p)<COIN_PICKUP&&!this.discovered.has(secret.id)){this.discovered.add(secret.id);this.onDiscover(secret.id);}
   if(this.time-this.notifyAt>.12){this.notify();this.notifyAt=this.time;}
  }
  loop(timestamp){
@@ -189,7 +258,6 @@ export class CityWorld {
   // Fleet parking bay and headquarters arrival pad.
   c.strokeStyle='#a9c3b6';c.lineWidth=2;c.strokeRect(550,1005,65,40);ink(c,'CITY FLEET',584,1065,11,'#d4ddd1','center');
   c.fillStyle='#5b8478';rounded(c,350,1100,37,115,3);c.fill();ink(c,'01',369,1122,13,'#d5e5d7','center');
-  for(const s of this.secretPoints||[]){c.fillStyle='#7d9e89';rounded(c,s.x-10,s.y-9,20,18,3);c.fill();ink(c,'?',s.x,s.y+5,14,'#172f32','center',800);}
   // Progress changes are visible on the streets, not solely in menus.
   const done=this.config.completed||[];
   if(done.includes('identity')){for(let i=0;i<4;i++){c.fillStyle=['#e8bf77','#82c8bd','#b2a2dc','#95b4d3'][i];c.fillRect(2025,1160+i*30,28,24);ink(c,['Si','Ar','Al','Br'][i],2039,1177+i*30,12,'#1e343a','center');}}
@@ -229,16 +297,57 @@ export class CityWorld {
   c.fillStyle='#203b49';c.fillRect(-6,1+bob,5,10);c.fillRect(1,1-bob,5,10);c.fillStyle=color;rounded(c,-9,-8,18,16,5);c.fill();c.fillStyle='#dec09c';c.beginPath();c.arc(0,-9,6,0,Math.PI*2);c.fill();c.fillStyle='#213e42';c.beginPath();c.arc(0,-11,6,Math.PI,Math.PI*2);c.fill();
   if(player){c.fillStyle='#f3d891';c.fillRect(-4,-2,8,8);c.strokeStyle='#f7e8b3';c.lineWidth=2;c.beginPath();c.moveTo(-5,-13);c.lineTo(5,-13);c.stroke();}c.restore();
  }
- trafficPosition(progress){
-  const path=[[450,400],[1950,400],[1950,1500],[450,1500]],lens=[1500,1100,1500,1100];let distance=progress%5200,segment=0;while(distance>lens[segment])distance-=lens[segment++];const a=path[segment],b=path[(segment+1)%4],f=distance/lens[segment],angle=Math.atan2(b[1]-a[1],b[0]-a[0]);return {x:a[0]+(b[0]-a[0])*f+Math.cos(angle+Math.PI/2)*26,y:a[1]+(b[1]-a[1])*f+Math.sin(angle+Math.PI/2)*26,angle};
+ trafficPosition(progress,route=0){return trafficAt(progress,route)}
+ /** Ambient traffic: each car follows its loop, keeps its distance from whatever is in its lane ahead
+  * (cars, the investigator, parked cars, pedestrians), slows into turns, and once 'power' restores the
+  * signals it stops at red and amber stop lines. Cars never move into the investigator; a car held up
+  * by the investigator for 1.5 s calls onHonk (rate limited). Both the 2D and 3D worlds use this. */
+ advanceTraffic(dt){
+  const T=this.traffic;if(!T?.length||!(dt>0))return;const p=this.player,time=this.time||0,live=this.signalsLive??(this.config?.completed||[]).includes('power'),phase=signalPhase(time);
+  for(const c of T){const q=trafficAt(c.progress,c.route||0);c.x=q.x;c.y=q.y;c.angle=q.angle;c.hx=Math.cos(q.angle);c.hy=Math.sin(q.angle);c.half=(CAR_LEN[c.type]||64)/2}
+  const peds=(this.pedestrians||[]).map(s=>pedestrianAt(s.seed,time)),still=[...(this.parked||[])];
+  if(!p.inVehicle&&Number.isFinite(this.car?.x))still.push(this.car);
+  const extra=this.trafficBlockers?.()||[];
+  // a looks at b: free distance ahead of a's bumper to b (Infinity when b is not in a's lane ahead)
+  const ahead=(a,x,y,lat,size)=>{const dx=x-a.x,dy=y-a.y,al=dx*a.hx+dy*a.hy;if(al<=0||al>200)return Infinity;return Math.abs(dy*a.hx-dx*a.hy)<lat?al-a.half-size:Infinity};
+  // (crossing cars are also checked where they will be in 0.7 s, so nobody noses into a moving stream)
+  const sees=(a,b)=>{const dot=a.hx*b.hx+a.hy*b.hy;if(dot<-.6)return Infinity;if(dot>.6)return ahead(a,b.x,b.y,18,b.half);const t=.7*(b.speed||0);return Math.min(ahead(a,b.x,b.y,46,b.half),ahead(a,b.x+b.hx*t,b.y+b.hy*t,46,b.half))};
+  for(let i=0;i<T.length;i++){const c=T[i],R=TRAFFIC_ROUTES[c.route||0]||TRAFFIC_ROUTES[0];if(!Number.isFinite(c.cruise))c.cruise=c.speed||0;const cruise=c.cruise;let gap=Infinity,waitOn=-1,byPlayer=false,hard=false;
+   const ignore=(c.ignoreUntil||0)>time?c.ignore:-1;
+   for(let j=0;j<T.length;j++){if(j===i)continue;const o=T[j];
+    if((o.route||0)===(c.route||0)){const g=((o.progress-c.progress)%R.len+R.len)%R.len-c.half-o.half;if(g<250&&g<gap){gap=g;waitOn=j}continue} // same loop: exact distance along the path
+    const g=sees(c,o);if(g===Infinity||j===ignore)continue;const back=sees(o,c);
+    if(back!==Infinity&&(g<back||(g===back&&i<j)))continue; // both in each other's way: whoever is nearer the crossing goes first
+    if(g<gap){gap=g;waitOn=j}}
+   if(Number.isFinite(p.x)){const size=p.inVehicle?34:12,lat=p.inVehicle?30:24,dx=p.x-c.x,dy=p.y-c.y,al=dx*c.hx+dy*c.hy,g=ahead(c,p.x,p.y,lat,size);
+    if(g<gap){gap=g;byPlayer=true;waitOn=-1}if(g!==Infinity&&al<c.half+size+10)hard=true}
+   for(const o of still){const g=ahead(c,o.x,o.y,30,34);if(g<gap){gap=g;waitOn=-1}}
+   for(const q of peds){const g=ahead(c,q.x,q.y,22,8);if(g<gap){gap=g;waitOn=-1}}
+   for(const b of extra){const dx=b.x-c.x,dy=b.y-c.y,al=dx*c.hx+dy*c.hy;if(al>120&&al<260&&Math.abs(dy*c.hx-dx*c.hy)<(b.lat||70)){gap=Math.min(gap,al-150-c.half);waitOn=-1}}
+   // intersections: slow into turns (and everywhere while the signals blink amber); stop at red/amber once signals work
+   let cap=cruise;const v=Math.max(0,c.speed||0);
+   for(const nd of R.nodes){const rel=((c.progress-nd.enter)%R.len+R.len)%R.len,inside=rel<nd.exit-nd.enter,dist=inside?0:R.len-rel,slow=nd.turn?Math.min(cruise,Math.max(60,cruise*.5)):!live?Math.min(cruise,Math.max(60,cruise*.6)):cruise;
+    if(dist<260&&slow<cruise)cap=Math.min(cap,Math.sqrt(slow*slow+2*200*dist));
+    if(live&&!inside&&dist<260){const light=phase[nd.axis];if(light!=='green'){const stop=dist-(STOP_LINE-CORNER)-c.half;const committed=light==='amber'?stop<v*v/520:stop<4&&v>30;if(!committed&&stop>-6&&stop<gap){gap=stop;waitOn=-1;byPlayer=false}}}}
+   const target=Math.min(cap,gap<=6?0:Math.sqrt(2*220*(gap-6)));
+   c.speed=hard?0:v<target?Math.min(target,v+90*dt):Math.max(target,v-460*dt);
+   c.progress=(c.progress+c.speed*dt)%R.len;
+   // honk (politely) at an investigator holding the car up; break rare cross-traffic standoffs
+   if(byPlayer&&c.speed<5){c.wait=(c.wait||0)+dt;if(c.wait>1.5&&time-(c.honkAt??-99)>6&&time-(this.honkAt??-99)>2.5){c.honkAt=time;this.honkAt=time;this.onHonk?.()}}else c.wait=0;
+   c.waitOn=c.speed<1?waitOn:-1;
+  }
+  // break the rare gridlock (a cycle of cars each waiting on the next): the lowest-numbered car goes first
+  for(let i=0;i<T.length;i++){let j=T[i].waitOn,min=i,steps=0;while(j>=0&&j!==i&&steps++<T.length){min=Math.min(min,j);j=T[j].waitOn}if(j===i&&min===i){T[i].ignore=T[i].waitOn;T[i].ignoreUntil=time+1.5}}
  }
  render(){
   const c=this.ctx;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.clearRect(0,0,this.width,this.height);
   c.save();c.translate(this.width/2,this.height/2);c.scale(this.zoom,this.zoom);c.translate(-this.camera.x,-this.camera.y);c.drawImage(this.surface,0,0);
   const isVisible=(x,y)=>Math.abs(x-this.camera.x)<this.width/this.zoom/2+80&&Math.abs(y-this.camera.y)<this.height/this.zoom/2+80;
-  // Ambient fleet traffic follows a clockwise loop and yields to investigators.
-  for(const t of this.traffic){const pos=this.trafficPosition(t.progress);let {x,y,angle}=pos;const d=dist(pos,this.player);if(d<45){x+=Math.cos(angle+Math.PI/2)*(45-d);y+=Math.sin(angle+Math.PI/2)*(45-d);}if(isVisible(x,y))this.drawCar(c,x,y,angle,t.color);}
-  for(const p of this.pedestrians){const side=p.seed%2?1:-1,vertical=p.seed%3===0;let x,y,ang;if(vertical){x=roadX[p.seed%3]+side*77;y=160+((p.seed*113+this.time*(12+p.seed%9))%1500);ang=Math.PI/2;}else{x=80+((p.seed*153+this.time*(10+p.seed%10))%2080);y=roadY[p.seed%3]+side*77;ang=0;}
+  // Element coins not yet found (one per group).
+  for(const s of this.secretPoints||[]){if(this.discovered.has(s.id)||!isVisible(s.x,s.y))continue;c.fillStyle='#e9c24f';c.strokeStyle='#5a4300';c.lineWidth=2;c.beginPath();for(let k=0;k<6;k++){const a=k*Math.PI/3+Math.PI/6;c.lineTo(s.x+Math.cos(a)*12,s.y+Math.sin(a)*12);}c.closePath();c.fill();c.stroke();ink(c,s.symbol||'?',s.x,s.y+4,s.symbol?.length>1?9:11,'#3a2c05','center',800);}
+  // Ambient fleet traffic drives the street loops in both directions and yields to investigators.
+  for(const t of this.traffic){const {x,y,angle}=Number.isFinite(t.x)?t:this.trafficPosition(t.progress,t.route||0);if(isVisible(x,y))this.drawCar(c,x,y,angle,t.color||'#a9b5ab');}
+  for(const p of this.pedestrians){let {x,y,angle:ang}=pedestrianAt(p.seed,this.time);
    const d=dist({x,y},this.player);if(d<68){x+=(x-this.player.x)/(d||1)*(68-d);y+=(y-this.player.y)/(d||1)*(68-d);}if(isVisible(x,y)&&!circleCollides(x,y,7))this.drawPerson(c,x,y,ang,p.color);
   }
   const skin=this.config.skin==='amber'?'#e9b065':this.config.skin==='violet'?'#ad9cde':'#6fc8b4';
@@ -265,5 +374,12 @@ export class CityWorld {
   c.translate(this.player.x,this.player.y);c.rotate(this.player.angle);c.fillStyle='#f4fcf2';c.strokeStyle='#14353f';c.lineWidth=9;c.beginPath();c.moveTo(58,0);c.lineTo(-36,-32);c.lineTo(-20,0);c.lineTo(-36,32);c.closePath();c.fill();c.stroke();c.restore();
   ink(c,'N',w-10,14,10,'#b6cdc5','center',800);
  }
+ /** 3D-only lighting hooks (time of day, city lights); the 2D fallback ignores them. */
+ setTimeMode(mode){return mode}
+ setCityProgress(){}
+ /** 3D-only GPS waypoint; the 2D fallback has no route ribbon, so these are no-ops. */
+ setWaypoint(){return null}
+ clearWaypoint(){return false}
+ get waypoint(){return null}
  destroy(){this.destroyed=true;cancelAnimationFrame(this.frame);window.removeEventListener('resize',this.resizeHandler);}
 }

@@ -10,7 +10,7 @@
 <meta name="description" content="PTA: Periodic Table Auto — an original open-world chemistry adventure. Explore Element City, borrow an authorized fleet car, and restore the city through scientific investigations.">
 <title>PTA: Periodic Table Auto</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css?v=5.2.0">
+<link rel="stylesheet" href="style.css?v=5.3.0">
 </head>
 <body>
 <canvas id="world" aria-label="Element City game world. Use the controls guide for keyboard and touch instructions."></canvas>
@@ -21,14 +21,14 @@
     <div class="radar"><canvas id="minimap" width="200" height="200" aria-label="Radar: gold route leads to your current destination"></canvas></div>
     <div class="radar-meta"><span id="district">RESEARCH QUARTER</span><span class="systems"><span id="systems">5 awaiting repair</span><span class="meter"><span id="incident-fill"></span></span></span></div>
   </div>
-  <div class="hud-right"><span id="rep" class="rep">0 REP</span><span id="ride" class="ride">ON FOOT</span><button id="pause" class="square" aria-label="Pause game">❚❚</button></div>
+  <div class="hud-right"><span id="job-timer" class="job-timer hidden" role="timer" aria-label="Side job time bonus"></span><span class="rep-block"><span id="rep" class="rep">0 REP</span><small id="rank" class="rank">Rookie Responder</small></span><span id="ride" class="ride">ON FOOT</span><button id="pause" class="square" aria-label="Pause game">❚❚</button></div>
 </header>
 
 <aside id="objective" class="objective hidden" aria-live="polite">
   <div class="eyebrow" id="objective-eyebrow">DISPATCH</div>
   <h2 id="objective-title">Your city. Your investigation.</h2>
   <p id="objective-text"></p>
-  <button id="dispatch-btn" class="text-btn">Dispatch ›</button>
+  <div class="objective-actions"><button id="dispatch-btn" class="text-btn">Dispatch ›</button><button id="brief-btn" class="text-btn" data-act="brief" aria-label="Recent messages">Recent ›</button></div>
 </aside>
 
 <nav id="tools" class="tools hidden" aria-label="Investigation tools">
@@ -37,7 +37,7 @@
   <button data-tool="map" aria-label="City map (M)"><b>M</b><span>Map</span></button>
   <button data-act="recenter" aria-label="Recenter camera (R)"><b>R</b><span>Recenter</span></button>
   <button id="camera-btn" data-act="camera" aria-label="Switch camera (C)"><b>C</b><span>Camera</span></button>
-  <button data-tool="guide" aria-label="How to play"><b>?</b><span>Guide</span></button>
+  <button data-tool="guide" aria-label="Guide: how to play"><b>?</b><span>Guide</span></button>
 </nav>
 
 <div id="context" class="context hidden">
@@ -46,7 +46,7 @@
 </div>
 
 <button id="radio" class="radio-chip hidden" aria-label="Car radio: tap to change station"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="radio-label">RADIO OFF</span></button>
-<div id="speedo" class="speedo hidden" aria-hidden="true"><b id="speed-value">0</b><small>KM/H</small><span class="gear" id="gear">D</span></div>
+<div id="speedo" class="speedo hidden" aria-hidden="true"><b id="speed-value">0</b><small id="speed-unit">MPH</small><span class="gear" id="gear">D</span></div>
 
 <div id="touch" class="touch hidden">
   <div id="joystick" role="group" aria-label="Movement and steering: touch anywhere in the lower-left area and slide">
@@ -64,6 +64,6 @@
 <div id="modal-root"></div>
 <div id="boot-error" class="hidden" role="alert"></div>
 <noscript><p style="padding:2rem;color:#fff">PTA: Periodic Table Auto needs JavaScript enabled.</p></noscript>
-<script type="module" src="app.js?v=5.2.0"></script>
+<script type="module" src="app.js?v=5.3.0"></script>
 </body>
 </html>

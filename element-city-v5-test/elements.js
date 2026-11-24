@@ -4,7 +4,7 @@
  * This display uses La/Ac in group 3; Ce–Lu and Th–Lr are detached continuations.
  */
 export const REFERENCE_CONDITIONS = 'Approximately 20–25 °C and 1 atmosphere';
-export const TABLE_NOTE = 'Groups are columns; periods are rows. Atomic number counts protons. La and Ac occupy Group 3 in this layout; alternative Group 3 layouts exist. Detached rows continue periods 6 and 7. Categories summarize patterns, with boundary conventions and exceptions.';
+export const TABLE_NOTE = 'Groups are columns; periods are rows. Atomic number counts protons. La and Ac occupy Group 3 in this layout; alternative Group 3 layouts exist. Detached rows continue periods 6 and 7. Categories summarize patterns, with boundary conventions and exceptions. Many US tables also label main groups 1A–8A; the A number equals the valence electrons (helium has 2). Electron configurations are written in filling order (4s before 3d); some references write 3d before 4s.';
 export const CATEGORIES = {
   alkali: 'Alkali metal', alkaline: 'Alkaline earth metal', transition: 'Transition metal',
   'post-transition': 'Other metal', metalloid: 'Metalloid', nonmetal: 'Other nonmetal',
@@ -208,3 +208,39 @@ export const ELEMENTS = names.map(([symbol,name],i)=>{
  return Object.freeze(e);
 });
 export const elementBySymbol = symbol => ELEMENTS.find(e=>e.symbol.toLowerCase()===String(symbol).toLowerCase());
+
+/** Average atomic masses (amu): IUPAC/CIAAW standard atomic weights, abridged to at most five
+ * significant figures; conventional values for elements with an interval (H 1.008, Cl 35.45).
+ * '—' = no standard atomic weight (no stable isotopes and no characteristic terrestrial composition). */
+export const MASS=`1.008 4.0026 6.94 9.0122 10.81 12.011 14.007 15.999 18.998 20.180 22.990 24.305 26.982 28.085 30.974 32.06 35.45 39.95 39.098 40.078
+ 44.956 47.867 50.942 51.996 54.938 55.845 58.933 58.693 63.546 65.38 69.723 72.630 74.922 78.971 79.904 83.798 85.468 87.62 88.906 91.222
+ 92.906 95.95 — 101.07 102.91 106.42 107.87 112.41 114.82 118.71 121.76 127.60 126.90 131.29 132.91 137.33 138.91 140.12 140.91 144.24
+ — 150.36 151.96 157.25 158.93 162.50 164.93 167.26 168.93 173.05 174.97 178.49 180.95 183.84 186.21 190.23 192.22 195.08 196.97 200.59
+ 204.38 207.2 208.98 — — — — — — 232.04 231.04 238.03`.split(/\s+/).concat(Array(26).fill('—'));
+/** Pauling electronegativity (RSC periodic table values) for elements 1–56. Noble gases are omitted:
+ * He, Ne and Ar have no Pauling value, and this game does not list Kr or Xe. */
+export const EN_ALL=Object.freeze({H:2.20,Li:0.98,Be:1.57,B:2.04,C:2.55,N:3.04,O:3.44,F:3.98,Na:0.93,Mg:1.31,Al:1.61,Si:1.90,P:2.19,S:2.58,Cl:3.16,
+ K:0.82,Ca:1.00,Sc:1.36,Ti:1.54,V:1.63,Cr:1.66,Mn:1.55,Fe:1.83,Co:1.88,Ni:1.91,Cu:1.90,Zn:1.65,Ga:1.81,Ge:2.01,As:2.18,Se:2.55,Br:2.96,
+ Rb:0.82,Sr:0.95,Y:1.22,Zr:1.33,Nb:1.6,Mo:2.16,Tc:1.9,Ru:2.2,Rh:2.28,Pd:2.20,Ag:1.93,Cd:1.69,In:1.78,Sn:1.96,Sb:2.05,Te:2.1,I:2.66,Cs:0.79,Ba:0.89});
+/** Ground-state electron configurations, written in filling (Aufbau/Madelung) order as most US high-school
+ * texts do (4s before 3d). EXC lists the known exceptions to simple filling; 104+ are predicted. */
+const ORBITALS=['1s','2s','2p','3s','3p','4s','3d','4p','5s','4d','5p','6s','4f','5d','6p','7s','5f','6d','7p'];
+const CAPACITY={s:2,p:6,d:10,f:14};
+const CORES=[[86,'Rn'],[54,'Xe'],[36,'Kr'],[18,'Ar'],[10,'Ne'],[2,'He']];
+const EXC={24:'4s1 3d5',29:'4s1 3d10',41:'5s1 4d4',42:'5s1 4d5',44:'5s1 4d7',45:'5s1 4d8',46:'4d10',47:'5s1 4d10',
+ 57:'6s2 5d1',58:'6s2 4f1 5d1',64:'6s2 4f7 5d1',78:'6s1 4f14 5d9',79:'6s1 4f14 5d10',
+ 89:'7s2 6d1',90:'7s2 6d2',91:'7s2 5f2 6d1',92:'7s2 5f3 6d1',93:'7s2 5f4 6d1',96:'7s2 5f7 6d1',103:'7s2 5f14 7p1'};
+const coreOf=n=>CORES.find(([z])=>z<n)||null;
+const sup=k=>String(k).replace(/\d/g,c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]);
+const fmt=list=>list.map(([o,k])=>o+sup(k)).join(' ');
+/** [[orbital, electrons], …] for element n, exceptions included. */
+export function orbitalsOf(n){
+ if(EXC[n]){const [z]=coreOf(n);return [...orbitalsOf(z),...EXC[n].split(' ').map(t=>[t.slice(0,2),Number(t.slice(2))])]}
+ const out=[];let left=n;for(const o of ORBITALS){if(left<=0)break;const k=Math.min(CAPACITY[o[1]],left);out.push([o,k]);left-=k}return out}
+/** Noble-gas shorthand, e.g. configOf(8) → '[He] 2s² 2p⁴'. */
+export function configOf(n){const all=orbitalsOf(n),core=coreOf(n);const tail=core?all.slice(orbitalsOf(core[0]).length):all;
+ return (core?`[${core[1]}] `:'')+fmt(tail)+(n>=104?' (predicted)':'')}
+/** Full configuration, e.g. fullConfigOf(11) → '1s² 2s² 2p⁶ 3s¹'. */
+export const fullConfigOf=n=>fmt(orbitalsOf(n))+(n>=104?' (predicted)':'');
+/** Electrons per occupied energy level (shell), e.g. shellsOf(11) → [2, 8, 1]. */
+export function shellsOf(n){const s=[];for(const [o,k] of orbitalsOf(n)){const level=Number(o[0]);s[level-1]=(s[level-1]||0)+k}return Array.from(s,v=>v||0)}

@@ -71,8 +71,8 @@ export function chevronTexture(){const t=canvasTexture(64,64,(c,w,h)=>{c.clearRe
 /* Each facade texture is 4 bays × 4 storeys. Walls are near-white so per-building vertex
  * colours tint them. A companion data texture packs roughness (G) and metalness (B). */
 export const STYLES=['glass','deco','brick','concrete'];
-function drawFacade(c,orm,style,w,h){
-  const r=rng(style.length*97+13),bw=w/4,fh=h/4;
+function drawFacade(c,orm,style,w,h,em){
+  const r=rng(style.length*97+13),bw=w/4,fh=h/4;if(em){em.fillStyle='#000';em.fillRect(0,0,w,h)}
   const wall={glass:'#d9e2e4',deco:'#f6f1e6',brick:'#ffffff',concrete:'#e7e4de'}[style];
   c.fillStyle=wall;c.fillRect(0,0,w,h);orm.fillStyle='rgb(255,235,0)';orm.fillRect(0,0,w,h);
   if(style==='brick'){c.fillStyle='#b8664c';c.fillRect(0,0,w,h);for(let y=0;y<h;y+=8)for(let x=(y/8)%2*8;x<w;x+=16){const v=r();c.fillStyle=v>.7?'#a5583f':v>.4?'#c27153':'#b36148';c.fillRect(x,y,15,7)}c.fillStyle='#d8c9b5';for(let y=7;y<h;y+=8)c.fillRect(0,y,w,1)}
@@ -92,28 +92,39 @@ function drawFacade(c,orm,style,w,h){
     c.fillStyle=style==='glass'?'#1d2b33':'#f4f1ea';const frame=style==='glass'?2:3;
     c.fillRect(x+ww/2-1,y,2,hh);if(style!=='glass'){c.fillRect(x-frame,y-frame,ww+frame*2,frame);c.fillRect(x-frame,y+hh,ww+frame*2,frame+2);c.fillRect(x-frame,y,frame,hh);c.fillRect(x+ww,y,frame,hh)}
     orm.fillStyle=style==='glass'?'rgb(255,18,170)':'rgb(255,30,110)';orm.fillRect(x,y,ww,hh);
+    if(em){em.fillStyle='#fff';em.fillRect(x+2,y+2,ww-4,hh-4)}
   }
   if(style==='glass'){c.fillStyle='#2b3a42';for(let fl=0;fl<4;fl++)c.fillRect(0,fl*fh+fh-7,w,7);c.fillStyle='#1d2b33';for(let b=0;b<=4;b++)c.fillRect(b*bw-3,0,6,h)}
   if(style==='deco'){c.fillStyle='#00000018';for(let fl=0;fl<4;fl++)c.fillRect(0,fl*fh+fh*.2-6,w,5)}
 }
+/** Night lighting shared by every facade: uLit is the share of windows lit (0..1). */
+export const CITY_LIGHTS={uLit:{value:.35}};
+/** Lit windows at night: the emissive map is a window mask; each window cell (UV grid) gets a hashed
+ * on/off rank and a warm or cool tint, so the pattern never repeats between buildings. */
+function windowGlow(shader){shader.uniforms.uLit=CITY_LIGHTS.uLit;
+  shader.fragmentShader=shader.fragmentShader.replace('void main() {','uniform float uLit;\nvoid main() {').replace('#include <emissivemap_fragment>',
+   '#ifdef USE_EMISSIVEMAP\n{vec2 cell=floor(vEmissiveMapUv*4.);float r1=fract(sin(dot(cell,vec2(12.9898,78.233)))*43758.5453),r2=fract(sin(dot(cell,vec2(39.346,11.135)))*24634.6345);'+
+   'totalEmissiveRadiance*=texture2D(emissiveMap,vEmissiveMapUv).r*step(r1,uLit)*(.55+.45*r2)*mix(vec3(1.,.74,.42),vec3(.78,.87,1.),step(.8,r2));}\n#endif')}
 export function facadeMaterials(envIntensity=1){
   const out={};
-  for(const style of STYLES){let ormCtx;
-    const ormTex=canvasTexture(512,512,(c)=>{ormCtx=c},{repeat:true,srgb:false});
-    const map=canvasTexture(512,512,(c,w,h)=>drawFacade(c,ormCtx,style,w,h),{repeat:true});ormTex.needsUpdate=true;
-    out[style]=new THREE.MeshStandardMaterial({map,roughnessMap:ormTex,metalnessMap:ormTex,roughness:1,metalness:1,vertexColors:true,envMapIntensity:envIntensity});
+  for(const style of STYLES){let ormCtx,emCtx;
+    const ormTex=canvasTexture(512,512,(c)=>{ormCtx=c},{repeat:true,srgb:false}),emTex=canvasTexture(512,512,(c)=>{emCtx=c},{repeat:true,srgb:false});
+    const map=canvasTexture(512,512,(c,w,h)=>drawFacade(c,ormCtx,style,w,h,emCtx),{repeat:true});ormTex.needsUpdate=true;emTex.needsUpdate=true;
+    out[style]=new THREE.MeshStandardMaterial({map,roughnessMap:ormTex,metalnessMap:ormTex,roughness:1,metalness:1,vertexColors:true,envMapIntensity:envIntensity,emissive:'#ffffff',emissiveMap:emTex,emissiveIntensity:0});
+    out[style].onBeforeCompile=windowGlow;
   }
   return out;
 }
-export function storefrontMaterial(){let ormCtx;const orm=canvasTexture(512,256,c=>{ormCtx=c},{repeat:true,srgb:false});
+export function storefrontMaterial(){let ormCtx,emCtx;const orm=canvasTexture(512,256,c=>{ormCtx=c},{repeat:true,srgb:false}),em=canvasTexture(512,256,c=>{emCtx=c},{repeat:true});
   const map=canvasTexture(512,256,(c,w,h)=>{const r=rng(301);c.fillStyle='#e8e4dc';c.fillRect(0,0,w,h);ormCtx.fillStyle='rgb(255,220,0)';ormCtx.fillRect(0,0,w,h);
-    c.fillStyle='#2a2f33';c.fillRect(0,0,w,46);ormCtx.fillStyle='rgb(255,120,40)';ormCtx.fillRect(0,0,w,46);
+    c.fillStyle='#2a2f33';c.fillRect(0,0,w,46);ormCtx.fillStyle='rgb(255,120,40)';ormCtx.fillRect(0,0,w,46);emCtx.fillStyle='#000';emCtx.fillRect(0,0,w,h);
     for(let b=0;b<4;b++){const x=b*128+8;c.fillStyle='#30363a';c.fillRect(x-4,52,120,h-52);const g=c.createLinearGradient(0,56,0,h);g.addColorStop(0,'#9cc3d3');g.addColorStop(.5,'#557d90');g.addColorStop(1,'#2a4250');c.fillStyle=g;
       c.fillRect(x,58,112,h-62);ormCtx.fillStyle='rgb(255,14,140)';ormCtx.fillRect(x,58,112,h-62);
+      const eg=emCtx.createLinearGradient(0,58,0,h);eg.addColorStop(0,'#5a4128');eg.addColorStop(1,['#ffd49a','#ffe6bf','#ffc98a','#e8f0ff'][b]);emCtx.fillStyle=eg;emCtx.fillRect(x,58,112,h-62);
       c.globalAlpha=.35;c.fillStyle=['#e6c68f','#c9e0d6','#e3b4a6','#d7d0f0'][Math.floor(r()*4)];c.fillRect(x+6,h-70,100,60);c.globalAlpha=1;
       c.fillStyle='#30363a';c.fillRect(x+55,58,3,h-62);if(b%2){c.fillStyle='#3b4a52';c.fillRect(x+70,120,36,h-120);c.fillStyle='#c9b27a';c.fillRect(x+98,180,3,12)}}
-  },{repeat:true});orm.needsUpdate=true;
-  return new THREE.MeshStandardMaterial({map,roughnessMap:orm,metalnessMap:orm,roughness:1,metalness:1,vertexColors:true});
+  },{repeat:true});orm.needsUpdate=true;em.needsUpdate=true;
+  return new THREE.MeshStandardMaterial({map,roughnessMap:orm,metalnessMap:orm,roughness:1,metalness:1,vertexColors:true,emissive:'#ffffff',emissiveMap:em,emissiveIntensity:0});
 }
 
 /** Text atlas: one canvas, many labelled slots. Returns {texture, uv(slot)}. */
@@ -137,13 +148,16 @@ export const VEHICLES={
 };
 const shared={};
 function sharedMats(){if(shared.glass)return shared;
-  shared.glass=new THREE.MeshStandardMaterial({color:'#0e1a20',metalness:.9,roughness:.06,envMapIntensity:1.4});
+  shared.glass=new THREE.MeshStandardMaterial({color:'#1c2b33',metalness:.3,roughness:.08,envMapIntensity:1.6});
   shared.tire=new THREE.MeshStandardMaterial({color:'#161616',roughness:.92});
   shared.rim=new THREE.MeshStandardMaterial({color:'#c2c6ca',metalness:.95,roughness:.22});
   shared.trim=new THREE.MeshStandardMaterial({color:'#1b1e20',roughness:.6});
   shared.head=new THREE.MeshStandardMaterial({color:'#fff7e0',emissive:'#fff1c4',emissiveIntensity:.7,roughness:.2});
   shared.tail=new THREE.MeshStandardMaterial({color:'#5a0a08',emissive:'#ff2a14',emissiveIntensity:.35,roughness:.3});
+  shared.reverse=new THREE.MeshStandardMaterial({color:'#d9dcdf',emissive:'#ffffff',emissiveIntensity:0,roughness:.2});
   return shared}
+/** Shared vehicle light materials (head, tail), so night lighting can raise them in one place. */
+export function vehicleLights(){return sharedMats()}
 function extrude(points,depth,bevel){const s=new THREE.Shape();points.forEach(([x,y],i)=>i?s.lineTo(x,y):s.moveTo(x,y));s.closePath();
   const g=new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelThickness:bevel,bevelSize:bevel*.8,bevelSegments:2,curveSegments:4,steps:1});g.translate(0,0,-depth/2);return g}
 /** Vehicle facing +x, wheels on the ground (y=0). Returns a Group with userData for animation. */
@@ -160,15 +174,19 @@ export function makeVehicle(type='sedan',{paint='#c8ccd0',fleet=false,stripe='#1
   const bumperR=bumperF.clone();bumperR.translate(-v.L-.4,0,0);add(bumperR,m.trim);
   const rocker=new THREE.BoxGeometry(v.L-2*v.r-14,2.6,v.W-1.2);rocker.translate(0,4.6,0);add(rocker,m.trim,false);
   const grill=new THREE.BoxGeometry(1,2.6,v.W*.45);grill.translate(v.L/2+.6,9.2,0);add(grill,m.trim,false);
-  const tailMat=ownTail?m.tail.clone():m.tail;
+  const tailMat=ownTail?m.tail.clone():m.tail,reverseMat=ownTail?m.reverse.clone():m.reverse,rx=v.body.at(-1)[0]+.2,ry=v.body.at(-1)[1];
+  // full-width rear light bar, reverse lamps and wheel arches (the view players see most)
+  const bar=new THREE.BoxGeometry(1,1,v.W-9);bar.translate(rx,ry+1.2,0);add(bar,tailMat,false);
   for(const z of [-1,1]){const h=new THREE.BoxGeometry(1.2,2.2,5.4);h.translate(v.body[2][0]-.6,v.body[2][1]+.6,z*(v.W/2-4.6));add(h,m.head,false);
     const t=new THREE.BoxGeometry(1.2,2.4,5.8);t.translate(v.body.at(-1)[0]+.2,v.body.at(-1)[1]+1.2,z*(v.W/2-4.4));add(t,tailMat,false);
-    const mirror=new THREE.BoxGeometry(2.4,1.6,2.2);mirror.translate(front-2,v.cabin[0][1]+1.4,z*(v.W/2+.6));add(mirror,paintMat,false)}
+    const mirror=new THREE.BoxGeometry(2.4,1.6,2.2);mirror.translate(front-2,v.cabin[0][1]+1.4,z*(v.W/2+.6));add(mirror,paintMat,false);
+    const rev=new THREE.BoxGeometry(1,1.3,2.8);rev.translate(rx-.6,ry-1.6,z*(v.W/2-9.5));add(rev,reverseMat,false);
+    for(const ax of [-v.wx,v.wx]){const arch=new THREE.TorusGeometry(v.r+1.1,1.1,4,10,Math.PI);arch.translate(ax,v.r,z*(v.W/2-.5));add(arch,m.trim,false)}}
   g.userData.wheels=[];
-  const tireGeo=new THREE.CylinderGeometry(v.r,v.r,3.6,18);tireGeo.rotateX(Math.PI/2);const rimGeo=new THREE.CylinderGeometry(v.r*.62,v.r*.62,3.8,12);rimGeo.rotateX(Math.PI/2);
+  const tireGeo=new THREE.CylinderGeometry(v.r,v.r,3.6,18);tireGeo.rotateX(Math.PI/2);const spokeGeo=mergeGeometries([0,1,2].map(k=>{const b=new THREE.BoxGeometry(v.r*1.1,.8,3.9);b.rotateZ(k*Math.PI/3);return b}));const rimGeo=new THREE.CylinderGeometry(v.r*.62,v.r*.62,3.8,12);rimGeo.rotateX(Math.PI/2);
   for(const x of [-v.wx,v.wx])for(const z of [-1,1]){const pivot=new THREE.Group();pivot.position.set(x,v.r,z*(v.W/2-1.0));g.add(pivot);
     const wheel=new THREE.Mesh(tireGeo,m.tire);wheel.castShadow=true;pivot.add(wheel);const rim=new THREE.Mesh(rimGeo,m.rim);wheel.add(rim);
-    const spoke=new THREE.BoxGeometry(v.r*1.1,.8,3.9);for(let k=0;k<3;k++){const s=new THREE.Mesh(spoke,m.trim);s.rotation.z=k*Math.PI/3;rim.add(s)}
+    rim.add(new THREE.Mesh(spokeGeo,m.trim));
     g.userData.wheels.push({pivot,wheel,front:x>0})}
   if(fleet){
     const stripeMat=new THREE.MeshStandardMaterial({color:stripe,metalness:.4,roughness:.35});
@@ -181,7 +199,7 @@ export function makeVehicle(type='sedan',{paint='#c8ccd0',fleet=false,stripe='#1
     for(const z of [-1,1]){const p=new THREE.PlaneGeometry(26,6.5);if(z<0)p.rotateY(Math.PI);p.translate(-2,12.6,z*(v.W/2+.05));add(p,doorMat,false)}
     g.userData.stripe=stripeMat;
   }
-  g.userData.paint=paintMat;g.userData.tail=tailMat;g.userData.length=v.L;g.userData.width=v.W;
+  g.userData.paint=paintMat;g.userData.tail=tailMat;g.userData.reverse=reverseMat;g.userData.length=v.L;g.userData.width=v.W;
   return g;
 }
 /** Merge a static vehicle's parts by material (traffic: ~7 draw calls per car). */
@@ -191,6 +209,61 @@ export function compactGroup(group){
     if(!by.has(o.material))by.set(o.material,[]);by.get(o.material).push(o.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld)))});
   const out=new THREE.Group();for(const [mat,list] of by){const mesh=new THREE.Mesh(mergeGeometries(list),mat);mesh.castShadow=true;out.add(mesh)}
   group.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()});out.userData={...group.userData};return out;
+}
+
+/** Player car: merge every static part by material but keep the wheel pivots animated (~40 meshes → ~12). */
+export function compactDriven(group){const wheels=group.userData.wheels||[];for(const w of wheels)group.remove(w.pivot);
+  const out=compactGroup(group);for(const mesh of out.children)mesh.receiveShadow=false;for(const w of wheels)out.add(w.pivot);return out}
+
+/** Instanced ambient traffic: each vehicle type is built once and drawn as one InstancedMesh per material
+ * (~8 draw calls per type, and only for types with a car in view). Paint comes from per-instance colours.
+ * Each frame: begin(), set(i, proxy, show) for every car, commit(). Hidden cars are packed out (count). */
+export class Fleet{
+  constructor(parent,specs){this.dummy=new THREE.Object3D();this.slot=[];this.groups=new Map();this.colors=specs.map(s=>new THREE.Color(s.paint||'#c8ccd0'));const byType=new Map();
+    specs.forEach((s,i)=>{const t=VEHICLES[s.type]?s.type:'sedan';if(!byType.has(t))byType.set(t,[]);byType.get(t).push(i)});
+    for(const [type,ids] of byType){const g=compactGroup(makeVehicle(type,{paint:'#ffffff'})),meshes=[];let paint=null;
+      for(const child of g.children){const im=new THREE.InstancedMesh(child.geometry,child.material,ids.length);im.castShadow=true;im.receiveShadow=false;im.frustumCulled=false;
+        if(child.material===g.userData.paint){paint=im;ids.forEach((id,k)=>im.setColorAt(k,this.colors[id]))}parent.add(im);meshes.push(im)}
+      this.groups.set(type,{meshes,paint,n:0,length:g.userData.length,width:g.userData.width});ids.forEach(id=>this.slot[id]=type)}}
+  dims(i){const g=this.groups.get(this.slot[i]);return g?{length:g.length,width:g.width}:{length:64,width:28}}
+  begin(){for(const g of this.groups.values())g.n=0}
+  /** Place car i from an Object3D-like proxy (position, rotation.y) when show is true. */
+  set(i,o,show=true){const g=this.groups.get(this.slot[i]);if(!g||!show)return;const k=g.n++,d=this.dummy;d.position.copy(o.position);d.rotation.set(0,o.rotation.y,0);d.updateMatrix();
+    for(const m of g.meshes)m.setMatrixAt(k,d.matrix);g.paint?.setColorAt(k,this.colors[i])}
+  commit(){for(const g of this.groups.values())for(const m of g.meshes){m.count=g.n;m.visible=g.n>0;m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true}}
+  setShadows(on){for(const g of this.groups.values())for(const m of g.meshes)m.castShadow=on}
+}
+
+/** Tyre marks from handbrake slides: one instanced draw call, a capped ring buffer of flat quads that fade out
+ * in the shader (each mark stores its birth time; no per-frame buffer updates). */
+export class SkidMarks{
+  constructor(parent,count=160,life=14){const geo=new THREE.PlaneGeometry(1,1);geo.rotateX(-Math.PI/2);this.count=count;this.next=0;this.dummy=new THREE.Object3D();
+    this.born=new THREE.InstancedBufferAttribute(new Float32Array(count).fill(-1e4),1);geo.setAttribute('aBorn',this.born);
+    const uTime={value:0};this.uTime=uTime;
+    this.material=new THREE.MeshBasicMaterial({color:'#121212',transparent:true,opacity:.42,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+    this.material.onBeforeCompile=sh=>{sh.uniforms.uTime=uTime;
+      sh.vertexShader='attribute float aBorn;\nuniform float uTime;\nvarying float vFade;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>\nvFade=clamp(1.0-(uTime-aBorn)/${life.toFixed(1)},0.0,1.0);`);
+      sh.fragmentShader='varying float vFade;\n'+sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=vFade;')};
+    this.material.customProgramCacheKey=()=>'skidmarks';
+    this.mesh=new THREE.InstancedMesh(geo,this.material,count);this.mesh.frustumCulled=false;this.mesh.renderOrder=1;
+    const d=this.dummy;d.scale.set(0,0,0);d.updateMatrix();for(let i=0;i<count;i++)this.mesh.setMatrixAt(i,d.matrix);parent.add(this.mesh)}
+  /** Add one mark from (ax,az) to (bx,bz) at height y, width w, born at time t. */
+  add(ax,az,bx,bz,y,w,t){const i=this.next;this.next=(i+1)%this.count;const d=this.dummy,L=Math.hypot(bx-ax,bz-az);
+    d.position.set((ax+bx)/2,y,(az+bz)/2);d.rotation.set(0,-Math.atan2(bz-az,bx-ax),0);d.scale.set(L+.6,1,w);d.updateMatrix();this.mesh.setMatrixAt(i,d.matrix);
+    this.born.setX(i,t);this.born.needsUpdate=true;this.mesh.instanceMatrix.needsUpdate=true}
+}
+
+// ---------------------------------------------------------------- grounding
+/** Soft round contact shadow (black with a radial alpha falloff). */
+export function blobTexture(){return canvasTexture(64,64,(c,w,h)=>{const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(.5,'rgba(0,0,0,.6)');g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(0,0,w,h)},{srgb:false})}
+/** One instanced draw call of flat blob shadows under cars and people (grounds them when real shadows are off). */
+export class Blobs{
+  constructor(parent,count){const geo=new THREE.PlaneGeometry(1,1);geo.rotateX(-Math.PI/2);this.count=count;this.dummy=new THREE.Object3D();
+    this.material=new THREE.MeshBasicMaterial({map:blobTexture(),transparent:true,opacity:.5,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,toneMapped:false});
+    this.mesh=new THREE.InstancedMesh(geo,this.material,count);this.mesh.frustumCulled=false;this.mesh.renderOrder=1;parent.add(this.mesh);for(let i=0;i<count;i++)this.hide(i)}
+  set(i,x,y,z,yaw,sx,sz){if(i>=this.count)return;const d=this.dummy;d.position.set(x,y,z);d.rotation.set(0,yaw,0);d.scale.set(sx,1,sz);d.updateMatrix();this.mesh.setMatrixAt(i,d.matrix)}
+  hide(i){this.set(i,0,-500,0,0,0,0)}
+  commit(){this.mesh.instanceMatrix.needsUpdate=true}
 }
 
 // ---------------------------------------------------------------- people

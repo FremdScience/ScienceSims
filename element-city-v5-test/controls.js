@@ -4,7 +4,7 @@
 // Canonical actions. Every key alias maps to one action BEFORE mixing, so releasing
 // "ArrowUp" no longer cancels a held "w" or a held touch accelerator (v4 bug).
 const CANON = {arrowup:'up',w:'up',up:'up',arrowdown:'down',s:'down',down:'down',arrowleft:'left',a:'left',left:'left',
-  arrowright:'right',d:'right',right:'right',shift:'shift',' ':'space',space:'space',spacebar:'space'};
+  arrowright:'right',d:'right',right:'right',shift:'shift',' ':'handbrake',space:'handbrake',spacebar:'handbrake',handbrake:'handbrake'};
 export const canonicalKey = key => CANON[String(key).toLowerCase()] || String(key).toLowerCase();
 
 export function normalizeStick(dx,dy,radius=64,deadZone=.12){

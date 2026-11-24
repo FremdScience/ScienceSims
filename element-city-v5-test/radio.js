@@ -72,3 +72,36 @@ export class Radio{
    if(pos===6||pos===14)this.chord(t,root,kind,s*1.2,{type:'square',v:.03,cut:1500,wet:.2});
    if(section!==0&&pos%2===1&&r()<.3){const sc=SCALE.catalyst;this.tone(t,sc[Math.floor(r()*sc.length)],s*1.5,{type:'sawtooth',v:.05,cut:1800,wet:.3})}}}
 }
+
+/** Sound effects that share the radio's AudioContext (one context, one iOS unlock path) but use their
+ * own output bus, so they play while the radio is off. All sounds are synthesized here. volume 0 = silent. */
+export class Sfx{
+ constructor(radio){this.radio=radio;this.volume=0;this.bus=null;this.eng=null;this.lastHonk=0}
+ ctx(){if(!this.volume)return null;const r=this.radio;try{if(!r.ctx&&!r.ensure())return null;const c=r.ctx;if(c.state==='suspended')c.resume();
+   if(!this.bus){this.bus=c.createGain();const comp=c.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;this.bus.connect(comp);comp.connect(c.destination)}
+   this.bus.gain.setTargetAtTime(this.volume,c.currentTime,.02);return c}catch{return null}}
+ env(c,t,a,d,peak){const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+d);g.connect(this.bus);return g}
+ osc(c,t,type,f,d,peak,{to=0,a=.005,cut=0}={}){const o=c.createOscillator(),g=this.env(c,t,a,d,peak);o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
+   if(cut){const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=cut;o.connect(lp);lp.connect(g)}else o.connect(g);o.start(t);o.stop(t+a+d+.05)}
+ noise(c,t,type,f,d,peak){const nb=this.radio.noise;if(!nb)return;const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=this.env(c,t,.002,d,peak);s.buffer=nb;fl.type=type;fl.frequency.value=f;s.connect(fl);fl.connect(g);s.start(t,Math.random()*.4);s.stop(t+d+.05)}
+ click(){const c=this.ctx();if(!c)return;this.osc(c,c.currentTime,'sine',1250,.035,.06)}
+ chime(ok){const c=this.ctx();if(!c)return;const t=c.currentTime;if(ok){this.osc(c,t,'triangle',880,.18,.16);this.osc(c,t+.12,'triangle',1318.5,.3,.16)}else{this.osc(c,t,'sine',330,.16,.12);this.osc(c,t+.13,'sine',262,.26,.12)}}
+ coin(){const c=this.ctx();if(!c)return;const t=c.currentTime;[1046.5,1318.5,1568,2093].forEach((f,i)=>this.osc(c,t+i*.05,'square',f,.12,.05,{cut:5000}))}
+ /** Car horn (H key). far=true is a softer, lower honk from another car in traffic. */
+ horn(far=false){const c=this.ctx();if(!c)return;const t=c.currentTime,k=far?.35:1,d=far?.22:.35;for(const f of far?[349,440]:[392,494])this.osc(c,t,'square',f,d,.09*k,{a:.01,cut:far?1100:1800})}
+ honk(){const now=Date.now();if(now-this.lastHonk<2500)return;this.lastHonk=now;this.horn(true)}
+ door(){const c=this.ctx();if(!c)return;const t=c.currentTime;this.noise(c,t,'lowpass',600,.06,.25);this.osc(c,t+.02,'sine',120,.12,.25)}
+ thud(k=1){const c=this.ctx();if(!c)return;const t=c.currentTime,v=Math.max(.15,Math.min(1,k));this.noise(c,t,'lowpass',300,.22,.45*v);this.osc(c,t,'sine',70,.25,.4*v,{to:40})}
+ /** A short original "investigation complete" fanfare: I–IV–V–I arpeggio, about 1.8 s; ducks the radio. */
+ jingle(){const c=this.ctx();if(!c)return;const t=c.currentTime+.03,r=this.radio,mt=m=>440*Math.pow(2,(m-69)/12);
+   try{r.setDuck(.25);setTimeout(()=>r.setDuck(1),2000)}catch{}
+   [[72,0],[76,.14],[79,.28],[77,.46],[81,.6],[79,.8],[83,.94]].forEach(([m,dt])=>this.osc(c,t+dt,'sawtooth',mt(m),.22,.07,{cut:2000}));
+   [60,64,67,72].forEach(m=>this.osc(c,t+1.12,'triangle',mt(m),.7,.08,{a:.02}))}
+ /** Engine drone with four "gears": pitch rises through each gear and drops at every shift. */
+ engine(live,speed=0){const c=live?this.ctx():this.radio.ctx;if(!c)return;
+   if(!this.eng){if(!live||!this.bus)return;const o=c.createOscillator(),sub=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain(),sg=c.createGain();o.type='sawtooth';sub.type='sine';lp.type='lowpass';lp.frequency.value=380;g.gain.value=0;sg.gain.value=.5;
+     o.connect(lp);sub.connect(sg);sg.connect(lp);lp.connect(g);g.connect(this.bus);o.start();sub.start();this.eng={o,sub,g}}
+   const e=this.eng,t=c.currentTime;if(!live){e.g.gain.setTargetAtTime(0,t,.12);return}
+   const v=Math.abs(speed),gear=Math.min(3,Math.floor(v/85)),rpm=Math.min(1,(v-gear*85)/85),f=48+rpm*70+gear*6;
+   e.o.frequency.setTargetAtTime(f,t,.08);e.sub.frequency.setTargetAtTime(f/2,t,.08);e.g.gain.setTargetAtTime(.05+rpm*.03,t,.1)}
+}
