@@ -1,16 +1,16 @@
 /** Element City v5.1 — app shell: HUD, saving, input wiring and the six-investigation campaign. */
-import {attachTabletControls,InputMixer} from './controls.js?v=5.3.3';
-import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStep,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.3.3';
-import {PRACTICE,checkPractice} from './practice.js?v=5.3.3';
-import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.3.3';
-import * as worldMod from './world.js?v=5.3.3';
-import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.3.3';
-import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS,MASS,EN_ALL,configOf,fullConfigOf,shellsOf} from './elements.js?v=5.3.3';
-import {Radio,STATIONS,Sfx} from './radio.js?v=5.3.3';
-import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS,pickTouch,toastMs,pushBrief} from './core.js?v=5.3.3';
+import {attachTabletControls,InputMixer} from './controls.js?v=5.3.4';
+import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStep,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.3.4';
+import {PRACTICE,checkPractice} from './practice.js?v=5.3.4';
+import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.3.4';
+import * as worldMod from './world.js?v=5.3.4';
+import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.3.4';
+import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS,MASS,EN_ALL,configOf,fullConfigOf,shellsOf} from './elements.js?v=5.3.4';
+import {Radio,STATIONS,Sfx} from './radio.js?v=5.3.4';
+import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS,pickTouch,toastMs,pushBrief} from './core.js?v=5.3.4';
 import {COURIER,validateDelivery,describe,GATES,GATE_SLOTS,gateCrossing,validateGate,MATERIALS,validateClass,validatePower,
   BEHAVIOR,SHOW_ROUNDS,WHY_OPTIONS,validateShow,validateWhy,UI_SCALE,READINGS,uiOf,validateSort,SURVEY_QUESTIONS,validateSurvey,
-  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el,valence,missionStats,checkWant,makeExpressJob,coinCard,rankFor,expressReward,SIDE_REP_CAP} from './campaign.js?v=5.3.3';
+  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el,valence,missionStats,checkWant,makeExpressJob,coinCard,rankFor,expressReward,SIDE_REP_CAP} from './campaign.js?v=5.3.4';
 
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const DEBUG=new URLSearchParams(location.search).has('debug');

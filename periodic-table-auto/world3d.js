@@ -1,16 +1,16 @@
 /** Element City v5 — real-time 3D city. Original procedural art; physics and map data are
  * shared with the tested 2D fallback (world.js). Public API is unchanged from v4. */
-import {driveStep,cameraSafePosition} from './driving.js?v=5.3.3';
-import {POWER_POINTS,powerStep,cableState,benchDone} from './power-scene.js?v=5.3.3';
-import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.3';
-import {routeTo,snapToRoad} from './navigation.js?v=5.3.3';
-import {ELEMENTS} from './elements.js?v=5.3.3';
+import {driveStep,cameraSafePosition} from './driving.js?v=5.3.4';
+import {POWER_POINTS,powerStep,cableState,benchDone} from './power-scene.js?v=5.3.4';
+import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.4';
+import {routeTo,snapToRoad} from './navigation.js?v=5.3.4';
+import {ELEMENTS} from './elements.js?v=5.3.4';
 import * as THREE from './vendor/three.module.js';
-import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.3';
+import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.4';
 import {FLOOR,GROUND,BAY,CURB,rng,canvasTexture,mergeGeometries,tint,Batch,facadeBox,splitBox,asphaltTexture,paverTexture,grassTexture,roofTexture,chevronTexture,
   STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries,
-  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.3';
-import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.3';
+  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.4';
+import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.4';
 export {WORLD,stations,buildings,circleCollides,moveWithCollisions,ELEMENT_COINS};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -475,23 +475,60 @@ export class CityWorld extends FlatWorld{
     c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';let size=64;c.font=`900 ${size}px system-ui,sans-serif`;while(c.measureText(text).width>470&&size>26){size-=4;c.font=`900 ${size}px system-ui,sans-serif`}c.fillText(text,256,68);arch.tex.needsUpdate=true}}
   placeGate(slot){const s=GATE_SLOTS[slot];if(!s){this.gate.group.visible=false;return}this.gate.group.visible=true;
     for(const [side,off] of [['a',-30],['b',30]]){const g=this.gate.arches[side].g;if(s.axis==='x'){g.position.set(s.x,.25,s.y+off);g.rotation.y=0}else{g.position.set(s.x+off,.25,s.y);g.rotation.y=Math.PI/2}}}
+  /** Harbor fountain show. Each nozzle is real-looking water, not a solid shape: a thin glassy column that fades out at
+   * the top, GPU-animated spray droplets that rise and fall back outward (a tapering plume with a falling skirt), foam
+   * rings where the water lands, and a lit pool whose ring light shows the indicator color. */
   buildFountains(){this.fountain={group:new THREE.Group(),nozzles:[]};const f=this.fountain;f.group.position.set(2470,0,950);this.scene.add(f.group);
     const deck=new THREE.Mesh(new THREE.BoxGeometry(70,6,300),new THREE.MeshStandardMaterial({color:'#39444b',roughness:.7}));deck.position.y=1;deck.castShadow=true;f.group.add(deck);
     const rim=new THREE.MeshStandardMaterial({color:'#c9d2d6',metalness:.6,roughness:.3});
+    const SPRAY=760,seeds=new Float32Array(SPRAY*4),r=rng(91);
+    for(let i=0;i<SPRAY;i++){seeds[i*4]=r();seeds[i*4+1]=r()*Math.PI*2;seeds[i*4+2]=.5+.5*Math.pow(r(),.6);seeds[i*4+3]=r()}
+    const sprayGeo=new THREE.BufferGeometry();sprayGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(SPRAY*3),3));sprayGeo.setAttribute('aSeed',new THREE.BufferAttribute(seeds,4));
+    const coreGeo=new THREE.CylinderGeometry(1.2,3.2,1,18,1,true),splashGeo=new THREE.RingGeometry(2.5,22,48,1);
+    const water='vec3 water(vec3 tint,float k){return mix(vec3(.9,.96,1.),tint,k);}';
     for(let i=0;i<4;i++){const z=-112+i*75,base=new THREE.Mesh(new THREE.CylinderGeometry(11,13,6,20),rim);base.position.set(0,5,z);f.group.add(base);
-      const mat=new THREE.MeshStandardMaterial({color:'#7d3cc8',emissive:'#7d3cc8',emissiveIntensity:1.1,transparent:true,opacity:.82,depthWrite:false,roughness:.2});
-      const jet=new THREE.Mesh(new THREE.CylinderGeometry(2.6,7,1,14,1,true),mat);jet.position.set(0,8,z);jet.scale.y=.01;f.group.add(jet);
-      const crown=new THREE.Mesh(new THREE.SphereGeometry(9,14,8),mat);crown.position.set(0,8,z);crown.scale.setScalar(.01);f.group.add(crown);
+      const u={uTime:{value:0},uH:{value:1},uOn:{value:0},uTint:{value:new THREE.Color('#7d3cc8')},uScale:{value:400}};
+      const pool=new THREE.Mesh(new THREE.CircleGeometry(10.3,28),new THREE.MeshStandardMaterial({color:'#2f7f9c',roughness:.12,metalness:.15,emissive:'#7d3cc8',emissiveIntensity:0}));pool.rotation.x=-Math.PI/2;pool.position.set(0,8.06,z);f.group.add(pool);
+      const led=new THREE.Mesh(new THREE.TorusGeometry(10.5,.75,8,40),new THREE.MeshBasicMaterial({color:'#7d3cc8',toneMapped:false}));led.rotation.x=-Math.PI/2;led.position.set(0,8.1,z);led.visible=false;f.group.add(led);
+      // glassy column: streaks run upward, edges catch the light, fades to nothing at the top (no cap)
+      const core=new THREE.Mesh(coreGeo,new THREE.ShaderMaterial({uniforms:u,transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:false,toneMapped:false,
+        vertexShader:'varying vec2 vUv;varying float vEdge;void main(){vUv=uv;vec4 mv=modelViewMatrix*vec4(position,1.);vec3 n=normalize(normalMatrix*normal);vEdge=1.-abs(dot(n,normalize(-mv.xyz)));gl_Position=projectionMatrix*mv;}',
+        fragmentShader:`uniform float uTime,uOn;uniform vec3 uTint;varying vec2 vUv;varying float vEdge;${water}float h(float x){return fract(sin(x*127.1)*43758.5453);}
+          void main(){float c=floor(vUv.x*22.),s=h(c);float streak=.5+.5*sin((vUv.y*5.-uTime*(2.6+1.8*s))*6.2831+s*6.2831);
+          float a=(.12+.5*pow(vEdge,1.4)+.2*streak)*uOn*smoothstep(1.,.62,vUv.y)*smoothstep(0.,.05,vUv.y);gl_FragColor=vec4(water(uTint,.38),a);
+          #include <colorspace_fragment>
+          }`}));core.position.set(0,8,z);core.visible=false;f.group.add(core);
+      // spray: each droplet flies on its own arc; rising ones hug the column, falling ones drift outward and fade
+      const spray=new THREE.Points(sprayGeo,new THREE.ShaderMaterial({uniforms:u,transparent:true,depthWrite:false,fog:false,toneMapped:false,
+        vertexShader:`uniform float uTime,uH,uOn,uScale;attribute vec4 aSeed;varying float vA;varying float vK;
+          void main(){float g=260.,v0=sqrt(2.*g*max(uH,.5))*aSeed.z,tA=v0/g,life=2.*tA;float t=fract(uTime/max(life,.2)+aSeed.x)*life;
+          float y=max(0.,v0*t-.5*g*t*t),fall=max(0.,t-tA);float drift=(4.+uH*.15)*(.5+aSeed.w);
+          float rad=.35+.9*aSeed.w*min(1.,t*3.)+drift*fall;vec3 p=vec3(cos(aSeed.y)*rad,8.+y,sin(aSeed.y)*rad);
+          vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;float k=t/life;vK=k;
+          vA=uOn*(fall>0.?.5*(1.-smoothstep(.72,1.,k)):.62)*(1.-.45*smoothstep(.8,1.,y/max(uH,1.)));
+          gl_PointSize=uScale*(1.1+1.7*aSeed.w)*(fall>0.?1.25:1.)/max(1.,-mv.z);}`,
+        fragmentShader:`uniform vec3 uTint;varying float vA;varying float vK;${water}
+          void main(){vec2 c=gl_PointCoord-.5;float d=length(c);if(d>.5)discard;float a=smoothstep(.5,.08,d)*vA;gl_FragColor=vec4(water(uTint,.32+.2*vK),a);
+          #include <colorspace_fragment>
+          }`}));spray.position.set(0,0,z);spray.frustumCulled=false;spray.visible=false;f.group.add(spray);
+      // foam where the water lands: rings ripple outward
+      const splash=new THREE.Mesh(splashGeo,new THREE.ShaderMaterial({uniforms:u,transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:false,toneMapped:false,
+        vertexShader:'varying float vR;void main(){vR=length(position.xy)/22.;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+        fragmentShader:`uniform float uTime,uOn;varying float vR;void main(){float w=.5+.5*sin(vR*30.-uTime*5.);float a=uOn*(1.-vR)*smoothstep(.1,.3,vR)*(.18+.4*w*w);gl_FragColor=vec4(vec3(.95,.98,1.),a);
+          #include <colorspace_fragment>
+          }`}));splash.rotation.x=-Math.PI/2;splash.position.set(0,8.2,z);splash.visible=false;f.group.add(splash);
       const label=spriteLabel('—','#bcacf4',undefined,230);label.position.set(0,30,z);label.visible=false;f.group.add(label);
-      f.nozzles.push({z,mat,jet,crown,label,h:0,target:0,start:0})}}
+      f.nozzles.push({z,u,core,spray,splash,pool,led,label,h:0,target:0,start:0})}}
   /** Run a fountain act: entries [{sym,h,color,text}] in the player's order. Calls done() when finished. */
   playShow(entries,done){const f=this.fountain;f.entries=entries;f.t0=this.clockLast;f.done=done;f.running=true;this.viewMode='show';this.snapCamera=true;
-    f.nozzles.forEach((n,i)=>{const e=entries[i];n.target=e?e.h:0;n.h=0;n.start=i*1.1;n.label.visible=false;if(e){n.mat.emissive.set(e.color);n.mat.color.set(e.color);n.label.material.map?.dispose();const sp=spriteLabel(`${i+1} · ${e.sym}`,'#bcacf4',undefined,230);n.label.material.map=sp.material.map;n.label.material.needsUpdate=true}});
+    f.nozzles.forEach((n,i)=>{const e=entries[i];n.target=e?e.h:0;n.h=0;n.start=i*1.1;n.label.visible=false;if(e){n.u.uTint.value.set(e.color);n.led.material.color.set(e.color);n.pool.material.emissive.set(e.color);n.label.material.map?.dispose();const sp=spriteLabel(`${i+1} · ${e.sym}`,'#bcacf4',undefined,230);n.label.material.map=sp.material.map;n.label.material.needsUpdate=true}});
     f.duration=1.1*entries.length+2.6;this.lastRender=0}
   resetShow(){const f=this.fountain;if(!f)return;f.running=false;f.nozzles.forEach(n=>{n.h=0;n.target=0;n.label.visible=false})}
-  updateFountains(realDt,reduced){const f=this.fountain;if(!f)return;const el=f.running?(performance.now()-f.t0)/1000:0;
-    f.nozzles.forEach(n=>{const active=f.running?el>n.start:false;const goal=active?n.target:(f.running?0:n.h);n.h+=(goal-n.h)*Math.min(1,realDt*(reduced?20:3));const H=Math.max(.01,n.h*165),wob=reduced?0:Math.sin(performance.now()/120+n.z)*.04;
-      n.jet.scale.y=H;n.jet.position.y=8+H/2;n.crown.scale.setScalar(n.h>.03?(.6+n.h)*(1+wob):.01);n.crown.position.y=8+H;n.label.visible=f.running&&active||(!f.running&&n.target>0);n.label.position.y=8+H+18});
+  updateFountains(realDt,reduced){const f=this.fountain;if(!f)return;const el=f.running?(performance.now()-f.t0)/1000:0,secs=performance.now()/1000*(reduced?.4:1),scale=(this.height||600)*(this.dpr||1)*.5;
+    f.nozzles.forEach(n=>{const active=f.running?el>n.start:false;const goal=active?n.target:(f.running?0:n.h);n.h+=(goal-n.h)*Math.min(1,realDt*(reduced?20:3));const H=Math.max(.01,n.h*165),on=Math.min(1,n.h*40),show=n.h>.004;
+      n.u.uTime.value=secs;n.u.uH.value=H;n.u.uOn.value=on;n.u.uScale.value=scale;n.core.visible=n.spray.visible=n.splash.visible=n.led.visible=show;
+      n.core.scale.set(1,H*.9,1);n.core.position.y=8+H*.45;n.splash.scale.setScalar(.35+Math.min(1,H/110)*.75);n.pool.material.emissiveIntensity=on*.55;
+      n.label.visible=f.running&&active||(!f.running&&n.target>0);n.label.position.y=8+H+18});
     if(f.running&&el>f.duration){f.running=false;const cb=f.done;f.done=null;this.viewMode='chase';this.snapCamera=true;cb?.()}}
   buildDropZones(){this.dropRings=new THREE.Group();this.scene.add(this.dropRings);this.dropRings.visible=false;const mat=new THREE.MeshBasicMaterial({color:'#ffc46a',transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
     for(const d of DROP_ZONES){const r=new THREE.Mesh(new THREE.RingGeometry(13,16,32),mat);r.rotation.x=-Math.PI/2;r.position.set(d.x,groundHeight(d.x,d.y)+.45,d.y);this.dropRings.add(r)}}
