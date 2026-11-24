@@ -1,5 +1,5 @@
 /** Progress, saving and shared helpers. Campaign content lives in campaign.js. */
-import {MISSIONS,MISSION_IDS,MATERIALS,validatePower} from './campaign.js?v=5.3.7';
+import {MISSIONS,MISSION_IDS,MATERIALS,validatePower} from './campaign.js?v=5.3.8';
 export {MISSIONS,MATERIALS,validatePower};
 export const SAVE_KEY='element-city-v1';
 /** campaign 2 = the six-investigation storyline introduced in 5.1. */

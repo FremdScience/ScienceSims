@@ -1,16 +1,17 @@
 /** Element City v5.1 — app shell: HUD, saving, input wiring and the six-investigation campaign. */
-import {attachTabletControls,InputMixer} from './controls.js?v=5.3.7';
-import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStep,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.3.7';
-import {PRACTICE,checkPractice} from './practice.js?v=5.3.7';
-import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.3.7';
-import * as worldMod from './world.js?v=5.3.7';
-import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.3.7';
-import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS,MASS,EN_ALL,configOf,fullConfigOf,shellsOf} from './elements.js?v=5.3.7';
-import {Radio,STATIONS,Sfx} from './radio.js?v=5.3.7';
-import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS,pickTouch,toastMs,pushBrief} from './core.js?v=5.3.7';
+import {attachTabletControls,InputMixer} from './controls.js?v=5.3.8';
+import {POWER_POINTS,POWER_TESTS,SAMPLE_IDS,powerReady,powerStep,measureSample,connectTerminal,benchDone} from './power-scene.js?v=5.3.8';
+import {PRACTICE,checkPractice} from './practice.js?v=5.3.8';
+import {CityWorld as FlatWorld,stations,buildings} from './world.js?v=5.3.8';
+import * as worldMod from './world.js?v=5.3.8';
+import {CityWorld,toKmh,DROP_ZONES} from './world3d.js?v=5.3.8';
+import {ELEMENTS,CATEGORIES,TABLE_NOTE,REFERENCE_CONDITIONS,MASS,EN_ALL,configOf,fullConfigOf,shellsOf} from './elements.js?v=5.3.8';
+import {Radio,STATIONS,Sfx} from './radio.js?v=5.3.8';
+import {ThemeSong} from './theme.js?v=5.3.8';
+import {SAVE_KEY,freshState,readSave,writeSave,MISSIONS,pickTouch,toastMs,pushBrief} from './core.js?v=5.3.8';
 import {COURIER,validateDelivery,describe,GATES,GATE_SLOTS,gateCrossing,validateGate,MATERIALS,validateClass,validatePower,
   BEHAVIOR,SHOW_ROUNDS,WHY_OPTIONS,validateShow,validateWhy,UI_SCALE,READINGS,uiOf,validateSort,SURVEY_QUESTIONS,validateSurvey,
-  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el,valence,missionStats,checkWant,makeExpressJob,coinCard,rankFor,expressReward,SIDE_REP_CAP} from './campaign.js?v=5.3.7';
+  RELAYS,ionCharge,validateCharge,validateRatio,formulaFor,ANALOGY,COMPOUND,pretty,repFor,el,valence,missionStats,checkWant,makeExpressJob,coinCard,rankFor,expressReward,SIDE_REP_CAP} from './campaign.js?v=5.3.8';
 
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const DEBUG=new URLSearchParams(location.search).has('debug');
@@ -68,14 +69,15 @@ function scene(){const m=current();if(expressOn())return {kind:'courier'};if(!m|
   return null}
 function trackedTarget(){const m=current();if(m&&state.step>0){if(m.id==='survey'&&surveyCollected())return 'survey';if(m.id==='show'||m.id==='power')return m.station}return state.active||next()?.id||'hq'}
 const radio=new Radio();radio.volume=state.settings.musicVolume??.6;
+const theme=new ThemeSong(radio);theme.onStop=()=>musicButton();
 const sfx=new Sfx(radio);Object.defineProperty(sfx,'volume',{get:()=>Number(state.settings.volume)||0});
 function radioWanted(){return state.started&&modal!=='title'&&(state.settings.station??-1)>=0&&(!!worldInfo.inVehicle||!!state.settings.radioOnFoot)&&!document.hidden}
 function updateRadio(){const st=state.settings.station??-1;radio.station=st;radio.setDuck(modal?.3:1);if(radioWanted()){if(!radio.playing&&radio.ctx)radio.start()}else if(radio.playing)radio.stop();
   const chip=$('#radio');chip.classList.toggle('hidden',!state.started||modal==='title'||!(worldInfo.inVehicle||state.settings.radioOnFoot));chip.classList.toggle('on',st>=0);chip.style.setProperty('--station',STATIONS[st]?.color||'#ffffff55');$('#radio-label').textContent=st>=0?STATIONS[st].name:'RADIO OFF'}
 function cycleRadio(){const s=state.settings;s.station=((s.station??-1)+2)%(STATIONS.length+1)-1;radio.volume=s.musicVolume??.6;radio.tune(s.station);if(!radioWanted())radio.stop();const st=STATIONS[s.station];toast(st?`📻 ${st.name} · ${st.tag}`:'📻 Radio off',2600);updateRadio();save()}
-function sync(){if(modal!=='finale'&&world.finaleOn)world.endFinale?.();document.body.classList.toggle('finale-on',modal==='finale');if(state.active==='power'){const w=W();if(w.failed&&w.material&&!(w.connections||[]).length)w.material=null}world.updateConfig({powerState:{...W(),enabled:state.active==='power'&&state.step>0},scene:scene(),cameraSensitivity:state.settings.cameraSensitivity||1,autoCamera:state.settings.autoCamera!==false,
+function sync(){if(modal!=='finale'&&world.finaleOn)world.endFinale?.();if(theme.playing&&!['splash','title','guide','newplayer'].includes(modal))theme.stop(1.6);document.body.classList.toggle('finale-on',modal==='finale');if(state.active==='power'){const w=W();if(w.failed&&w.material&&!(w.connections||[]).length)w.material=null}world.updateConfig({powerState:{...W(),enabled:state.active==='power'&&state.step>0},scene:scene(),cameraSensitivity:state.settings.cameraSensitivity||1,autoCamera:state.settings.autoCamera!==false,
   paused:!!modal||!state.started,reducedMotion:state.settings.reducedMotion,completed:state.completed,activeMission:trackedTarget(),touchMode:touchUI(),skin:state.completed.length>=3?'amber':'teal',
-  quality:state.settings.quality||'auto',guideLine:state.settings.guideLine!==false,titleCam:modal==='title'});
+  quality:state.settings.quality||'auto',guideLine:state.settings.guideLine!==false,titleCam:modal==='title'||modal==='splash'});
   document.body.classList.toggle('playing',state.started&&!modal);updateHUD();renderStreet();updateEngineSound();updateRadio()}
 
 // ------------------------------------------------------------------ feedback helpers
@@ -103,7 +105,7 @@ function setInert(on){for(const id of INERT){const e=document.getElementById(id)
 /** A selector for the focused control, so a same-panel re-render can put keyboard focus back on it. */
 function focusKey(a){if(!a||!a.closest?.('.dialog'))return null;const d=Object.entries(a.dataset||{})[0];if(d)return `${a.tagName.toLowerCase()}[data-${d[0].replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${CSS.escape(d[1])}"]`;return a.id?'#'+CSS.escape(a.id):null}
 function openModal(type,html,cls=''){const same=!!modal&&type===modal,key=same?focusKey(document.activeElement):null;if(!modal||modal==='celebrate')holdToast();modal=type;clearInputs();
-  $('#modal-root').innerHTML=`<div class="scrim ${type==='title'?'title-screen':type==='finale'?'finale-screen':''}"><section role="dialog" aria-modal="true" class="dialog ${cls}" tabindex="-1">${html}</section></div>`;
+  $('#modal-root').innerHTML=`<div class="scrim ${type==='title'||type==='splash'?'title-screen':type==='finale'?'finale-screen':''}"><section role="dialog" aria-modal="true" class="dialog ${cls}" tabindex="-1">${html}</section></div>`;
   const d=$('.dialog'),h=d.querySelector('h1,h2');if(h){h.id||='dialog-title';d.setAttribute('aria-labelledby',h.id)}else d.setAttribute('aria-label',type);setInert(true);sync();
   setTimeout(()=>{if(!d.isConnected)return;const t=key&&d.querySelector(key);(t&&!t.disabled?t:d).focus({preventScroll:true})})}
 function closeModal(){modal=null;$('#modal-root').innerHTML='';setInert(false);sync();save();resumeToast()}
@@ -112,7 +114,11 @@ const tools=(hintAct)=>`<div class="tool-row"><button data-act="table-here">Peri
 
 const TIPS=['Atomic radius increases down a group.','First ionization energy generally increases across a period.','The atomic number is the number of protons in each atom.','Main-group elements in the same group have the same number of valence electrons.','Halogens (Group 17) usually form ions with a −1 charge.','Noble gases (Group 18) have filled outer energy levels and rarely react.','Electronegativity generally increases across a period and decreases down a group.'];
 const soundButton=()=>{const on=sfx.volume>0;return `<button id="sound-toggle" data-act="sound-toggle" aria-pressed="${on}">${on?'Sound: on':'Sound: off'}</button>`};
-function title(){openModal('title',`<span class="title-chip">A CITY BUILT ON DISCOVERY</span><h1 aria-label="PTA I: Element City">PTA <i class="numeral">I</i><span>ELEMENT CITY</span></h1><div class="subtitle">Periodic Table Auto</div><p class="lead">The city’s systems are failing. The evidence is elemental. Borrow a ride, follow the clues, and bring the lights back.</p>${state.started?`<p class="save-line">Saved game on this device: <b>${savedSummary()}</b></p>`:''}<div class="actions"><button class="primary" data-act="start">${state.started?'Continue this game':'Join the response team'}</button>${state.started?'<button data-act="new-player">New player</button>':''}<button data-act="guide">How to play</button>${soundButton()}</div><p class="title-tip"><b>TIP</b>${TIPS[Math.floor(Math.random()*TIPS.length)]}</p><p class="byline">AN ORIGINAL CHEMISTRY ADVENTURE · NO ACCOUNT NEEDED<br>Keyboard + touch · Progress stays in this browser</p>${storageOK?'':'<p class="save-warn" role="alert">This browser is not saving progress (private browsing or blocked storage). Tell your teacher before you start.</p>'}`,'title-card')}
+function title(){openModal('title',`<span class="title-chip">A CITY BUILT ON DISCOVERY</span><h1 aria-label="PTA I: Element City">PTA <i class="numeral">I</i><span>ELEMENT CITY</span></h1><div class="subtitle">Periodic Table Auto</div><p class="lead">The city’s systems are failing. The evidence is elemental. Borrow a ride, follow the clues, and bring the lights back.</p>${state.started?`<p class="save-line">Saved game on this device: <b>${savedSummary()}</b></p>`:''}<div class="actions"><button class="primary" data-act="start">${state.started?'Continue this game':'Join the response team'}</button>${state.started?'<button data-act="new-player">New player</button>':''}<button data-act="guide">How to play</button>${soundButton()}<button id="music-toggle" data-act="music-toggle" aria-pressed="${theme.playing}">${theme.playing?'Music: on':'Music: off'}</button></div><p class="title-tip"><b>TIP</b>${TIPS[Math.floor(Math.random()*TIPS.length)]}</p><p class="byline">AN ORIGINAL CHEMISTRY ADVENTURE · NO ACCOUNT NEEDED<br>Keyboard + touch · Progress stays in this browser</p>${storageOK?'':'<p class="save-warn" role="alert">This browser is not saving progress (private browsing or blocked storage). Tell your teacher before you start.</p>'}`,'title-card')}
+function splash(){openModal('splash',`<button class="splash-start" data-act="splash-start"><span class="title-chip">A CITY BUILT ON DISCOVERY</span><h1 aria-label="PTA I: Element City">PTA <i class="numeral">I</i><span>ELEMENT CITY</span></h1><div class="subtitle">Periodic Table Auto</div><span class="tap-start">Tap to start</span><small class="splash-note">${songAllowed()?'♪ With the PTA I theme · or press any key':'Sound is off · or press any key'}</small></button>`,'title-card splash-card')}
+const songAllowed=()=>sfx.volume>0&&(state.settings.musicVolume??.6)>0;
+/** Title screen Music button: the theme beat can be stopped without muting the game's sound effects. */
+function musicButton(){const b=$('#music-toggle');if(b){b.textContent=theme.playing?'Music: on':'Music: off';b.setAttribute('aria-pressed',String(theme.playing))}}
 function savedSummary(){const n=state.completed.length,when=state.savedAt?new Date(state.savedAt):null;return `${n} of ${MISSIONS.length} investigations done${when&&!isNaN(when)?` · last played ${when.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})} ${when.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}`:''}`}
 function start(){const first=!state.started;state.started=true;closeModal();if(!storageOK)setTimeout(()=>toast('Heads up: this browser is not saving progress. Tell your teacher.',7000),400);if(state.active==='power'&&state.step>0)world.focusWorkshop?.();
   if(first){state.tutorial=0;record('Welcome to Element City','You joined the student science response team. Use the periodic table as a tool; revision is part of investigation.');tutorialIntro()}
@@ -390,13 +396,15 @@ const actions={start,close:closeModal,finale,'finale-explore':()=>{closeModal();
   'close-guide':()=>state.started?closeModal():title(),'table-here':()=>table(modal==='express'?'express':state.active==='ions'&&modal==='relay'?`relay:${W().currentRelay}`:state.active),'table-back':backToTask,
   express:startExpress,'express-end':()=>endExpress(),brief:briefLog,'waypoint-clear':()=>{setWaypoint(null);drawMap()},
   'express-hint':()=>{const x=state.express;if(!x?.job)return;const h=x.job.hints;x.hint=Math.min((x.hint||0)+1,h.length);$('#hint').textContent=`Hint ${x.hint}/${h.length}: ${h[x.hint-1]}`;save()},
-  'sound-toggle':()=>{state.settings.volume=sfx.volume>0?0:.6;state.settings.sfxChosen=true;if(sfx.volume>0){radio.ensure();sfx.chime(true)}const b=$('#sound-toggle');if(b){b.textContent=sfx.volume>0?'Sound: on':'Sound: off';b.setAttribute('aria-pressed',String(sfx.volume>0))}save()},
+  'sound-toggle':()=>{if(sfx.volume>0)theme.stop(.3);state.settings.volume=sfx.volume>0?0:.6;state.settings.sfxChosen=true;if(sfx.volume>0){radio.ensure();sfx.chime(true)}const b=$('#sound-toggle');if(b){b.textContent=sfx.volume>0?'Sound: on':'Sound: off';b.setAttribute('aria-pressed',String(sfx.volume>0))}save();musicButton()},
   'skip-tutorial':()=>{state.tutorial=3;closeModal();toast('Follow the gold route to Noor.');save()},
   recover:()=>{world.recover();closeModal();toast('Returned safely to HQ.');save()},
   restart:()=>{const m=current();if(!m)return toast('No active investigation to restart.');state.work={};state.step=0;world.resetShow?.();world.setCamera?.('chase');streetPoint=null;autoNear=null;save();closeModal();toast(`${m.title} restarted. Talk to ${m.person} to begin again.`)},
   'new-player':()=>openModal('newplayer',`${closeButton()}<h2>Start a new game on this device?</h2><p>This erases the saved game here (<b>${savedSummary()}</b>). If it belongs to someone else, check with your teacher first. Sound and graphics settings are kept.</p><div class="actions"><button data-act="download">Download that progress first</button><button class="danger" data-act="new-player-go">Erase it and start fresh</button><button data-act="title">Cancel</button></div>`,'narrow'),
   'new-player-go':()=>{const keep=state.settings;actions.reset();state.settings={...state.settings,...keep,station:-1};save();title()},
-  title:()=>title(),'use-2d':()=>{save();location.href=location.pathname+'?2d'},
+  title:()=>title(),
+  'splash-start':()=>{if(modal!=='splash')return;if(songAllowed()){theme.volume=state.settings.musicVolume??.6;theme.start()}title()},
+  'music-toggle':()=>{if(theme.playing)theme.stop(.5);else{theme.volume=state.settings.musicVolume||.6;theme.start()}musicButton()},'use-2d':()=>{save();location.href=location.pathname+'?2d'},
   'reset-confirm':()=>openModal('reset',`${closeButton()}<h2>Start over?</h2><p>This clears investigations, evidence, coins and settings on this browser.</p><div class="actions"><button class="danger" data-act="reset">Reset all progress</button><button data-act="pause">Keep my progress</button></div>`,'narrow'),
   reset:()=>{state=freshState();setWaypoint(null);world.setTimeMode?.('auto');world.setCityProgress?.(0);world.resetCars?.();radio.tune(-1);world.loadPosition({x:520,y:1050,walked:0,driven:0,discovered:[]});world.recover();world.resetShow?.();writeSave(storage,state);title()},
   recenter:()=>{world.recenterCamera?.();toast('Camera centered behind you.');if(modal==='pause')closeModal()},
@@ -415,7 +423,7 @@ const actions={start,close:closeModal,finale,'finale-explore':()=>{closeModal();
 };
 const activeRelay=()=>W().currentRelay;
 
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset,w=W();if(!b.closest('#touch')&&d.act!=='sound-toggle')sfx.click();
+document.addEventListener('click',e=>{if(modal==='splash'){e.preventDefault();actions['splash-start']();return}const b=e.target.closest('button');if(!b)return;const d=b.dataset,w=W();if(!b.closest('#touch')&&d.act!=='sound-toggle')sfx.click();
   if(d.waypoint){const z=DROP_ZONES.find(q=>q.symbol===d.waypoint);if(z){setWaypoint(z,`${z.symbol} · ${z.name}`);closeModal();toast(`Route set to ${z.symbol} (${z.name}). Follow the gold route.`,3500)}return}
   if(d.act){actions[d.act]?.();return}if(d.tool){({table:()=>table(),notebook,map:cityMap,guide})[d.tool]?.();return}
   if(d.element)return elementDetails(Number(d.element));
@@ -461,7 +469,8 @@ document.addEventListener('change',e=>{const id=e.target.id;if(id?.startsWith('p
 
 // ------------------------------------------------------------------ keyboard, sound, lifecycle
 const motionKeys=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','shift',' '];
-document.addEventListener('keydown',e=>{if(e.key==='Tab'&&modal){const items=$$('.dialog button:not(:disabled),.dialog input,.dialog select,.dialog a');if(items.length){const f=items[0],l=items.at(-1);if(e.shiftKey&&(document.activeElement===f||document.activeElement===$('.dialog'))){e.preventDefault();l.focus()}else if(!e.shiftKey&&document.activeElement===l){e.preventDefault();f.focus()}}return}
+document.addEventListener('keydown',e=>{if(modal==='splash'&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&e.key!=='Tab'){e.preventDefault();actions['splash-start']();return}
+  if(e.key==='Tab'&&modal){const items=$$('.dialog button:not(:disabled),.dialog input,.dialog select,.dialog a');if(items.length){const f=items[0],l=items.at(-1);if(e.shiftKey&&(document.activeElement===f||document.activeElement===$('.dialog'))){e.preventDefault();l.focus()}else if(!e.shiftKey&&document.activeElement===l){e.preventDefault();f.focus()}}return}
   if(e.key==='Escape'){e.preventDefault();if(modal==='title'||modal==='stale')return;if(modal){if(modal==='table'&&returnTo)backToTask();else state.started?closeModal():title()}else pause();return}
   if(modal||!state.started)return;const key=e.key.toLowerCase();if(e.metaKey||e.ctrlKey||e.altKey){clearInputs();return}
   if(motionKeys.includes(key)){e.preventDefault();allInputs.set('keyboard-'+key,e.key,true);if(lastInput!=='keys'){lastInput='keys';sync()}}if(e.repeat)return;if(key==='h'&&worldInfo.inVehicle)sfx.horn();
@@ -470,7 +479,7 @@ document.addEventListener('keyup',e=>allInputs?.set('keyboard-'+e.key.toLowerCas
 function updateEngineSound(){sfx.engine(state.started&&!modal&&!!worldInfo.inVehicle&&sfx.volume>0&&state.settings.engineSound!==false,worldInfo.speed||0)}
 function clearInputs(){tabletControls?.clear();allInputs?.clear();world?.setStick?.(0,0);for(const k of [...motionKeys,'up','down','left','right','space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'])world.setInput(k,false);$$('[data-key]').forEach(b=>b.classList.remove('held'))}
 window.addEventListener('blur',()=>{clearInputs();if(state.started&&!modal&&!DEBUG)pause()});
-document.addEventListener('visibilitychange',()=>{clearInputs();if(document.hidden)radio.suspend();else updateRadio();if(document.hidden&&state.started){save();if(!modal&&!DEBUG)pause()}});
+document.addEventListener('visibilitychange',()=>{clearInputs();if(document.hidden){theme.stop(.2);radio.suspend()}else updateRadio();if(document.hidden&&state.started){save();if(!modal&&!DEBUG)pause()}});
 window.addEventListener('pagehide',()=>{clearInputs();save()});
 window.addEventListener('pageshow',e=>{clearInputs();if(e.persisted&&state.started&&!modal)pause()});
 // iOS only (re)starts audio inside a tap or key press: resume the radio on the next gesture after app switching.
@@ -485,5 +494,5 @@ tabletControls=attachTabletControls($('#touch'),()=>world,()=>state.started&&!mo
 $('#horn-btn')?.addEventListener('pointerdown',e=>{e.preventDefault();if(worldInfo.inVehicle)sfx.horn()});
 $('#vehicle').onclick=()=>{if((state.settings.station??-1)>=0)radio.ensure();sfx.door();world.toggleVehicle()};$('#toast').onclick=hideToast;
 $('#objective').addEventListener('click',e=>{if(!e.target.closest('button'))$('#objective').classList.toggle('expanded')});$('#radio').onclick=cycleRadio;$('#interact').onclick=interactNow;$('#pause').onclick=pause;$('#dispatch-btn').onclick=dispatch;
-if(DEBUG)window.__ec={radio,get world(){return world},get state(){return state},actions,sync,save,clearInputs,get modal(){return modal},deliver,pointAction,collectReading,relayUI,showConsole,surveyBoard,complete,interactStation,sfx,startExpress,deliverExpress,endExpress,setWaypoint,cityMap,get brief(){return brief}};
-title();sync();window.__ptaBooted=true;
+if(DEBUG)window.__ec={radio,theme,get world(){return world},get state(){return state},actions,sync,save,clearInputs,get modal(){return modal},deliver,pointAction,collectReading,relayUI,showConsole,surveyBoard,complete,interactStation,sfx,startExpress,deliverExpress,endExpress,setWaypoint,cityMap,get brief(){return brief}};
+splash();sync();window.__ptaBooted=true;
