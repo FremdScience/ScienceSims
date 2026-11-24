@@ -456,3 +456,7 @@ body:not(.touch-mode) .radio-chip{left:auto;right:calc(190px + var(--sar));botto
 @media(orientation:landscape) and (max-height:820px){.ranking{margin:10px 0}.ranking>div{padding:8px 5px}.ranking strong{font-size:26px;margin-top:4px}}
 @media(orientation:landscape) and (max-height:820px){.split-cols .sample-tray{gap:6px;margin:6px 0}.split-cols .sample-tile{padding-top:5px;padding-bottom:5px}.split-cols>div>p{margin:2px 0 4px}}
 @media(orientation:landscape) and (max-height:820px){.dialog.complete-card{width:min(800px,100%)}.complete-card .badge{width:60px;height:60px;font-size:26px;margin:2px auto 12px}.complete-card .panel p{font-size:14px;line-height:1.45}}
+/* 5.3.7 wordmark: PTA I */
+.title-card h1 .numeral{font-style:italic;color:var(--gold);text-shadow:0 6px 0 #000a;margin-left:.04em}
+.title-card h1 span{font-size:.34em}
+@media(max-width:600px){.title-card h1{font-size:84px}}
