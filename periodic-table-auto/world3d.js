@@ -1,16 +1,16 @@
 /** Element City v5 — real-time 3D city. Original procedural art; physics and map data are
  * shared with the tested 2D fallback (world.js). Public API is unchanged from v4. */
-import {driveStep,cameraSafePosition} from './driving.js?v=5.3.8';
-import {POWER_POINTS,powerStep,cableState,benchDone} from './power-scene.js?v=5.3.8';
-import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.8';
-import {routeTo,snapToRoad} from './navigation.js?v=5.3.8';
-import {ELEMENTS} from './elements.js?v=5.3.8';
+import {driveStep,cameraSafePosition,CAR_PERF} from './driving.js?v=5.3.9';
+import {POWER_POINTS,powerStep,cableState,benchDone} from './power-scene.js?v=5.3.9';
+import {GATE_SLOTS,gateCrossing,READINGS,RELAYS,uiOf} from './campaign.js?v=5.3.9';
+import {routeTo,snapToRoad} from './navigation.js?v=5.3.9';
+import {ELEMENTS} from './elements.js?v=5.3.9';
 import * as THREE from './vendor/three.module.js';
-import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.8';
+import {CityWorld as FlatWorld,WORLD,stations,buildings,circleCollides,moveWithCollisions,collisionKeep,signalPhase,pedestrianAt,ELEMENT_COINS,COIN_PICKUP} from './world.js?v=5.3.9';
 import {FLOOR,GROUND,BAY,CURB,rng,canvasTexture,mergeGeometries,tint,Batch,facadeBox,splitBox,asphaltTexture,paverTexture,grassTexture,roofTexture,chevronTexture,
   STYLES,facadeMaterials,storefrontMaterial,textAtlas,signQuad,makeVehicle,compactGroup,makeHuman,poseHuman,Crowd,SKIN,HAIR,SHIRTS,PANTS,palmGeometries,treeGeometries,
-  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.8';
-import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.8';
+  CITY_LIGHTS,vehicleLights,compactDriven,Blobs,Fleet,SkidMarks,VEHICLES} from './assets3d.js?v=5.3.9';
+import {sampleDay,litFraction,TIME_MODES,DAY_START,HOURS_PER_SECOND} from './daylight.js?v=5.3.9';
 export {WORLD,stations,buildings,circleCollides,moveWithCollisions,ELEMENT_COINS};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -38,15 +38,20 @@ export const LAWNS=[[700,1270,860,1405],[1380,1270,1560,1405],[90,800,330,850],[
 export const DROP_ZONES=buildings.map(b=>{const c=[{x:b.x+b.w/2,y:b.y-24},{x:b.x+b.w/2,y:b.y+b.h+24},{x:b.x-24,y:b.y+b.h/2},{x:b.x+b.w+24,y:b.y+b.h/2}].filter(q=>!circleCollides(q.x,q.y,12));
   const roadDist=q=>Math.min(...ROAD_X.map(r=>Math.abs(q.x-r)),...ROAD_Y.map(r=>Math.abs(q.y-r)));c.sort((a,b2)=>roadDist(a)-roadDist(b2));const q=c[0]||{x:b.x+b.w/2,y:b.y+b.h+24};return {id:'drop-'+b.mark,kind:'drop',symbol:b.mark,name:b.name,x:q.x,y:q.y}});
 /** City Share cars: authorized fleet vehicles parked off the street that anyone on the response team may borrow. */
-export const FLEET_SPEC={id:'fleet',type:'compact',paint:'#eef2ef',stripe:'#14a38f'};
+/** The starting fleet car: a black sports sedan in the style of a 2019 Audi S6. */
+export const FLEET_SPEC={id:'fleet',type:'s6',paint:'#0c0e11',stripe:'#14a38f'};
+/** Hidden reward car: unlocked by Investigation 01, parked at the far south end of the Halogen Harbor seawall. */
+export const GT2_SPEC={id:'gt2',type:'gt2',paint:'#1f87e8',stripe:'#ffffff'};
+export const gt2Unlocked=completed=>Array.isArray(completed)&&completed.includes('courier');
 export const PARKED_SPOTS=[
  {id:'share-1',x:575,y:1300,angle:Math.PI/2,type:'sedan',paint:'#b3262e',stripe:'#ffffff'},
  {id:'share-2',x:1580,y:1064,angle:Math.PI,type:'suv',paint:'#1d3557',stripe:'#ffcc33'},
  {id:'share-3',x:1360,y:843,angle:0,type:'van',paint:'#f2f2ee',stripe:'#14a38f'},
  {id:'share-4',x:1780,y:790,angle:0,type:'compact',paint:'#f2c14e',stripe:'#1d3557'},
  {id:'share-5',x:348,y:1655,angle:-Math.PI/2,type:'sedan',paint:'#9aa3a8',stripe:'#d24d57'},
- {id:'share-6',x:860,y:1242,angle:0,type:'suv',paint:'#2e6b4f',stripe:'#ffffff'}];
-const CAR_DIMS={compact:[58,27],sedan:[68,28],suv:[70,30],van:[76,31]};
+ {id:'share-6',x:860,y:1242,angle:0,type:'suv',paint:'#2e6b4f',stripe:'#ffffff'},
+ {id:'gt2',x:2160,y:1712,angle:Math.PI,type:'gt2',paint:'#1f87e8',stripe:'#ffffff'}];
+const CAR_DIMS={compact:[58,27],sedan:[68,28],suv:[70,30],van:[76,31],s6:[70,28.6],gt2:[64,30]};
 /** Axis-aligned box around a parked car (rotated footprint), for collisions. */
 export function carBox(c){const [L,W]=CAR_DIMS[c.spec?.type||c.type]||[64,28],ca=Math.abs(Math.cos(c.angle||0)),sa=Math.abs(Math.sin(c.angle||0)),hw=(L*ca+W*sa)/2,hh=(L*sa+W*ca)/2;return {x:c.x-hw,y:c.y-hh,w:hw*2,h:hh*2}}
 export const QUALITY={high:{dpr:1.6,shadow:2048,shadows:true},balanced:{dpr:1.3,shadow:1024,shadows:true},low:{dpr:1,shadow:0,shadows:false}};
@@ -556,13 +561,15 @@ export class CityWorld extends FlatWorld{
   }
   makeDriven(spec){if(this.fleet){this.scene.remove(this.fleet);this.fleet.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()})}const m=compactDriven(makeVehicle(spec.type,{paint:spec.paint,fleet:true,stripe:spec.stripe,ownTail:true}));this.scene.add(m);return m}
   resetCars(){if(!this.parked)return;this.carSpec={...FLEET_SPEC};PARKED_SPOTS.forEach((p,i)=>{Object.assign(this.parked[i],{x:p.x,y:p.y,angle:p.angle,spec:{id:p.id,type:p.type,paint:p.paint,stripe:p.stripe}});this.meshParked(this.parked[i])});this.fleet=this.makeDriven(this.carSpec);this.refreshProgress()}
-  meshParked(c){if(c.mesh){this.scene.remove(c.mesh);c.mesh.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()})}c.mesh=compactGroup(makeVehicle(c.spec.type,{paint:c.spec.paint,fleet:true,stripe:c.spec.stripe}));c.mesh.position.set(c.x,groundHeight(c.x,c.y),c.y);c.mesh.rotation.y=-c.angle;this.scene.add(c.mesh)}
+  meshParked(c){if(c.mesh){this.scene.remove(c.mesh);c.mesh.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()})}c.mesh=compactGroup(makeVehicle(c.spec.type,{paint:c.spec.paint,fleet:true,stripe:c.spec.stripe}));c.mesh.position.set(c.x,groundHeight(c.x,c.y),c.y);c.mesh.rotation.y=-c.angle;c.mesh.visible=!this.lockedCar(c);this.scene.add(c.mesh)}
+  /** The GT2 stays hidden (and out of reach) until Investigation 01 is complete. */
+  lockedCar(c){return c?.spec?.id==='gt2'&&!gt2Unlocked(this.config?.completed)}
   /** Obstacles for movement: buildings plus parked cars (and your own car while you are on foot). */
-  obstacles(){if(!this.parked)return buildings;const list=this.parked.map(carBox);if(!this.player.inVehicle&&this.carSpec)list.push(carBox({...this.car,spec:this.carSpec}));
+  obstacles(){if(!this.parked)return buildings;const list=this.parked.filter(c=>!this.lockedCar(c)).map(carBox);if(!this.player.inVehicle&&this.carSpec)list.push(carBox({...this.car,spec:this.carSpec}));
     // traffic is solid nearby (never a box you are already inside, so nobody gets trapped)
     const p=this.player,r=p.inVehicle?19:12;for(const c of this.traffic||[]){if(!Number.isFinite(c.x)||Math.abs(c.x-p.x)>220||Math.abs(c.y-p.y)>220)continue;const b=carBox(c);if(Math.hypot(p.x-clamp(p.x,b.x,b.x+b.w),p.y-clamp(p.y,b.y,b.y+b.h))>=r)list.push(b)}
     return buildings.concat(list)}
-  nearestParked(){if(!this.parked)return -1;let best=-1,bd=100;for(let i=0;i<this.parked.length;i++){const d=distance(this.parked[i],this.player);if(d<bd){bd=d;best=i}}return distance(this.car,this.player)<bd?-1:best}
+  nearestParked(){if(!this.parked)return -1;let best=-1,bd=100;for(let i=0;i<this.parked.length;i++){if(this.lockedCar(this.parked[i]))continue;const d=distance(this.parked[i],this.player);if(d<bd){bd=d;best=i}}return distance(this.car,this.player)<bd?-1:best}
   /** Swap into parked car i: the car you were using stays parked where you left it. */
   swapInto(i){const P=this.parked[i];if(!P)return false;const left={x:this.car.x,y:this.car.y,angle:this.car.angle,spec:this.carSpec};this.car={x:P.x,y:P.y,angle:P.angle};this.carSpec=P.spec;
     Object.assign(P,{x:left.x,y:left.y,angle:left.angle,spec:left.spec});if(this.scene){this.meshParked(P);this.fleet=this.makeDriven(this.carSpec);this.refreshProgress()}return true}
@@ -660,7 +667,11 @@ export class CityWorld extends FlatWorld{
   recover(){super.recover();this.viewMode='chase';this.cameraYaw=-Math.PI/2;this.orbitOffset=0;this.pitchOffset=0;this.snapCamera=true;this.setStick(0,0);this.player.steer=0;this.carYaw=null}
   getState(){return {...super.getState(),carSpec:this.carSpec,parked:this.parked?.map(({x,y,angle,spec})=>({x,y,angle,spec}))}}
   loadPosition(position){super.loadPosition(position);
-    if(this.parked&&Array.isArray(position?.parked)&&position.parked.length===this.parked.length&&position.carSpec?.type&&position.parked.every(c=>Number.isFinite(c?.x)&&Number.isFinite(c?.y)&&c?.spec?.type)){this.carSpec=position.carSpec;position.parked.forEach((c,i)=>{Object.assign(this.parked[i],{x:c.x,y:c.y,angle:c.angle||0,spec:c.spec});this.meshParked(this.parked[i])});this.fleet=this.makeDriven(this.carSpec)}this.cameraYaw=this.player.angle;this.snapCamera=true;this.carYaw=null}
+    const fresh=s=>s?.id==='fleet'?{...FLEET_SPEC}:s?.id==='gt2'?{...GT2_SPEC}:s;
+    if(this.parked&&Array.isArray(position?.parked)&&position.parked.length>=this.parked.length-1&&position.parked.length<=this.parked.length&&position.carSpec?.type&&position.parked.every(c=>Number.isFinite(c?.x)&&Number.isFinite(c?.y)&&c?.spec?.type)){this.carSpec=fresh(position.carSpec);position.parked.forEach((c,i)=>{Object.assign(this.parked[i],{x:c.x,y:c.y,angle:c.angle||0,spec:fresh(c.spec)});this.meshParked(this.parked[i])});
+      // saves from before the GT2 existed: it waits at its harbor spot
+      if(position.parked.length<this.parked.length){const P=PARKED_SPOTS.at(-1),slot=this.parked.at(-1);Object.assign(slot,{x:P.x,y:P.y,angle:P.angle,spec:{...GT2_SPEC}});this.meshParked(slot)}
+      this.fleet=this.makeDriven(this.carSpec)}this.cameraYaw=this.player.angle;this.snapCamera=true;this.carYaw=null}
   updateConfig(config){super.updateConfig(config);if(config.paused){this.setStick(0,0);this.drag=null}if(config.touchMode!==undefined)this.touchMode=!!config.touchMode;
     if(config.quality&&config.quality!=='auto'&&config.quality!==this.quality&&this.renderer)this.applyQuality(config.quality);
     if(config.quality==='auto'&&this.renderer&&this.qualityLocked){this.qualityLocked=false}
@@ -671,7 +682,7 @@ export class CityWorld extends FlatWorld{
   tickMove(dt){
     if(this.player.inVehicle){const p=this.player,before={x:p.x,y:p.y};
       const steering=clamp((this.input.right?1:0)-(this.input.left?1:0)+(this.stick?.x||0),-1,1);
-      const movedBy=driveStep(p,this.input,steering,dt,this.touchMode);const moved=moveWithCollisions(p.x,p.y,movedBy.dx,movedBy.dy,19,this.obstacles());
+      const movedBy=driveStep(p,this.input,steering,dt,this.touchMode,CAR_PERF[this.carSpec?.type]);const moved=moveWithCollisions(p.x,p.y,movedBy.dx,movedBy.dy,19,this.obstacles());
       p.x=moved.x;p.y=moved.y;
       // glancing hits keep most of the speed and steer the car along the wall; hard hits stop it, jolt the camera and call onImpact
       if(moved.hit){const k=collisionKeep(moved,movedBy.dx,movedBy.dy,19,this.obstacles()),impact=Math.abs(p.speed)*(1-k.keep);p.speed*=.25+.7*k.keep;
@@ -709,14 +720,14 @@ export class CityWorld extends FlatWorld{
     if(!best&&sc.kind==='survey')consider((this.readingPoints||=READINGS.map(r=>({id:'reading-'+r.sym,kind:'reading',sym:r.sym,name:r.where,x:r.x,y:r.y}))).filter(q=>!(sc.collected||{})[q.sym]),95);
     if(!best&&sc.kind==='relay')consider((this.relayPoints||=RELAYS.map(t=>({id:'relay-'+t.id,kind:'relay',relay:t.id,name:t.name,x:t.x,y:t.y}))).filter(q=>!(sc.solved||{})[q.relay]),95);
     return best}
-  notify(){this.onChange({...this.player,nearby:this.nearbyStation(),nearbyWork:this.nearbyWork(),vehicleNearby:!this.player.inVehicle&&(distance(this.player,this.car)<100||this.nearestParked()>=0),carType:this.carSpec?.type,district:this.district(),walked:this.walked,driven:this.driven})}
+  notify(){this.onChange({...this.player,nearby:this.nearbyStation(),nearbyWork:this.nearbyWork(),vehicleNearby:!this.player.inVehicle&&(distance(this.player,this.car)<100||this.nearestParked()>=0),carType:this.carSpec?.type,parkedType:(()=>{const k=this.player.inVehicle?-1:this.nearestParked();return k>=0?this.parked[k].spec?.type:null})(),district:this.district(),walked:this.walked,driven:this.driven})}
   interact(){const point=this.nearbyWork();if(point){this.onWorldAction(point.id);return true}return super.interact()}
   tapWorkshop(event){if(!this.raycaster||this.player.inVehicle)return;const rect=this.canvas.getBoundingClientRect(),pointer=new THREE.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
     this.raycaster.far=2000;this.raycaster.setFromCamera(pointer,this.viewCamera);const hit=this.raycaster.intersectObjects(this.workshopTargets,true)[0];if(!hit)return;
     let object=hit.object;while(object&&!object.userData.pointId)object=object.parent;const id=object?.userData.pointId;if(!id)return;
     const sc=this.config.scene||{};const pt=POWER_POINTS.find(p=>p.id===id)||READINGS.map(r=>({id:'reading-'+r.sym,x:r.x,y:r.y})).find(p=>p.id===id)||RELAYS.map(t=>({id:'relay-'+t.id,x:t.x,y:t.y})).find(p=>p.id===id);
     const allowed=id.startsWith('reading-')?sc.kind==='survey':id.startsWith('relay-')?sc.kind==='relay':this.config.powerState?.enabled;if(pt&&allowed&&distance(pt,this.player)<155)this.onWorldAction(id)}
-  refreshProgress(){if(!this.markerGroups)return;const completed=this.config.completed||[];
+  refreshProgress(){if(!this.markerGroups)return;const completed=this.config.completed||[];for(const c of this.parked||[])if(c.mesh)c.mesh.visible=!this.lockedCar(c);
     for(const [id,m] of this.markerGroups){const s=stations.find(x=>x.id===id),active=id===this.config.activeMission,done=completed.includes(id);
       if(m.done!==done){m.icon.material.map?.dispose();m.icon.material.map=iconTexture(s.code,done?'#86d9b7':s.color,done);m.icon.material.needsUpdate=true;m.done=done}
       m.active=active;m.beam.visible=active||id==='hq';m.beam.material.uniforms.uOpacity.value=active?.75:.35;m.ring.material.opacity=active?.95:done?.3:.55;m.disc.visible=active||id==='hq'}

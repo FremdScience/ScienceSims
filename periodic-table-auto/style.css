@@ -468,3 +468,4 @@ body:not(.touch-mode) .radio-chip{left:auto;right:calc(190px + var(--sar));botto
 .splash-note{display:block;margin-top:14px;color:#d7e3e1;font-size:13px;letter-spacing:.04em}
 .reduced .tap-start{animation:none}
 @media(prefers-reduced-motion:reduce){.tap-start{animation:none}}
+.unlock-note{margin:12px 0 4px;padding:10px 14px;border-radius:10px;border:1px solid #4aa3ea88;background:linear-gradient(90deg,#1f87e82e,#1f87e80c);text-align:left;font-size:14px;line-height:1.45}.unlock-note b{display:block;font-size:11px;letter-spacing:.16em;color:#7cc4ff;margin-bottom:3px}.unlock-note i{display:block;margin-top:4px;color:var(--gold);font-style:normal;font-weight:700}

@@ -5,17 +5,19 @@ const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
 /** One driving step. Space is the handbrake: straight ahead it brakes like before; held while steering at
  * speed (> 140 units/s) the rear lets go, so the car rotates faster than it travels (p.slip, p.sliding).
  * Without the handbrake the travel direction snaps to the body heading, exactly as before. */
-export function driveStep(p,input,steering,dt,touch=true){
+/** Per-car performance multipliers (1 = the original fleet car): top speed, acceleration, braking, grip. */
+export const CAR_PERF={compact:{},sedan:{},suv:{},van:{},s6:{top:1.12,accel:1.3,brake:1.1,grip:1.05},gt2:{top:1.6,accel:2,brake:1.35,grip:1.25}};
+export function driveStep(p,input,steering,dt,touch=true,perf){const k=perf||{},top=k.top||1,acc=k.accel||1,brk=k.brake||1,grip=k.grip||1;
  const throttle=(input.up?1:0)-(input.down?1:0),hand=!!(input.handbrake||input.space||input[' ']);
  const target=clamp(steering,-1,1);p.steer=approach(p.steer||0,target,dt*4.2);
- const before=p.speed,limit=touch?285:335,slide=hand&&Math.abs(p.steer)>.25&&p.speed>140;
+ const before=p.speed,limit=(touch?285:335)*top,slide=hand&&Math.abs(p.steer)>.25&&p.speed>140;
  if(!Number.isFinite(p.vAngle))p.vAngle=p.angle;
  if(slide)p.speed=approach(p.speed,0,160*dt);
  else if(hand)p.speed=approach(p.speed,0,520*dt);
- else if(throttle){const braking=p.speed*throttle<0;p.speed+=throttle*(braking?430:205*(1-Math.min(Math.abs(p.speed)/limit,.9)*.52))*dt;}
+ else if(throttle){const braking=p.speed*throttle<0;p.speed+=throttle*(braking?430*brk:205*acc*(1-Math.min(Math.abs(p.speed)/limit,.9)*.52))*dt;}
  else p.speed=approach(p.speed,0,(18+Math.abs(p.speed)*.28)*dt);
  p.speed=clamp(p.speed,-105,limit);if(Math.abs(p.speed)<.7)p.speed=0;
- const speed=Math.abs(p.speed);const rate=(1.9/(1+speed/260))*clamp(speed/65,0,1)*(slide?1.7:1);
+ const speed=Math.abs(p.speed);const rate=(1.9/(1+speed/260))*clamp(speed/65,0,1)*(slide?1.7:1)*grip;
  p.angle+=p.steer*rate*Math.sign(p.speed)*dt;
  // velocity heading: lags the body while sliding, then the slip decays smoothly (no snap back)
  const slip=wrap(p.angle-p.vAngle),prev=p.slip||0;
