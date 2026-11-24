@@ -3,7 +3,7 @@
  * reactivity → acid/base OH compounds (hydroxides and oxyacids) → ions and formulas. Pure data and validators (no DOM).
  * All observations are virtual. No procedures are described. Hints never state an answer:
  * the last hint is always a worked example that uses different elements. */
-import {ELEMENTS,EN_ALL} from './elements.js?v=5.3.4';
+import {ELEMENTS,EN_ALL} from './elements.js?v=5.3.5';
 /** Pauling electronegativity (RSC values; see elements.js and SOURCES.md). */
 export const EN=EN_ALL;
 
@@ -189,10 +189,10 @@ export function validateSort(sym,choice){const r=READINGS.find(x=>x.sym===sym);i
 export const SURVEY_QUESTIONS=[
  {id:'q1',prompt:'Where do the elements that form basic OH compounds sit?',options:[['left','Left side: metals'],['right','Right side: nonmetals'],['staircase','On the staircase: metalloids']],answer:'left',
   wrong:'Look at the board: which side lit up purple and blue?'},
- {id:'q2',prompt:'Moving left → right across Period 3 (Na, Mg, Al … P, S), the OH compounds become…',options:[['basic','more basic'],['acidic','more acidic'],['same','about the same']],answer:'acidic',
+ {id:'q2',prompt:'Where do the elements that form acidic OH compounds sit?',options:[['left','Left side: metals'],['right','Right side: nonmetals'],['staircase','On the staircase: metalloids']],answer:'right',
+  wrong:'Look at the board: which side lit up red and orange?',right:'Metals on the left form basic OH compounds; nonmetals on the right form acidic ones.'},
+ {id:'q3',prompt:'Moving left → right across Period 3 (Na, Mg, Al … P, S), the OH compounds become…',options:[['basic','more basic'],['acidic','more acidic'],['same','about the same']],answer:'acidic',
   wrong:'Follow Period 3 on the board from Na to S. How do the colors change?'},
- {id:'q3',prompt:'A student claims: “All nonmetals react with water to make acids.” Does this survey show that?',options:[['yes','Yes: every nonmetal record was acidic.'],['no','No: we tested compounds that three nonmetals form, not the nonmetal elements themselves, and only three of them.']],answer:'no',
-  wrong:'What was actually in the S, P and C records: the element itself, or a compound it forms? And how many nonmetals did we test?',right:'Right. A claim about all nonmetals needs far more evidence than three compounds.'},
  {id:'q4',prompt:'Barium (Ba) forms an OH compound in water. Predict the indicator result.',options:[['acidic','Acidic (red/orange)'],['basic','Basic (purple)'],['neutral','Neutral (green)']],answer:'basic',
   wrong:'Find Ba on the table. Which side is it on, and which family?'},
  {id:'q5',prompt:'Formulas follow the family. Mg(OH)₂ and Ca(OH)₂ are known. Strontium’s OH compound is…',options:[['SrOH','SrOH'],['Sr(OH)2','Sr(OH)₂'],['Sr(OH)3','Sr(OH)₃']],answer:'Sr(OH)2',
